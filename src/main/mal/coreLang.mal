@@ -135,6 +135,7 @@ category Security {
           user info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
           ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
+              privilegedApplication.authenticate,
               lowPrivilegeApplications.authenticate,
               highPrivilegeApplications.authenticate,
               readPrivData.read,
@@ -230,7 +231,7 @@ associations {
   Identity         [highPrivAssignedIds]  * <-- HighApplicationPrivileges --> * [highPrivilegeApplications] Application
   Identity         [lowPrivAssignedIds]   * <-- LowApplicationPrivileges  --> * [lowPrivilegeApplications]  Application
   // Finally, Access control on data
-  Identity         [accessingIds]         *   <-- ReadPrivileges      --> *   [accessPrivDatastore]    DataStore
+  Identity         [accessingIds]         *   <-- DataStorePrivileges --> *   [accessPrivDatastore]    DataStore
   Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
   Identity         [writingIds]           *   <-- WritePrivileges     --> *   [writePrivData]          Data
   Identity         [deletingIds]          *   <-- DeletePrivileges    --> *   [deletePrivData]         Data
