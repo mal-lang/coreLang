@@ -219,13 +219,13 @@ associations {
   Object           [object]               1 <-- ObjectVulnerability   --> *   [vulnerabilities]        VulnerabilityExtensionPoint //We need to implement how vulnerabilities will affect Objects
   // Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
+  Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
   Identity         [highPrivIdentities]   * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
   Identity         [lowPrivIdentities]    * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
   // Then, Access Control on application level
   // Bad idea: have two types of identities, the specific one (associations are needed) and the "god mode" one (that does not need to be explicitly connected, you just get all the privs.) This is a problem with AD.
   Identity         [executionPrivileges]  * <-- ExecutionPrivileges   --> * [privilegedApplication]    Application
-  Identity         [userIds]              * <-- UserAssignedIdentities--> * [users]                     User
       user info: "Every application executes on a system with privileges of a specified identity on the system."
   Identity         [highPrivAssignedIds]  * <-- HighApplicationPrivileges --> * [highPrivilegeApplications] Application
   Identity         [lowPrivAssignedIds]   * <-- LowApplicationPrivileges  --> * [lowPrivilegeApplications]  Application
