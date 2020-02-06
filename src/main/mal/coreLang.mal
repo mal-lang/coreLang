@@ -8,16 +8,19 @@ include "VulnerabilityAutomatic.mal"
 category System {
 
     abstract asset Object
+      developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
     {
       & specificAccess
 
       & fullAccess
 
       | useVulnerability
-        ->  vulnerabilities.abuse
+        ->  vulnerabilities.incoming
     }
 
-    abstract asset System extends Object {
+    abstract asset System extends Object 
+      developer info: "A system specifies the hardware on which applications can run. The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
+    {
       | connect
         user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
         ->  fullAccess,
@@ -30,11 +33,19 @@ category System {
         ->  specificAccess
 
       & fullAccess
-        ->  highPrivAssignedIds.assume,
-            lowPrivAssignedIds,assume
+        ->  highPrivSysIds.assume,
+            lowPrivSysIds.assume,
+            datastores.authenticatedAccess
 
       & specificAccess
         ->  sysExecutedApps.localConnect // I do not know what more we need here...
+
+      | physicalAccess
+        user info: "Attacker has physical access on the location where the system is physically deployed."
+        ->  denialOfService
+
+      | denialOfService
+        ->  sysExecutedApps.deny
     }
 
     //asset OperatingSystem extends Application{
@@ -42,8 +53,9 @@ category System {
       // If AD is used then having full access on the OS should lead to possible compromise of any associated Identity (Per)
     //}
 
-    asset Application extends Object{
-
+    asset Application extends Object
+      developer info: "An application specifies pretty much everything that is executed or can execute other applications."
+    {
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the application."
         ->  localAccess,
@@ -51,9 +63,7 @@ category System {
 
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        -> networkAccess//,
-           // Tracebility step for security groups. Callback to all security groups with inbound rules associated with the application's port
-           //(networkInterfaces.securityGroups.containedRules[InboundSecurityGroupRule] /\ portRanges.superPortRanges*.securityGroupRules[InboundSecurityGroupRule]).containingGroup.calledByApplication
+        -> networkAccess
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
@@ -82,7 +92,7 @@ category System {
         developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>)"
         ->  access,
             // nonShellInstance.connect,
-            executionPrivileges.assume
+            executionPriviIds.assume
 
       | read
         user info: "The attacker can read some or all of this service's code and data."
@@ -99,9 +109,10 @@ category System {
 
 category Communication {
 
-    // Datastore is mainly used for pointing out where a piece of precious data is hosted. 
-    // Good as is today except that a Datastore object should also be associated with an AccessLevel object which you need to "unlock" before you can access that data.
-    asset DataStore extends Object {
+    asset DataStore extends Object 
+      developer info: "Datastore is mainly used for pointing out where a piece of precious data is hosted."
+      modeler info: "It is associated with an Identity asset which is needed to 'unlock' before accessing that data."
+    {
       | authenticatedAccess
         ->  datas.access
     }
@@ -132,12 +143,12 @@ category Security {
     asset Identity 
     {
         | assume
-          user info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
+          developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
           ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
-              privilegedApplication.authenticate,
-              lowPrivilegeApplications.authenticate,
-              highPrivilegeApplications.authenticate,
+              execPrivApps.access,
+              highPrivApps.access,
+              lowPrivApps.localConnect,
               readPrivData.read,
               writePrivData.write,
               deletePrivData.delete,
@@ -158,14 +169,22 @@ category Security {
         user info: "The attacker is able to steal the credentials."
         -> identities.assume
     }
+
+    asset PhysicalZone
+      developer info: "A physical zone is the location where systems are physically deployed."
+    {
+      | gainPhysicalAccess
+        ->  systems.connect,
+            systems.physicalAccess
+    }
 }
 
 category User {
 
     asset User 
     {
-        | compromise // This should be renamed
-                ->  userIds.assume
+        | compromise
+          ->  userIds.assume
     }
 }
 
@@ -173,18 +192,34 @@ category Networking {
     // If you have access to a network zone, you shall be able to connect (not log in) to any other service on the same network. (nmap scan) (Joar)
     // If you have managed to log in to and use a proxy, transparent or not, you shall be able to access any service protected by that proxy. (Joar)
 
-    asset Network extends Object {
+    asset Network extends Object 
+      developer info: "A network zone is a set of network accessible applications."
+    {
+
+      // Physical access atack vector
+      // iLOs are also reachable from here
+      // Only the applications that are exposed to this (local) network should be reachable.
     }
 
-    asset Firewall extends System {
+    asset Firewall extends System 
+      developer info: "A firewall specifies a router with firewall capabilities that connects many networks."
+    {
       | forwarding
+        // This should be the simplest interaction with a router/firwall, just forwarding the connections to other networks.
 
       | dos
-        // This will cascade the DoS attack on the connected networks and connected connections
+        // This should cascade the DoS attack on the connected networks and connected connections.
 
     }
 
     asset Connection extends Object {
+
+      | intercept // Maybe this is not the correct name
+        ->  data.access
+
+      | transmitResponse
+
+      | transmit
     }
 
     abstract asset Proxy extends Object {
@@ -199,14 +234,19 @@ category Networking {
 
 associations {
 	System           [hostSystem]           1 <-- SysExecution          --> *   [sysExecutedApps]        Application
+      developer info: "System is the hardware on which Applications are running."
   Application      [hostApp]              1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
   //OperatingSystem  [os]                 1 <-- AppExecution          --> *   [applications]           Application
   // Idea: allow applications to run other applications. Cons: confusing for users, too complex. Pros: Higher flexibility. Verdict: remove OS asset
-	Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System
-  Application      [netclients]           * <-- ApplicationConnection --> 1   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised (e.g client side attack)
+  // A network zone is a set of network accessible applications
+	//Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
+  PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
+  Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
+  Application      [netclients]           * <-- ApplicationConnection --> 1   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised after effort, connection should be always possible (e.g client side attack)
   Application      [application]          * <-- ApplicationConnection --> 1   [connection]             Connection //The connection asset is just the dataflow renamed
-  Network          [network]              * <-- NetworkConnection     --> *   [systems]                Connection
+  //Network          [network]              * <-- NetworkConnection     --> *   [systems]                Connection // Is this needed? No, but this is just an assumption!
 	Connection       [connection]           1 <-- DataInTransit         --> *   [data]                   Data 
 	Firewall         [firewall]             1 <-- Bridges               --> *   [networks]               Network
   // We need to talk about those two:
@@ -222,14 +262,16 @@ associations {
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
-  Identity         [highPrivIdentities]   * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
-  Identity         [lowPrivIdentities]    * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
+  Identity         [highPrivSysIds]       * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
+  Identity         [lowPrivSysIds]        * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
   // Then, Access Control on application level
   // Bad idea: have two types of identities, the specific one (associations are needed) and the "god mode" one (that does not need to be explicitly connected, you just get all the privs.) This is a problem with AD.
-  Identity         [executionPrivileges]  * <-- ExecutionPrivileges   --> * [privilegedApplication]    Application
-      user info: "Every application executes on a system with privileges of a specified identity on the system."
-  Identity         [highPrivAssignedIds]  * <-- HighApplicationPrivileges --> * [highPrivilegeApplications] Application
-  Identity         [lowPrivAssignedIds]   * <-- LowApplicationPrivileges  --> * [lowPrivilegeApplications]  Application
+  Identity         [executionPriviIds]    * <-- ExecutionPrivileges   --> *   [execPrivApps]            Application
+      user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
+  Identity         [highPrivAppIds]       * <-- HighApplicationPrivileges --> * [highPrivApps]         Application
+      user info: "High application privileges on an Application result in the compromise of all the child applications."
+  Identity         [lowPrivAppIds]        * <-- LowApplicationPrivileges  --> * [lowPrivApps]          Application
+      user info: "Low application privileges on an Application allow only the local interaction with the application."
   // Finally, Access control on data
   Identity         [accessingIds]         *   <-- DataStorePrivileges --> *   [accessPrivDatastore]    DataStore
   Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
