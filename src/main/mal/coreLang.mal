@@ -18,7 +18,7 @@ category System {
         ->  vulnerabilities.incoming
     }
 
-    abstract asset System extends Object 
+    asset System extends Object 
       developer info: "A system specifies the hardware on which applications can run. The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
     {
       | connect
@@ -233,37 +233,46 @@ category Networking {
 }
 
 associations {
-	System           [hostSystem]           1 <-- SysExecution          --> *   [sysExecutedApps]        Application
-      developer info: "System is the hardware on which Applications are running."
-  Application      [hostApp]              1 <-- AppExecution          --> *   [appExecutedApps]        Application
+  System           [hostSystem]        0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
+      developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
+  Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
   //OperatingSystem  [os]                 1 <-- AppExecution          --> *   [applications]           Application
   // Idea: allow applications to run other applications. Cons: confusing for users, too complex. Pros: Higher flexibility. Verdict: remove OS asset
   // A network zone is a set of network accessible applications
-	//Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
+  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
-  Application      [netclients]           * <-- ApplicationConnection --> 1   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised after effort, connection should be always possible (e.g client side attack)
-  Application      [application]          * <-- ApplicationConnection --> 1   [connection]             Connection //The connection asset is just the dataflow renamed
+      developer info: "An application can communicate / be exposed on a network. But this is not mandatory to be modeled (at least for now)."  
+  Application      [netclients]           * <-- ApplicationConnection --> *   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised after effort, connection should be always possible (e.g client side attack)
+      developer info: "An application can communicate directly to another application. This could be useful for auto modeling."  
+  Application      [application]          * <-- ApplicationConnection --> *   [connection]             Connection //The connection asset is just the dataflow renamed
+      developer info: "But also, an application can communicate over one or more (mesh type) connections."  
   //Network          [network]              * <-- NetworkConnection     --> *   [systems]                Connection // Is this needed? No, but this is just an assumption!
-	Connection       [connection]           1 <-- DataInTransit         --> *   [data]                   Data 
-	Firewall         [firewall]             1 <-- Bridges               --> *   [networks]               Network
+  Connection       [connection]           1 <-- DataInTransit         --> *   [data]                   Data 
+      developer info: "And a connection can have data in transit."  
+  Firewall         [firewall]             1 <-- Bridges               --> *   [networks]               Network
+      developer info: "A firewall is practicaly a router with firewall capabilities that connects many networks."
   // We need to talk about those two:
-  Proxy            [proxy]                1 <-- ProxyConnection       --> *   [networks]               Network
-  Proxy            [proxy]                1 <-- RelationTo            --> 1   [firewall]               Firewall
+  Proxy            [proxy]                * <-- ProxyConnection       --> *   [networks]               Network
+  Proxy            [proxy]             0..1 <-- RelationTo            --> 1   [firewall]               Firewall
   // Data related associations
-	DataStore        [datastore]            1 <-- DataStoring           --> *   [datas]                  Data
+  DataStore        [datastore]            1 <-- DataStoring           --> *   [datas]                  Data
+      user info: "A datastore is responsible for storing data."
   Data             [containingData]       * <-- Containment           --> *   [containedData]          Data
-	System           [system]               1 <-- DataStoreHosting      --> *   [datastores]             DataStore
-  // Vulnerabilities on objects
-  Object           [object]               1 <-- ObjectVulnerability   --> *   [vulnerabilities]        VulnerabilityExtensionPoint //We need to implement how vulnerabilities will affect Objects
+      user info: "Data can be contained inside other data."
+  Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
+      developer info: "An application should be able to contain some data."
+  System           [system]               1 <-- DataStoreHosting      --> *   [datastores]             DataStore
   // Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
   Identity         [highPrivSysIds]       * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
+      user info: "High access privileges on a System result in the compromise of all the privileges assigned to that system."
   Identity         [lowPrivSysIds]        * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
+      user info: "Low access privileges on a System provide individual identity access on the system."
   // Then, Access Control on application level
   // Bad idea: have two types of identities, the specific one (associations are needed) and the "god mode" one (that does not need to be explicitly connected, you just get all the privs.) This is a problem with AD.
   Identity         [executionPrivIds]     * <-- ExecutionPrivileges   --> *   [execPrivApps]            Application
