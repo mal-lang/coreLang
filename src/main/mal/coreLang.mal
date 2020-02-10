@@ -33,7 +33,8 @@ category System {
         ->  specificAccess
 
       & fullAccess
-        ->  highPrivSysIds.assume,
+        ->  sysExecutedApps.access,
+            highPrivSysIds.assume,
             lowPrivSysIds.assume,
             datastores.authenticatedAccess
 
