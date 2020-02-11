@@ -36,14 +36,15 @@ category System {
         ->  sysExecutedApps.access,
             highPrivSysIds.assume,
             lowPrivSysIds.assume,
-            datastores.authenticatedAccess
+            sysData.access
 
       & specificAccess
         ->  sysExecutedApps.localConnect // I do not know what more we need here...
 
       | physicalAccess
         user info: "Attacker has physical access on the location where the system is physically deployed."
-        ->  denialOfService
+        ->  denialOfService,
+            connect
 
       | denialOfService
         ->  sysExecutedApps.deny
@@ -60,7 +61,8 @@ category System {
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the application."
         ->  localAccess,
-            extensionPoint.incoming // Connection to all possible vulnerabilities that might be connected to the Application
+            extensionPoint.incoming, // Connection to all possible vulnerabilities that might be connected to the Application
+            appExecutedApps.localConnect // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
 
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
@@ -110,13 +112,13 @@ category System {
 
 category Communication {
 
-    asset DataStore extends Object 
-      developer info: "Datastore is mainly used for pointing out where a piece of precious data is hosted."
-      modeler info: "It is associated with an Identity asset which is needed to 'unlock' before accessing that data."
-    {
-      | authenticatedAccess
-        ->  datas.access
-    }
+    //asset DataStore extends Object 
+    //  developer info: "Datastore is mainly used for pointing out where a piece of precious data is hosted."
+    //  modeler info: "It is associated with an Identity asset which is needed to 'unlock' before accessing that data."
+    //{
+    //  | authenticatedAccess
+    //    ->  datas.access
+    //}
 
     asset Data {
         & access
@@ -152,8 +154,8 @@ category Security {
               lowPrivApps.localConnect,
               readPrivData.read,
               writePrivData.write,
-              deletePrivData.delete,
-              accessPrivDatastore.authenticatedAccess
+              deletePrivData.delete//,
+              //accessPrivDatastore.authenticatedAccess
     }
 
     asset Credentials
@@ -259,13 +261,14 @@ associations {
   Proxy            [proxy]                * <-- ProxyConnection       --> *   [networks]               Network
   Proxy            [proxy]             0..1 <-- RelationTo            --> 1   [firewall]               Firewall
   // Data related associations
-  DataStore        [datastore]            1 <-- DataStoring           --> *   [datas]                  Data
-      user info: "A datastore is responsible for storing data."
+  //DataStore        [datastore]            1 <-- DataStoring           --> *   [datas]                  Data
+  //    user info: "A datastore is responsible for storing data."
   Data             [containingData]       * <-- Containment           --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
   Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
       developer info: "An application should be able to contain some data."
-  System           [system]               1 <-- DataStoreHosting      --> *   [datastores]             DataStore
+  System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
+      user info: "A system can host data."
   // Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
@@ -276,14 +279,14 @@ associations {
       user info: "Low access privileges on a System provide individual identity access on the system."
   // Then, Access Control on application level
   // Bad idea: have two types of identities, the specific one (associations are needed) and the "god mode" one (that does not need to be explicitly connected, you just get all the privs.) This is a problem with AD.
-  Identity         [executionPrivIds]     * <-- ExecutionPrivileges   --> *   [execPrivApps]            Application
+  Identity         [executionPrivIds]     * <-- ExecutionPrivileges   --> *   [execPrivApps]           Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
   Identity         [highPrivAppIds]       * <-- HighApplicationPrivileges --> * [highPrivApps]         Application
       user info: "High application privileges on an Application result in the compromise of all the child applications."
   Identity         [lowPrivAppIds]        * <-- LowApplicationPrivileges  --> * [lowPrivApps]          Application
       user info: "Low application privileges on an Application allow only the local interaction with the application."
   // Finally, Access control on data
-  Identity         [accessingIds]         *   <-- DataStorePrivileges --> *   [accessPrivDatastore]    DataStore
+  //Identity         [accessingIds]         *   <-- DataStorePrivileges --> *   [accessPrivDatastore]    DataStore
   Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
   Identity         [writingIds]           *   <-- WritePrivileges     --> *   [writePrivData]          Data
   Identity         [deletingIds]          *   <-- DeletePrivileges    --> *   [deletePrivData]         Data
