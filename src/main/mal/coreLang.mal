@@ -88,7 +88,8 @@ category System {
             modify,
             deny,
             // shellInstance.connect
-            appExecutedApps.access // Gain access on all applications executed by this (host) application
+            appExecutedApps.access, // Gain access on all applications executed by this (host) application
+            containedData.access    // and access on all the contained data
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
@@ -253,7 +254,7 @@ associations {
   Application      [application]          * <-- ApplicationConnection --> *   [connection]             Connection //The connection asset is just the dataflow renamed
       developer info: "But also, an application can communicate over one or more (mesh type) connections."  
   //Network          [network]              * <-- NetworkConnection     --> *   [systems]                Connection // Is this needed? No, but this is just an assumption!
-  Connection       [connection]           1 <-- DataInTransit         --> *   [data]                   Data 
+  Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
       developer info: "And a connection can have data in transit."  
   Firewall         [firewall]             1 <-- Bridges               --> *   [networks]               Network
       developer info: "A firewall is practicaly a router with firewall capabilities that connects many networks."
