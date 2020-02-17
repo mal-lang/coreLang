@@ -32,7 +32,7 @@ category System {
       | individualPrivilegeAuthenticate @hidden
         ->  specificAccess
 
-      & fullAccess
+      & fullAccess {C,I,A}
         ->  sysExecutedApps.access,
             highPrivSysIds.assume,
             lowPrivSysIds.assume,
@@ -46,7 +46,7 @@ category System {
         ->  denialOfService,
             connect
 
-      | denialOfService
+      | denialOfService {A}
         ->  sysExecutedApps.deny
     }
 
@@ -59,11 +59,21 @@ category System {
       developer info: "An application specifies pretty much everything that is executed or can execute other applications."
     {
       | localConnect
-        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the application."
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             extensionPoint.incoming, // Connection to all possible vulnerabilities that might be connected to the Application
             appExecutedApps.localConnect // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
 
+      | networkConnect
+        user info: "An attacker can connect to any network exposed application."
+        ->  localAccess,
+            extensionPoint.incoming // Connection to all possible vulnerabilities that might be connected to the Application
+
+      | accessNetwork // This should be renamed to be more clear.
+        user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
+        ->  networks.access,
+            appConnections.applications.networkConnect
+      
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
         -> networkAccess
@@ -82,14 +92,15 @@ category System {
       & networkAccess @hidden
         ->  access
 
-      | access
+      | access {C,I,A}
         user info: "Legitimate access, as user or as administrator."
         ->  read,
             modify,
             deny,
             // shellInstance.connect
             appExecutedApps.access, // Gain access on all applications executed by this (host) application
-            containedData.access    // and access on all the contained data
+            containedData.access,    // and access on all the contained data
+            accessNetwork   // and access the network(s) on which the app is connected
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
@@ -142,11 +153,11 @@ category Communication {
     }
 }
 
-category Security {
+category IAM {
 
     asset Identity 
     {
-        | assume
+        | assume {C,I,A}
           developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
           ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
@@ -161,7 +172,7 @@ category Security {
 
     asset Credentials
     {
-      | use
+      | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.assume
 
@@ -187,7 +198,7 @@ category User {
 
     asset User 
     {
-        | compromise
+        | compromise {C}
           ->  userIds.assume
     }
 }
@@ -202,17 +213,37 @@ category Networking {
 
       // Physical access atack vector
       // iLOs are also reachable from here
-      // Only the applications that are exposed to this (local) network should be reachable.
+      | physicalAccess {A}
+        developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
+        ->  denialOfService,
+            //connect,
+            subnets*.physicalAccess
+
+      | access
+        user info: "Access provides connect to all reachable applications, even on all subnets."
+        ->  applications.networkConnect,
+            subnets*.applications.networkConnect,
+            //netConnections.networks.access // This has the same effect as the line below! (or so I think)
+            netConnections.routerFirewalls.forwarding,
+            denialOfService
+
+      | denialOfService {A}
+        user info: "If a DoS is performed it affects, the subnets, the applications communicatiing over the network as well as the connected application."
+        ->  subnets*.denialOfService,  
+            netConnections.denialOfService,
+            applications.deny
     }
 
-    asset Firewall extends System 
-      developer info: "A firewall specifies a router with firewall capabilities that connects many networks."
+    asset RoutingFirewall extends System 
+      developer info: "A routing firewall specifies a router with firewall capabilities that connects many networks."
     {
       | forwarding
-        // This should be the simplest interaction with a router/firwall, just forwarding the connections to other networks.
+        // This should be the simplest interaction with a router/firwall, just forwarding the white listed connections to other networks.
+        ->  connectionRules.networks.access
 
-      | dos
+      | denialOfService {A}
         // This should cascade the DoS attack on the connected networks and connected connections.
+        ->  connectionRules.denialOfService
 
     }
 
@@ -224,6 +255,8 @@ category Networking {
       | transmitResponse
 
       | transmit
+
+      | denialOfService {A}
     }
 
     abstract asset Proxy extends Object {
@@ -243,25 +276,35 @@ associations {
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
   //OperatingSystem  [os]                 1 <-- AppExecution          --> *   [applications]           Application
   // Idea: allow applications to run other applications. Cons: confusing for users, too complex. Pros: Higher flexibility. Verdict: remove OS asset
-  // A network zone is a set of network accessible applications
-  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
+  
+  // ### Networking associations
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
+  Network          [supernet]          0..1 <-- SubNetworkAssociation --> *   [subnets]                Network
+      developer info: "A network can have many ."
+
+  RoutingFirewall  [routerFirewalls]      * <-- FirewallRule          --> *   [connectionRules]        Connection
+      developer info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
-      developer info: "An application can communicate / be exposed on a network. But this is not mandatory to be modeled (at least for now)."  
-  Application      [netclients]           * <-- ApplicationConnection --> *   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised after effort, connection should be always possible (e.g client side attack)
-      developer info: "An application can communicate directly to another application. This could be useful for auto modeling."  
-  Application      [application]          * <-- ApplicationConnection --> *   [connection]             Connection //The connection asset is just the dataflow renamed
-      developer info: "But also, an application can communicate over one or more (mesh type) connections."  
-  //Network          [network]              * <-- NetworkConnection     --> *   [systems]                Connection // Is this needed? No, but this is just an assumption!
+      developer info: "An application can communicate / be exposed on a network."
+  Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         Connection
+      developer info: "But also, an application can communicate over one or more (mesh type) connections."
+  Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         Connection
+      developer info: "Two or more networks can also be inter-connected via a connection." 
   Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
-      developer info: "And a connection can have data in transit."  
-  Firewall         [firewall]             1 <-- Bridges               --> *   [networks]               Network
-      developer info: "A firewall is practicaly a router with firewall capabilities that connects many networks."
-  // We need to talk about those two:
-  Proxy            [proxy]                * <-- ProxyConnection       --> *   [networks]               Network
-  Proxy            [proxy]             0..1 <-- RelationTo            --> 1   [firewall]               Firewall
-  // Data related associations
+      developer info: "And a connection can have data in transit."
+
+  // A network zone is a set of network accessible applications
+  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
+  
+  //Application      [netclients]          * <-- ApplicationConnection --> *   [netapplication]         Application //This is a dataflow... If any side of the connection is compromised -> other side can be compromised after effort, connection should be always possible (e.g client side attack)
+  //    developer info: "An application can communicate directly to another application. This could be useful for auto modeling."
+  //Network          [network]             * <-- NetworkConnection     --> *   [connections]            Connection // Is this needed? No, but this is just an assumption!
+  
+  // We need to talk decide about this:
+  //Proxy            [proxy]                * <-- ProxyConnection       --> *   [networks]               Network
+  
+  // ### Data related associations
   //DataStore        [datastore]            1 <-- DataStoring           --> *   [datas]                  Data
   //    user info: "A datastore is responsible for storing data."
   Data             [containingData]       * <-- Containment           --> *   [containedData]          Data
@@ -270,7 +313,8 @@ associations {
       developer info: "An application should be able to contain some data."
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
-  // Access Control happens below
+  
+  // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
