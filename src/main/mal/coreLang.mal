@@ -201,22 +201,18 @@ category Networking {
       // iLOs are also reachable from here
       | physicalAccess {A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
-        ->  denialOfService,
-            //connect,
-            subnets*.physicalAccess
+        ->  denialOfService
 
       | access
-        user info: "Access provides connect to all reachable applications, even on all subnets."
+        user info: "Access provides connect to all reachable applications."
         ->  applications.networkConnect,
-            subnets*.applications.networkConnect,
             //netConnections.networks.access // This has the same effect as the line below! (or so I think)
             netConnections.routerFirewalls.forwarding,
             denialOfService
 
       | denialOfService {A}
-        user info: "If a DoS is performed it affects, the subnets, the applications communicatiing over the network as well as the connected application."
-        ->  subnets*.denialOfService,  
-            netConnections.denialOfService,
+        user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
+        ->  netConnections.denialOfService,
             applications.deny
     }
 
@@ -259,10 +255,8 @@ associations {
   // ### Networking associations
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
-  //Network          [supernet]          0..1 <-- SubNetworkAssociation --> *   [subnets]                Network
-  //    developer info: "A network can have many subnets."
 
-  RoutingFirewall  [routerFirewalls]      * <-- FirewallRule          --> *   [connectionRules]        Connection
+  RoutingFirewall  [routerFirewalls]      * <-- ConnectionRule          --> *   [connectionRules]        Connection
       developer info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       developer info: "An application can communicate / be exposed on a network.  A network zone is a set of network accessible applications."
