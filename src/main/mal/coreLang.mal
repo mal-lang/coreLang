@@ -10,9 +10,9 @@ category System {
     abstract asset Object
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
     {
-      & specificAccess
+      //& specificAccess
 
-      & fullAccess
+      //& fullAccess
 
       | useVulnerability
         ->  vulnerabilities.incoming
@@ -104,14 +104,14 @@ category System {
             // nonShellInstance.connect,
             executionPrivIds.assume
 
-      | read
+      | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services."
 
-      | modify
+      | modify {I}
         user info: "The attacker can modify some or all of this service's data."
 
-      | deny
+      | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this service."
 
     }
@@ -197,6 +197,10 @@ category Networking {
       developer info: "A network zone is a set of network accessible applications."
     {
 
+      let allowedNetworks =  (netConnections.routerFirewalls.connectionRules.networks /\ netConnections.networks) \/ (outgoingNetConnections.routerFirewalls.connectionRules.inNetworks /\ outgoingNetConnections.inNetworks)
+      let allowedApplications = (netConnections.routerFirewalls.connectionRules.applications /\ netConnections.applications) \/ (outgoingNetConnections.routerFirewalls.connectionRules.applications /\ outgoingNetConnections.applications)
+      let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
+
       // Physical access atack vector
       // iLOs are also reachable from here
       | physicalAccess {A}
@@ -206,32 +210,40 @@ category Networking {
       | access
         user info: "Access provides connect to all reachable applications."
         ->  applications.networkConnect,
-            //netConnections.networks.access // This has the same effect as the line below! (or so I think)
-            netConnections.routerFirewalls.forwarding,
+            //netConnections.networks.access // This has the same effect as the line below! (or so I think, update: I was thinking wrong!)
+            //netConnections.routerFirewalls.forwarding, // This was used initialy but it gave access everywhere so it was wrong.
+            networkForwarding,
             denialOfService
+
+      | networkForwarding
+        developer info: "By using the allowed connections, forwarding from one network to another can happen."
+          ->  allowedNetworks().access,
+              allowedApplications().networkConnect
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
-        ->  netConnections.denialOfService,
+        ->  allNetConnections().denialOfService,
             applications.deny
     }
 
     asset RoutingFirewall extends System 
       developer info: "A routing firewall specifies a router with firewall capabilities that connects many networks."
     {
-      | forwarding
-        // This should be the simplest interaction with a router/firwall, just forwarding the white listed connections to other networks.
-        ->  connectionRules.networks.access
-
+      
       | denialOfService {A}
         // This should cascade the DoS attack on the connected networks and connected connections.
         ->  connectionRules.denialOfService
 
+      & fullAccess {I, A}
+        developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed!"
+        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).access,
+            connectionRules.applications.networkConnect
+
     }
 
-    asset Connection extends Object {
+    asset Connection{
 
-      | intercept // Maybe this is not the correct name
+      | intercept {C} // Maybe this is not the correct name
         ->  data.access
 
       | transmitResponse
@@ -256,14 +268,18 @@ associations {
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
 
-  RoutingFirewall  [routerFirewalls]      * <-- ConnectionRule          --> *   [connectionRules]        Connection
+  RoutingFirewall  [routerFirewalls]      * <-- ConnectionRule        --> *   [connectionRules]        Connection
       developer info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       developer info: "An application can communicate / be exposed on a network.  A network zone is a set of network accessible applications."
   Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         Connection
-      developer info: "But also, an application can communicate over one or more (mesh type) connections."
+      developer info: "But also, an application can communicate over one or more (mesh type) bidirectional connections."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         Connection
-      developer info: "Two or more networks can also be inter-connected via a connection." 
+      developer info: "Two or more networks can also be inter-connected via a bidirectional connection."
+  Network          [outNetworks]          * <-- OutNetworkConnection --> *    [outgoingNetConnections] Connection
+      developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
+  Network          [inNetworks]           * <-- InNetworkConnection  --> *    [ingoingNetConnections]   Connection
+      developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
       developer info: "And a connection can have data in transit."
   //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested! 
