@@ -251,6 +251,7 @@ category Networking {
       | transmit
 
       | denialOfService {A}
+        ->  applications.deny
     }
 
     abstract asset Proxy extends Object {
