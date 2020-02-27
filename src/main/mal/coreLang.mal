@@ -24,7 +24,8 @@ category System {
       | connect
         user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
         ->  fullAccess,
-            specificAccess
+            specificAccess,
+            useVulnerability
 
       | allPrivilegeAuthenticate @hidden
         ->  fullAccess // This will provide access on all privileges connected with the system
@@ -61,17 +62,17 @@ category System {
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
-        ->  localAccess,
+        ->  networkAccess,
             extensionPoint.incoming // Connection to all possible vulnerabilities that might be connected to the Application
 
-      | accessNetwork // This should be renamed to be more clear.
+      | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
             appConnections.applications.networkConnect
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        -> networkAccess
+        -> networkConnect
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
@@ -95,25 +96,37 @@ category System {
             // shellInstance.connect
             appExecutedApps.access, // Gain access on all applications executed by this (host) application
             containedData.access,    // and access on all the contained data
-            accessNetwork   // and access the network(s) on which the app is connected
+            accessNetworkAndConnections   // and access the network(s) and connections on/to which the app is connected
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
         developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>)"
         ->  access,
             // nonShellInstance.connect,
-            executionPrivIds.assume
+            executionPrivIds.assume,
+            modify
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services."
+        ->  containedData.read
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data."
+        ->  containedData.access
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this service."
+        ->  containedData.delete
 
+    }
+
+    asset PhysicalZone
+      developer info: "A physical zone is the location where systems are physically deployed."
+    {
+      | gainPhysicalAccess
+        ->  systems.connect,
+            systems.physicalAccess
     }
 }
 
@@ -170,20 +183,16 @@ category IAM {
         user info: "The attacker is able to steal the credentials."
         -> identities.assume
     }
-
-    asset PhysicalZone
-      developer info: "A physical zone is the location where systems are physically deployed."
-    {
-      | gainPhysicalAccess
-        ->  systems.connect,
-            systems.physicalAccess
-    }
 }
 
 category User {
 
-    asset User 
+    asset User
     {
+        | phishUser [Exponential(0.001)]
+          user info: "The attacker can phish the user to gain access to his/her credentials."
+          ->  userIds.credentials.credentialTheft
+
         | compromise {C}
           ->  userIds.assume
     }
