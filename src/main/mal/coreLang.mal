@@ -161,8 +161,8 @@ category IAM {
           developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
           ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
-              execPrivApps.access,
-              highPrivApps.access,
+              execPrivApps.authenticate,
+              highPrivApps.authenticate,
               lowPrivApps.localConnect,
               readPrivData.read,
               writePrivData.write,
@@ -179,7 +179,7 @@ category IAM {
         user info: "The attacker is attempting to access the credentials."
         -> credentialTheft
 
-      | credentialTheft [Exponential(0.001)]
+      | credentialTheft [Exponential(0.01)]
         user info: "The attacker is able to steal the credentials."
         -> identities.assume
     }
@@ -189,7 +189,7 @@ category User {
 
     asset User
     {
-        | phishUser [Exponential(0.001)]
+        | phishUser
           user info: "The attacker can phish the user to gain access to his/her credentials."
           ->  userIds.credentials.credentialTheft
 
