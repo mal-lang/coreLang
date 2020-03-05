@@ -132,15 +132,29 @@ category System {
 
 category Communication {
 
-    asset Data {
+    abstract asset Information
+      user info: "Represents any type of information that might be contained inside Data."
+    {
+      | attemptAccess
+        user info: "The attacker is attempting to access the information."
+    }
+
+    asset Data
+      user info: "Any form of data that can be stored or transmitted."
+    {
         & access
           ->  read,
               write,
-              delete
+              delete,
+              credentialsExist
+
+        | credentialsExist [Exponential(0.1)]
+          ->  information.attemptAccess
 
         | read {C}
           user info: "The attacker can read the data."
-          ->  containedData.read
+          ->  containedData.read,
+              credentialsExist
 
         | write {I}
           user info: "The attacker can write to the location of the data, effectively deleting it."
@@ -155,7 +169,8 @@ category Communication {
 
 category IAM {
 
-    asset Identity 
+    asset Identity
+      developer info: "An identity can be visualised as a user group that can be associated with many credentials."
     {
         | assume {C,I,A}
           developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
@@ -169,7 +184,7 @@ category IAM {
               deletePrivData.delete
     }
 
-    asset Credentials
+    asset Credentials extends Information
     {
       | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
@@ -177,9 +192,9 @@ category IAM {
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
-        -> credentialTheft
+        -> use
 
-      | credentialTheft [Exponential(0.01)]
+      | credentialTheft
         user info: "The attacker is able to steal the credentials."
         -> identities.assume
     }
@@ -189,7 +204,10 @@ category User {
 
     asset User
     {
-        | phishUser
+        | attemptSocialEngineering
+          ->  phishUser
+
+        | phishUser [Exponential(0.01)]
           user info: "The attacker can phish the user to gain access to his/her credentials."
           ->  userIds.credentials.credentialTheft
 
@@ -295,12 +313,14 @@ associations {
   //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested! 
  
   // ### Data related associations
-  Data             [containingData]       * <-- Containment           --> *   [containedData]          Data
+  Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
   Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
       developer info: "An application should be able to contain some data."
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
+  Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
+      user info: "Data can contain information, as for example credentials."
   
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
