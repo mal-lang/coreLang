@@ -14,7 +14,7 @@ category System {
 
       //& fullAccess
 
-      | useVulnerability
+      | attemptUseVulnerability
         ->  vulnerabilities.incoming
     }
 
@@ -25,7 +25,7 @@ category System {
         user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
         ->  fullAccess,
             specificAccess,
-            useVulnerability
+            attemptUseVulnerability
 
       | allPrivilegeAuthenticate @hidden
         ->  fullAccess // This will provide access on all privileges connected with the system
@@ -57,13 +57,31 @@ category System {
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
-            extensionPoint.incoming, // Connection to all possible vulnerabilities that might be connected to the Application
-            appExecutedApps.localConnect // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+            connectLocalInteraction,
+            attemptUseVulnerability//, // Connection to all possible vulnerabilities that might be connected to the Application
+            //appExecutedApps.localConnect // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+
+      | connectLocalInteraction @hidden
+        developer info: "This intermediate step is used to represent that at least one type of connect has happened before being able to interact locally."
+        ->  localInteraction
+
+      | identityLocalInteraction @hidden
+        developer info: "This intermediate step is needed because if no LowApplicationPrivileges Identity is associated then localInteraction would be instantly compromised after connect"
+        ->  localInteraction
+
+      & localInteraction
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
+        ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+            attemptUseVulnerability   // Connection to all possible vulnerabilities that might be connected to the Application
+
+      | attemptUseVulnerability
+        ->  extensionPoint.incoming
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
-            extensionPoint.incoming // Connection to all possible vulnerabilities that might be connected to the Application
+            connectLocalInteraction,
+            attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
@@ -95,8 +113,9 @@ category System {
             deny,
             // shellInstance.connect
             appExecutedApps.access, // Gain access on all applications executed by this (host) application
-            containedData.access,    // and access on all the contained data
-            accessNetworkAndConnections   // and access the network(s) and connections on/to which the app is connected
+            containedData.access,   // and access on all the contained data
+            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
+            hostApp.localConnect    // and localConnect on the host application
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
@@ -178,7 +197,7 @@ category IAM {
               highPrivManagedSystems.allPrivilegeAuthenticate,
               execPrivApps.authenticate,
               highPrivApps.authenticate,
-              lowPrivApps.localConnect,
+              lowPrivApps.identityLocalInteraction,
               readPrivData.read,
               writePrivData.write,
               deletePrivData.delete
@@ -205,11 +224,21 @@ category User {
     asset User
     {
         | attemptSocialEngineering
+          user info: "An attacker can try to perform social engineering techiniques such as phishing."
+          developer info: "In the future, other social engineering techiniques should be connected to this attack step."
           ->  phishUser
 
-        | phishUser [Exponential(0.01)]
-          user info: "The attacker can phish the user to gain access to his/her credentials."
+        | attemptCredentialTheft [Exponential(0.01)]
           ->  userIds.credentials.credentialTheft
+
+        | attemptReverseTakeover [Exponential(0.01)]
+          user info: "After a sucessfull social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
+          ->  userIds.execPrivApps.networkConnect
+
+        | phishUser
+          user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
+          ->  attemptCredentialTheft,
+              attemptReverseTakeover
 
         | compromise {C}
           ->  userIds.assume
@@ -306,7 +335,7 @@ associations {
       developer info: "Two or more networks can also be inter-connected via a bidirectional connection."
   Network          [outNetworks]          * <-- OutNetworkConnection --> *    [outgoingNetConnections] Connection
       developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
-  Network          [inNetworks]           * <-- InNetworkConnection  --> *    [ingoingNetConnections]   Connection
+  Network          [inNetworks]           * <-- InNetworkConnection  --> *    [ingoingNetConnections]  Connection
       developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
       developer info: "And a connection can have data in transit."
