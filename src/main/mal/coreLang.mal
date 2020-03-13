@@ -10,10 +10,6 @@ category System {
     abstract asset Object
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
     {
-      //& specificAccess
-
-      //& fullAccess
-
       | attemptUseVulnerability
         ->  vulnerabilities.incoming
     }
@@ -28,19 +24,21 @@ category System {
             attemptUseVulnerability
 
       | allPrivilegeAuthenticate @hidden
-        ->  fullAccess // This will provide access on all privileges connected with the system
+        ->  fullAccess
 
       | individualPrivilegeAuthenticate @hidden
         ->  specificAccess
 
       & fullAccess {C,I,A}
+        user info: "Full access on a system allows the compromise or legitimate access on everything/all the privillges of the system: identities, applications, data, etc."
         ->  sysExecutedApps.access,
             highPrivSysIds.assume,
             lowPrivSysIds.assume,
-            sysData.access
+            sysData.attemptAccess
 
       & specificAccess
-        ->  sysExecutedApps.localConnect // I do not know what more we need here...
+        user info: "Specific access only allows the local connection (through localhost) to the hosted applications."
+        ->  sysExecutedApps.localConnect
 
       | physicalAccess
         user info: "Attacker has physical access on the location where the system is physically deployed."
@@ -58,8 +56,7 @@ category System {
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             connectLocalInteraction,
-            attemptUseVulnerability//, // Connection to all possible vulnerabilities that might be connected to the Application
-            //appExecutedApps.localConnect // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+            attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | connectLocalInteraction @hidden
         developer info: "This intermediate step is used to represent that at least one type of connect has happened before being able to interact locally."
@@ -75,6 +72,7 @@ category System {
             attemptUseVulnerability   // Connection to all possible vulnerabilities that might be connected to the Application
 
       | attemptUseVulnerability
+        user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
         ->  extensionPoint.incoming
 
       | networkConnect
@@ -111,9 +109,8 @@ category System {
         ->  read,
             modify,
             deny,
-            // shellInstance.connect
             appExecutedApps.access, // Gain access on all applications executed by this (host) application
-            containedData.access,   // and access on all the contained data
+            containedData.attemptAccess,   // and access on all the contained data
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect    // and localConnect on the host application
 
@@ -121,22 +118,21 @@ category System {
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
         developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>)"
         ->  access,
-            // nonShellInstance.connect,
             executionPrivIds.assume,
             modify
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services."
-        ->  containedData.read
+        ->  containedData.attemptRead
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data."
-        ->  containedData.access
+        ->  containedData.attemptAccess
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this service."
-        ->  containedData.delete
+        ->  containedData.attemptDelete
 
     }
 
@@ -161,26 +157,51 @@ category Communication {
     asset Data
       user info: "Any form of data that can be stored or transmitted."
     {
-        & access
-          ->  read,
-              write,
-              delete,
-              credentialsExist
+        | attemptAccess
+          suer info: "Attempt to access the data, this might fail if the dataNotExist defense is used."
+          ->  access
 
-        | credentialsExist [Exponential(0.1)]
+        & access
+          ->  attemptRead,
+              attemptWrite,
+              attemptDelete
+
+        // Not yet implemented to keep compatibility with current models
+        // # dataNotExist
+        //   user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
+        //   -> access,
+        //      readContainedInformation,
+        //      read,
+        //      write,
+        //      delete
+
+        & readContainedInformation
+          user info: "From the data, attempt to access also the contained information, if exists."
           ->  information.attemptAccess
 
-        | read {C}
+        | attemptRead
+          user info: "Attempt to read the data."
+          ->  read
+
+        | attemptWrite
+          user info: "Attempt to write on the data."
+          ->  write
+
+        | attemptDelete
+           user info: "Attempt to delete the data."
+          -> delete
+
+        & read {C}
           user info: "The attacker can read the data."
           ->  containedData.read,
-              credentialsExist
+              readContainedInformation
 
-        | write {I}
+        & write {I}
           user info: "The attacker can write to the location of the data, effectively deleting it."
           ->  containedData.write,
               delete
 
-        | delete {I,A}
+        & delete {I,A}
           user info: "The attacker can delete the data."
           ->  containedData.delete
     }
@@ -198,9 +219,9 @@ category IAM {
               execPrivApps.authenticate,
               highPrivApps.authenticate,
               lowPrivApps.identityLocalInteraction,
-              readPrivData.read,
-              writePrivData.write,
-              deletePrivData.delete
+              readPrivData.attemptRead,
+              writePrivData.attemptWrite,
+              deletePrivData.attemptDelete
     }
 
     asset Credentials extends Information
@@ -257,8 +278,6 @@ category Networking {
       let allowedApplications = (netConnections.routerFirewalls.connectionRules.applications /\ netConnections.applications) \/ (outgoingNetConnections.routerFirewalls.connectionRules.applications /\ outgoingNetConnections.applications)
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
 
-      // Physical access atack vector
-      // iLOs are also reachable from here
       | physicalAccess {A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
         ->  denialOfService
@@ -266,8 +285,6 @@ category Networking {
       | access
         user info: "Access provides connect to all reachable applications."
         ->  applications.networkConnect,
-            //netConnections.networks.access // This has the same effect as the line below! (or so I think, update: I was thinking wrong!)
-            //netConnections.routerFirewalls.forwarding, // This was used initialy but it gave access everywhere so it was wrong.
             networkForwarding,
             denialOfService
 
@@ -287,7 +304,7 @@ category Networking {
     {
       
       | denialOfService {A}
-        // This should cascade the DoS attack on the connected networks and connected connections.
+       user info: "A DoS attack should cascade on the connected networks and associated connections"
         ->  connectionRules.denialOfService
 
       & fullAccess {I, A}
@@ -299,8 +316,8 @@ category Networking {
 
     asset Connection{
 
-      | intercept {C} // Maybe this is not the correct name
-        ->  data.access
+      | intercept {C}
+        ->  data.attemptAccess
 
       | transmitResponse
 
@@ -310,8 +327,8 @@ category Networking {
         ->  applications.deny
     }
 
-    abstract asset Proxy extends Object {
-    }
+    // abstract asset Proxy extends Object {
+    // }
 
 }
 
@@ -320,7 +337,6 @@ associations {
       developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
- 
   // ### Networking associations
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
@@ -339,8 +355,7 @@ associations {
       developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
       developer info: "And a connection can have data in transit."
-  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested! 
- 
+  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
@@ -349,8 +364,7 @@ associations {
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
-      user info: "Data can contain information, as for example credentials."
-  
+      user info: "Data can contain information, as for example credentials." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
