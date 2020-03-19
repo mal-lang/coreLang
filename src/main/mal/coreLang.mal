@@ -11,7 +11,7 @@ category System {
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
     {
       | attemptUseVulnerability
-        ->  vulnerabilities.incoming
+        ->  objvulnerabilities.incoming
     }
 
     asset System extends Object 
@@ -56,7 +56,8 @@ category System {
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             connectLocalInteraction,
-            attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
+            attemptUseVulnerability, // Connection to all possible (manual) vulnerabilities that might be connected to the Application
+            vulnerabilities.attemptLocalConnectVuln // And connection to all automatically modeled vulnerabilities
 
       | connectLocalInteraction @hidden
         developer info: "This intermediate step is used to represent that at least one type of connect has happened before being able to interact locally."
@@ -73,12 +74,13 @@ category System {
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
-        ->  extensionPoint.incoming
+        ->  vulnerabilities.incoming
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
             connectLocalInteraction,
+            networkRequestConnect,
             attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | accessNetworkAndConnections
@@ -88,10 +90,11 @@ category System {
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        -> networkConnect
+        ->  vulnerabilities.attemptNetworkRequestConnectVuln
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
+        ->  vulnerabilities.attemptNetworkRespondConnectVuln
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
@@ -145,7 +148,7 @@ category System {
     }
 }
 
-category Communication {
+category DataResources {
 
     abstract asset Information
       user info: "Represents any type of information that might be contained inside Data."
