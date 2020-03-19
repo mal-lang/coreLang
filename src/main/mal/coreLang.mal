@@ -169,14 +169,13 @@ category DataResources {
               attemptWrite,
               attemptDelete
 
-        // Not yet implemented to keep compatibility with current models
-        // # dataNotExist
-        //   user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
-        //   -> access,
-        //      readContainedInformation,
-        //      read,
-        //      write,
-        //      delete
+        # dataNotExist
+          user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
+          -> access,
+             readContainedInformation,
+             read,
+             write,
+             delete
 
         & readContainedInformation
           user info: "From the data, attempt to access also the contained information, if exists."
@@ -196,17 +195,17 @@ category DataResources {
 
         & read {C}
           user info: "The attacker can read the data."
-          ->  containedData.read,
+          ->  containedData.attemptRead,
               readContainedInformation
 
         & write {I}
           user info: "The attacker can write to the location of the data, effectively deleting it."
-          ->  containedData.write,
+          ->  containedData.attemptWrite,
               delete
 
         & delete {I,A}
           user info: "The attacker can delete the data."
-          ->  containedData.delete
+          ->  containedData.attemptDelete
     }
 }
 
