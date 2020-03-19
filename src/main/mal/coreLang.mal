@@ -169,13 +169,24 @@ category DataResources {
               attemptWrite,
               attemptDelete
 
+        # dataEncrypted
+          user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
+          ->  decryptData
+
+        | decryptData
+          ->  access,
+              readContainedInformation,
+              read,
+              write,
+              delete
+
         # dataNotExist
           user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
-          -> access,
-             readContainedInformation,
-             read,
-             write,
-             delete
+          ->  access,
+              readContainedInformation,
+              read,
+              write,
+              delete
 
         & readContainedInformation
           user info: "From the data, attempt to access also the contained information, if exists."
@@ -230,7 +241,8 @@ category IAM {
     {
       | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
-        ->  identities.assume
+        ->  identities.assume,
+            encryptedData.decryptData
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
@@ -238,7 +250,7 @@ category IAM {
 
       | credentialTheft
         user info: "The attacker is able to steal the credentials."
-        -> identities.assume
+        -> use
     }
 }
 
@@ -367,6 +379,8 @@ associations {
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials." 
+  Data             [encryptedData]     0..1 <-- EncryptionCredentials --> *   [encryptCreds]           Credentials
+      user info: "Encrypted data can be associated with the relevant encryption credentials." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
