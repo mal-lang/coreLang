@@ -70,10 +70,11 @@ category System {
       & localInteraction
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
-            attemptUseVulnerability   // Connection to all possible vulnerabilities that might be connected to the Application
+            attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
+            vulnerabilities.attemptLocalConnectVuln // And connection to all automatically modeled vulnerabilities
 
       | attemptUseVulnerability
-        user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        user info: "Attempt to use the connected 'manual' vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
         ->  vulnerabilities.incoming
 
       | networkConnect

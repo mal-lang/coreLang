@@ -25,7 +25,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.6.0-M1</version>
+      <version>5.6.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -111,12 +111,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M3</version>
+        <version>3.0.0-M4</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.1.2</version>
+        <version>3.2.0</version>
         <configuration>
           <skipIfEmpty>true</skipIfEmpty>
           <archive>
@@ -127,20 +127,8 @@
       <plugin>
         <groupId>com.allogy.maven.wagon</groupId>
         <artifactId>maven-s3-wagon</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0</version>
         <extensions>true</extensions>
-        <dependencies>
-          <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
-          </dependency>
-          <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>2.3.2</version>
-          </dependency>
-        </dependencies>
       </plugin>
     </plugins>
   </build>
@@ -148,7 +136,6 @@
   <profiles>
     <profile>
       <id>securiCAD</id>
-
       <dependencies>
         <dependency>
           <groupId>com.foreseeti</groupId>
@@ -161,7 +148,6 @@
           <version>${simulator.version}</version>
         </dependency>
       </dependencies>
-
       <build>
         <plugins>
           <plugin>
