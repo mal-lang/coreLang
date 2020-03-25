@@ -225,6 +225,16 @@ category IAM {
     asset Identity
       developer info: "An identity can be visualised as a user group that can be associated with many credentials."
     {
+        # twoFactorAuthentication
+          user info: "Two Factor Authentication (2FA). This defense, if enabled, should block all atempts to assume identity illegitimately."
+          ->  sucessfullAssume
+
+        | attemptAssume
+          ->  sucessfullAssume
+
+        & sucessfullAssume @hidden
+          ->  assume
+
         | assume {C,I,A}
           developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
           ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
@@ -241,8 +251,9 @@ category IAM {
     {
       | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
-        ->  identities.assume,
-            encryptedData.decryptData
+        ->  identities.attemptAssume,
+            encryptedData.decryptData,
+            identities.users.steal2FAtoken
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
@@ -257,13 +268,16 @@ category IAM {
 category User {
 
     asset User
+      user info: "This asset represents the user himself. It is the suitable attack surface for social engineering attacks!"
     {
         | attemptSocialEngineering
           user info: "An attacker can try to perform social engineering techiniques such as phishing."
           developer info: "In the future, other social engineering techiniques should be connected to this attack step."
-          ->  phishUser
+          ->  phishUser,
+              steal2FAtoken
 
         | attemptCredentialTheft [Exponential(0.01)]
+          user info: "Trick the user to provide his/her credentials."
           ->  userIds.credentials.credentialTheft
 
         | attemptReverseTakeover [Exponential(0.01)]
@@ -275,8 +289,12 @@ category User {
           ->  attemptCredentialTheft,
               attemptReverseTakeover
 
-        | compromise {C}
+        & steal2FAtoken [Exponential(0.05)]
+          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
           ->  userIds.assume
+
+        | compromise {C}
+          ->  userIds.attemptAssume
     }
 }
 
