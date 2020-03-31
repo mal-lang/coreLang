@@ -16,7 +16,7 @@ category System {
       | deny {A}
         user info: "The attacker can deny some or all functionality of an object."
 
-      & attemptBypassAccessControl @hidden {C, I}
+      | attemptBypassAccessControl @hidden {C, I}
         user info: "The attacker can bypass the access control and gain full access after a vulnerability is abused."
     }
 
@@ -27,8 +27,7 @@ category System {
         user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
         ->  attemptGainFullAccess,
             specificAccess,
-            attemptUseVulnerability,
-            attemptBypassAccessControl
+            attemptUseVulnerability
 
       | allPrivilegeAuthenticate @hidden
         ->  attemptGainFullAccess
@@ -59,7 +58,7 @@ category System {
       | deny {A}
         ->  sysExecutedApps.deny
 
-      & attemptBypassAccessControl @hidden {C, I}
+      | attemptBypassAccessControl @hidden {C, I}
         user info: "The attacker can bypass the access control and gain full access after being able to connect to the system and a vulnerability is abused."
         ->  fullAccess
     }
