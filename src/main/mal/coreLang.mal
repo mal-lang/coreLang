@@ -95,7 +95,6 @@ category System {
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
             connectLocalInteraction,
-            networkRequestConnect,
             attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | accessNetworkAndConnections
@@ -107,11 +106,13 @@ category System {
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        ->  vulnerabilities.attemptNetworkRequestConnectVuln
+        ->  vulnerabilities.attemptNetworkRequestConnectVuln,
+            networkConnect
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
-        ->  vulnerabilities.attemptNetworkRespondConnectVuln
+        ->  vulnerabilities.attemptNetworkRespondConnectVuln,
+            networkConnect
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
