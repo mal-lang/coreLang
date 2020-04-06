@@ -1,0 +1,16 @@
+                             ------------
+                             Introduction
+                             ------------
+
+~~ For information about the APT format, see https://maven.apache.org/doxia/references/apt-format.html
+
+coreLang
+
+  coreLang is a probabilistic modeling and simulation language for
+  the abstract domain of IT. More specifically, it is a domain
+  specific language (DSL) created with
+  {{{https://mal-lang.org/}MAL (the Meta Attack Language)}}.
+
+* Usage
+
+  Not yet written.

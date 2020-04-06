@@ -8,9 +8,35 @@
   <packaging>jar</packaging>
 
   <name>coreLang</name>
+  <description>coreLang is a probabilistic modeling and simulation language for the abstract domain of IT. More specifically, it is a domain specific language (DSL) created with MAL (the Meta Attack Language).</description>
+  <url>https://mal-lang.org/coreLang/</url>
+  <inceptionYear>2019</inceptionYear>
+  <organization>
+    <name>mal-lang</name>
+    <url>https://mal-lang.org/</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>manual</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git://github.com/mal-lang/coreLang.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/mal-lang/coreLang.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://github.com/mal-lang/coreLang</url>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/mal-lang/coreLang/issues</url>
+  </issueManagement>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.install.skip>true</maven.install.skip>
     <malcompiler.version>0.1.0-SNAPSHOT</malcompiler.version>
     <kernelcad.version>1.6.2-SNAPSHOT</kernelcad.version>
@@ -25,7 +51,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.6.0</version>
+      <version>5.6.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -106,6 +132,8 @@
           <release>11</release>
           <showWarnings>true</showWarnings>
           <showDeprecation>true</showDeprecation>
+          <source>11</source>
+          <target>11</target>
         </configuration>
       </plugin>
       <plugin>
@@ -125,6 +153,11 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.9.0</version>
+      </plugin>
+      <plugin>
         <groupId>com.allogy.maven.wagon</groupId>
         <artifactId>maven-s3-wagon</artifactId>
         <version>1.2.0</version>
@@ -132,6 +165,27 @@
       </plugin>
     </plugins>
   </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>3.0.0</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>summary</report>
+              <report>dependency-info</report>
+              <report>scm</report>
+              <report>issue-management</report>
+              <report>licenses</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
 
   <profiles>
     <profile>

@@ -1,0 +1,100 @@
+                             ------------
+                             Contributors
+                             ------------
+
+~~ For information about the APT format, see https://maven.apache.org/doxia/references/apt-format.html
+~~ For information about the VTL format, see https://velocity.apache.org/engine/1.7/user-guide.html
+
+#set($contributors = {
+  "organizations": {
+    "kth": {
+      "name": "KTH Royal Institute of Technology",
+      "url": "https://www.kth.se/",
+      "individualCopyright": true,
+      "members": [
+        {
+          "name": "Mathias Ekstedt",
+          "url": "https://www.kth.se/profile/mekstedt",
+          "email": "mekstedt@kth.se"
+        },
+        {
+          "name": "Simon Hacks",
+          "url": "https://www.kth.se/profile/shacks",
+          "email": "shacks@kth.se"
+        },
+        {
+          "name": "Sotirios Katsikeas",
+          "url": "https://www.kth.se/profile/sotkat",
+          "email": "sotkat@kth.se"
+        },
+        {
+          "name": "Robert Lagerström",
+          "url": "https://www.kth.se/profile/robertl",
+          "email": "robertl@kth.se"
+        }
+      ]
+    },
+    "foreseeti": {
+      "name": "Foreseeti AB",
+      "url": "https://www.foreseeti.com/",
+      "individualCopyright": false,
+      "members": [
+        {
+          "name": "Per Eliasson",
+          "url": "https://github.com/pdeliasson",
+          "email": "per.eliasson@foreseeti.com"
+        },
+        {
+          "name": "Joar Jacobsson",
+          "url": "https://github.com/joarjox",
+          "email": "joar.jacobsson@foreseeti.com"
+        },
+        {
+          "name": "Erik Ringdahl",
+          "url": "https://github.com/eringdahl",
+          "email": "erik.ringdahl@foreseeti.com"
+        },
+        {
+          "name": "Max Wällstedt",
+          "url": "https://github.com/maxwalls",
+          "email": "max.wallstedt@foreseeti.com"
+        }
+      ]
+    }
+  }
+})
+
+Contributors
+
+  coreLang has contributors from
+  {{{$contributors["organizations"]["kth"]["url"]}$contributors["organizations"]["kth"]["name"]}}
+  and
+  {{{$contributors["organizations"]["foreseeti"]["url"]}$contributors["organizations"]["foreseeti"]["name"]}}
+  .
+
+  The copyright of coreLang is owned by <<coreLang contributors>>,
+  which is defined as:
+#foreach ($o in $contributors["organizations"].values())
+#if ($o["individualCopyright"])
+#foreach ($m in $o["members"])
+
+      * {{{$m["url"]}$m["name"]}}
+#end
+#else
+
+      * {{{$o["url"]}$o["name"]}}
+#end
+#end
+
+#foreach ($o in $contributors["organizations"].values())
+
+* $o["name"]
+
+*--*--*--*
+ <<Name>> | <<Email>> | <<Organization>>
+#foreach ($m in $o["members"])
+*--*--*--*
+{{{$m["url"]}$m["name"]}} | {{{mailto:$m["email"]}$m["email"]}} | {{{$o["url"]}$o["name"]}}
+#end
+*--*--*--*
+#end

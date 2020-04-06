@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <skin>
+    <groupId>org.apache.maven.skins</groupId>
+    <artifactId>maven-fluido-skin</artifactId>
+    <version>1.8</version>
+  </skin>
+  <custom>
+    <fluidoSkin>
+      <sourceLineNumbersEnabled>true</sourceLineNumbersEnabled>
+      <gitHub>
+        <projectId>mal-lang/coreLang</projectId>
+        <ribbonOrientation>right</ribbonOrientation>
+      </gitHub>
+    </fluidoSkin>
+  </custom>
+  <bannerLeft>
+    <name>MAL</name>
+    <src>https://mal-lang.org/helmet.svg</src>
+    <href>https://mal-lang.org/</href>
+  </bannerLeft>
+  <publishDate position="right"/>
+  <version position="right"/>
+  <body>
+    <menu name="Overview">
+      <item name="Introduction" href="index.html"/>
+      <item name="Contributors" href="contributors.html"/>
+    </menu>
+    <menu ref="reports"/>
+    <breadcrumbs>
+      <item name="MAL" href="https://mal-lang.org/"/>
+      <item name="coreLang" href="https://mal-lang.org/coreLang/"/>
+    </breadcrumbs>
+    <footer><![CDATA[
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <p>
+          Copyright &copy; 2020 <a href="https://mal-lang.org/coreLang/contributors.html">coreLang contributors</a>, Licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.
+        </p>
+        <img alt="MAL logo" style="width: 3em; height: 3em;" src="https://mal-lang.org/helmet.svg"/>
+        <p>
+          This work, "MAL logo", is a derivative of "<a href="https://thenounproject.com/term/diving-helmet/2448842/">Diving Helmet</a>" by <a href="https://thenounproject.com/madexmadeicons/">Made x Made Icons</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+          <br/>
+          "MAL logo" is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> by <a href="https://www.foreseeti.com/">Foreseeti AB</a>.
+        </p>
+      </div>
+    ]]></footer>
+  </body>
+</project>

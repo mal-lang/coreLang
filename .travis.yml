@@ -1,0 +1,22 @@
+language: java
+os: linux
+dist: bionic
+jdk: openjdk11
+
+notifications:
+  email: false
+
+git:
+  depth: false
+  quiet: true
+
+install: skip
+script: scripts/build.sh
+
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  local_dir: target/site
+  on:
+    branch: master
