@@ -63,15 +63,24 @@ category System {
         ->  fullAccess
     }
 
+    asset SoftwareProduct
+      user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
+    {
+
+    }
+
     asset Application extends Object
       developer info: "An application specifies pretty much everything that is executed or can execute other applications."
     {
+      let allManualVulnerabilities = vulnerabilities[ManualVulnerability] \/ appSoftProduct.softProductVulnerabilities[ManualVulnerability]
+      let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities()
+
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             connectLocalInteraction,
             attemptUseVulnerability, // Connection to all possible (manual) vulnerabilities that might be connected to the Application
-            vulnerabilities.attemptLocalConnectVuln // And connection to all automatically modeled vulnerabilities
+            attemptLocalConnectVuln // And connection to automatically modeled vulnerabilities
 
       | connectLocalInteraction @hidden
         developer info: "This intermediate step is used to represent that at least one type of connect has happened before being able to interact locally."
@@ -85,11 +94,57 @@ category System {
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
-            vulnerabilities.attemptLocalConnectVuln // And connection to all automatically modeled vulnerabilities
+            attemptLocalConnectVuln // And connection to automatically modeled vulnerabilities
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected 'manual' vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
-        ->  vulnerabilities.attemptAbuse
+        ->  allManualVulnerabilities().attemptAbuse
+
+      | attemptLocalConnectVuln
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
+        -> allAutomaticVulnerabilities()[LLNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LLNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LLLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LLLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LLHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LLHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
+
+      | attemptNetworkRequestConnectVuln
+        -> allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
+
+      | attemptNetworkRespondConnectVuln
+        -> allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse,
+           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
@@ -106,12 +161,12 @@ category System {
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        ->  vulnerabilities.attemptNetworkRequestConnectVuln,
+        ->  attemptNetworkRequestConnectVuln,
             networkConnect
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
-        ->  vulnerabilities.attemptNetworkRespondConnectVuln,
+        ->  attemptNetworkRespondConnectVuln,
             networkConnect
 
       | authenticate
@@ -395,6 +450,8 @@ associations {
       developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
+  SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
+        developer info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
   // ### Networking associations
   PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
