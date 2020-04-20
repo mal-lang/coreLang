@@ -1,0 +1,40 @@
+category Vulnerability {
+
+  asset LowImpactVulnerability extends Vulnerability
+    user info: "A low impact vulnerability is assumed to have a low impact on confidentiality, integrity and availability of the vulnerable application."
+  {
+    | impact
+      -> lowImpact
+
+    | lowImpact @hidden [Bernoulli(0.5)]
+      -> application.read,
+         application.modify,
+         application.deny
+  }
+
+  asset HighImpactVulnerability extends Vulnerability
+    user info: "A high impact vulnerability is assumed to have a hight impact on the vulnerable application."
+  {
+    | impact
+      user info: "This exploit is assumed to grant the attacker full control of the vulnerable application's executing code."
+      -> application.codeExecution
+  }
+}
+
+category Exploit {
+
+  asset HighComplexityExploit extends Exploit
+    user info: "An exploit that has high exploitability complexity."
+  {
+    | attemptExploit [Exponential(0.01)]
+      -> vulnerability.impact
+  }
+
+  asset LowComplexityExploit extends Exploit
+    user info: "An exploit that has low exploitability complexity."
+  {
+    | attemptExploit [Exponential(1.0)]
+      -> vulnerability.impact
+  }
+
+}

@@ -1,13 +1,13 @@
 /*
  *  This stable version of the language was presented in the first coreLang paper.
- *  Date of stable version: 9 April 2020
+ *  Date of stable version: 21 April 2020
  */
 
 #id: "org.mal-lang.coreLang"
 #version: "0.0.1"
 
 include "coreVulnerability.mal"
-include "VulnerabilityManual.mal"
+include "vulnerabilitiy.mal"
 
 category System {
 
@@ -105,14 +105,6 @@ category System {
             appConnections.applications.networkConnect,
             appConnections.transmit,
             appConnections.transmitResponse
-      
-      | networkRequestConnect
-        user info: "The attacker has successfully sent a request to the application."
-        ->  networkConnect
-
-      | networkRespondConnect [Exponential(0.001)]
-        user info: "An attacker may be able to respond to requests submitted by an application."
-        ->  networkConnect
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
@@ -137,22 +129,22 @@ category System {
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
-        developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>)"
+        developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
         ->  access,
             executionPrivIds.assume,
             modify
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
-        developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services."
+        developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
         ->  containedData.attemptRead
 
       | modify {I}
-        user info: "The attacker can modify some or all of this service's data."
+        user info: "The attacker can modify some or all of this service's data. Adopted from awsLang."
         ->  containedData.attemptAccess
 
       | deny {A}
-        user info: "The attacker can deny some or all functionality and data pertaining to this service."
+        user info: "The attacker can deny some or all functionality and data pertaining to this service. Adopted from awsLang."
         ->  containedData.attemptDelete
 
     }
@@ -177,6 +169,7 @@ category DataResources {
 
     asset Data
       user info: "Any form of data that can be stored or transmitted."
+      developer info: "Adopted from awsLang."
     {
         | attemptAccess
           user info: "Attempt to access the data."
@@ -287,9 +280,7 @@ category User {
 }
 
 category Networking {
-    // If you have access to a network zone, you shall be able to connect (not log in) to any other service on the same network. (nmap scan) (Joar)
-    // If you have managed to log in to and use a proxy, transparent or not, you shall be able to access any service protected by that proxy. (Joar)
-
+    
     asset Network
       developer info: "A network zone is a set of network accessible applications."
     {
@@ -345,11 +336,13 @@ category Networking {
 
       | transmitResponse {I}
         user info: "By transmitting a response towards a network application/service a connection to the application can be achieved."
-        ->  applications.networkRespondConnect
+        developer info: "Adopted from awsLang."
+        ->  applications.networkConnect
 
       | transmit {I}
         user info: "By transmitting over a connection towards a network application a connection to the application can be achieved."
-        ->  applications.networkRequestConnect
+        developer info: "Adopted from awsLang."
+        ->  applications.networkConnect
 
       | denialOfService {A}
         ->  applications.deny
@@ -393,19 +386,19 @@ associations {
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
-  Identity         [highPrivSysIds]       * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
-      user info: "High access privileges on a System result in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
-      user info: "Low access privileges on a System provide individual identity access on the system."
+  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess  --> *   [highPrivManagedSystems]  System
+      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
+  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess   --> *   [lowPrivManagedSystems]   System
+      user info: "Low privilege access on a System provides individual identity access on the system."
   // Then, Access Control on application level
-  Identity         [executionPrivIds]     * <-- ExecutionPrivileges   --> *   [execPrivApps]           Application
+  Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
-  Identity         [highPrivAppIds]       * <-- HighApplicationPrivileges --> * [highPrivApps]         Application
-      user info: "High application privileges on an Application result in the compromise of all the child applications."
-  Identity         [lowPrivAppIds]        * <-- LowApplicationPrivileges  --> * [lowPrivApps]          Application
-      user info: "Low application privileges on an Application allow only the local interaction with the application."
+  Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+      user info: "High privilege application access on an Application results in the compromise of all the child applications."
+  Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+      user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
-  Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
-  Identity         [writingIds]           *   <-- WritePrivileges     --> *   [writePrivData]          Data
-  Identity         [deletingIds]          *   <-- DeletePrivileges    --> *   [deletePrivData]         Data
+  Identity         [readingIds]         *   <-- ReadPrivileges      --> *     [readPrivData]           Data
+  Identity         [writingIds]         *   <-- WritePrivileges     --> *     [writePrivData]          Data
+  Identity         [deletingIds]        *   <-- DeletePrivileges    --> *     [deletePrivData]         Data
 }
