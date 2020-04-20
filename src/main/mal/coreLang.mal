@@ -65,6 +65,7 @@ category System {
 
     asset SoftwareProduct
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
+      developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
 
     }
@@ -72,8 +73,9 @@ category System {
     asset Application extends Object
       developer info: "An application specifies pretty much everything that is executed or can execute other applications."
     {
-      let allManualVulnerabilities = vulnerabilities[ManualVulnerability] \/ appSoftProduct.softProductVulnerabilities[ManualVulnerability]
-      let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities()
+      let allManualVulnerabilities = vulnerabilities[ManuallyModeledVulnerability] \/ appSoftProduct.softProductVulnerabilities[ManuallyModeledVulnerability]
+      let allUnknownVulnerabilities = vulnerabilities[UnknownVulnerability] \/ appSoftProduct.softProductVulnerabilities[UnknownVulnerability]
+      let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities() - allUnknownVulnerabilities()
 
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
@@ -102,6 +104,7 @@ category System {
 
       | attemptLocalConnectVuln
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
+        developer info: "Adopted from awsLang."
         -> allAutomaticVulnerabilities()[LLNNVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[LLNRVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[LLLNVulnerability].attemptAbuse,
@@ -113,10 +116,10 @@ category System {
            allAutomaticVulnerabilities()[LHLNVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[LHLRVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[LHHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
+           allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse
 
-      | attemptNetworkRequestConnectVuln
+      | attemptNetworkRequestRespondConnectVuln
+        developer info: "Adopted from awsLang."
         -> allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
@@ -128,23 +131,7 @@ category System {
            allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
            allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
-
-      | attemptNetworkRespondConnectVuln
-        -> allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[UnknownVulnerability].attemptAbuse
+           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
@@ -161,12 +148,14 @@ category System {
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
-        ->  attemptNetworkRequestConnectVuln,
+        developer info: "Adopted from awsLang."
+        ->  attemptNetworkRequestRespondConnectVuln,
             networkConnect
 
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
-        ->  attemptNetworkRespondConnectVuln,
+        developer info: "Adopted from awsLang."
+        ->  attemptNetworkRequestRespondConnectVuln,
             networkConnect
 
       | authenticate
@@ -192,22 +181,22 @@ category System {
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
-        developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>)"
+        developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
         ->  access,
             executionPrivIds.assume,
             modify
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
-        developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services."
+        developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
         ->  containedData.attemptRead
 
       | modify {I}
-        user info: "The attacker can modify some or all of this service's data."
+        user info: "The attacker can modify some or all of this service's data. Adopted from awsLang."
         ->  containedData.attemptAccess
 
       | deny {A}
-        user info: "The attacker can deny some or all functionality and data pertaining to this service."
+        user info: "The attacker can deny some or all functionality and data pertaining to this service. Adopted from awsLang."
         ->  containedData.attemptDelete
 
     }
@@ -232,6 +221,7 @@ category DataResources {
 
     asset Data
       user info: "Any form of data that can be stored or transmitted."
+      developer info: "Adopted from awsLang."
     {
         | attemptAccess
           user info: "Attempt to access the data, this might fail if the dataNotExist defense is used."
@@ -326,7 +316,7 @@ category IAM {
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.decryptData,
-            identities.users.steal2FAtoken
+            identities.users.attemptSteal2FAtoken
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
@@ -361,6 +351,10 @@ category User {
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
           ->  attemptCredentialTheft,
               attemptReverseTakeover
+
+        | attemptSteal2FAtoken @hidden
+          developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model."
+          ->  steal2FAtoken
 
         & steal2FAtoken [Exponential(0.05)]
           user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
@@ -430,10 +424,12 @@ category Networking {
 
       | transmitResponse {I}
         user info: "By transmitting a response towards a network application/service a connection to the application can be achieved."
+        developer info: "Adopted from awsLang."
         ->  applications.networkRespondConnect
 
       | transmit {I}
         user info: "By transmitting over a connection towards a network application a connection to the application can be achieved."
+        developer info: "Adopted from awsLang."
         ->  applications.networkRequestConnect
 
       | denialOfService {A}
@@ -486,18 +482,17 @@ associations {
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   // First on system level
-  Identity         [highPrivSysIds]       * <-- HighAccessPrivileges  --> *   [highPrivManagedSystems] System
-      user info: "High access privileges on a System result in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowAccessPrivileges   --> *   [lowPrivManagedSystems]  System
-      user info: "Low access privileges on a System provide individual identity access on the system."
+  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess  --> *   [highPrivManagedSystems]  System
+      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
+  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess   --> *   [lowPrivManagedSystems]   System
+      user info: "Low privilege access on a System provides individual identity access on the system."
   // Then, Access Control on application level
-  // Bad idea: have two types of identities, the specific one (associations are needed) and the "god mode" one (that does not need to be explicitly connected, you just get all the privs.) This is a problem with AD.
-  Identity         [executionPrivIds]     * <-- ExecutionPrivileges   --> *   [execPrivApps]           Application
+  Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
-  Identity         [highPrivAppIds]       * <-- HighApplicationPrivileges --> * [highPrivApps]         Application
-      user info: "High application privileges on an Application result in the compromise of all the child applications."
-  Identity         [lowPrivAppIds]        * <-- LowApplicationPrivileges  --> * [lowPrivApps]          Application
-      user info: "Low application privileges on an Application allow only the local interaction with the application."
+  Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+      user info: "High privilege application access on an Application results in the compromise of all the child applications."
+  Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+      user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
   Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
   Identity         [writingIds]           *   <-- WritePrivileges     --> *   [writePrivData]          Data
