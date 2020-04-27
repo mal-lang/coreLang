@@ -237,7 +237,7 @@ category DataResources {
 
         | decryptData
           ->  access,
-              readContainedInformation,
+              readContainedInformationAndData,
               read,
               write,
               delete
@@ -245,14 +245,15 @@ category DataResources {
         # dataNotExist
           user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
           ->  access,
-              readContainedInformation,
+              readContainedInformationAndData,
               read,
               write,
               delete
 
-        & readContainedInformation
-          user info: "From the data, attempt to access also the contained information, if exists."
-          ->  information.attemptAccess
+        & readContainedInformationAndData
+          user info: "From the data, attempt to access also the contained information/data, if exists."
+          ->  information.attemptAccess,
+              containedData.attemptAccess
 
         | attemptRead
           user info: "Attempt to read the data."
@@ -269,7 +270,7 @@ category DataResources {
         & read {C}
           user info: "The attacker can read the data."
           ->  containedData.attemptRead,
-              readContainedInformation
+              readContainedInformationAndData
 
         & write {I}
           user info: "The attacker can write to the location of the data, effectively deleting it."
@@ -338,7 +339,7 @@ category User {
           ->  phishUser,
               steal2FAtoken
 
-        | attemptCredentialTheft [Exponential(0.01)]
+        | attemptCredentialTheft [Exponential(0.02)]
           user info: "Trick the user to provide his/her credentials."
           ->  userIds.credentials.credentialTheft
 
@@ -355,7 +356,7 @@ category User {
           developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model."
           ->  steal2FAtoken
 
-        & steal2FAtoken [Exponential(0.05)]
+        & steal2FAtoken [Exponential(0.02)]
           user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
           ->  userIds.assume
 
