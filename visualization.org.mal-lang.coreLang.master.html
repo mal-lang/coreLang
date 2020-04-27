@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Visualization of org.mal-lang.coreLang</title>
+    <style>
+        .node circle {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        
+        .node rect {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        
+        .node text {
+            font: 10px sans-serif;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        
+        line.link {
+            fill: none;
+            stroke: #888;
+            stroke-width: 1.5px;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var width = 1260,
+            height = 1024,
+            color = d3.scale.category20c(),
+            root;
+
+        var force = d3.layout.force()
+            .linkDistance(80)
+            .charge(-80)
+            .gravity(.05)
+            .size([width, height])
+            .on("tick", tick);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        var link = svg.selectAll(".link"),
+            node = svg.selectAll(".node");
+
+        // build the arrow.
+        svg.append("svg:defs").selectAll("marker")
+            .data(["end"]) // Different link/path types can be defined here
+            .enter().append("svg:marker") // This section adds in the arrows
+            .attr("id", String)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 45)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5");
+
+        root = {"children":[{"name":"Vulnerability","children":[{"name":"userInteracts","type":"defense","targets":[]},{"name":"remove","type":"defense","targets":[{"name":"abuse","entity_name":"Vulnerability","size":4000}]},{"name":"attemptAbuse","type":"or","targets":[{"name":"abuse","entity_name":"Vulnerability","size":4000}]},{"name":"abuse","type":"and","targets":[{"name":"attemptExploit","entity_name":"Exploit","size":4000}]},{"name":"impact","type":"or","targets":[]}]},{"name":"UnknownVulnerability","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Vulnerability","size":4000},{"name":"requestForgery","entity_name":"UnknownVulnerability","size":4000},{"name":"codeExecution","entity_name":"UnknownVulnerability","size":4000},{"name":"objectAccess","entity_name":"UnknownVulnerability","size":4000},{"name":"modify","entity_name":"UnknownVulnerability","size":4000},{"name":"deny","entity_name":"UnknownVulnerability","size":4000},{"name":"read","entity_name":"UnknownVulnerability","size":4000}]},{"name":"requestForgery","type":"or","targets":[{"name":"transmit","entity_name":"Connection","size":4000},{"name":"transmitResponse","entity_name":"Connection","size":4000}]},{"name":"codeExecution","type":"or","targets":[{"name":"codeExecution","entity_name":"Application","size":4000}]},{"name":"objectAccess","type":"or","targets":[{"name":"attemptBypassAccessControl","entity_name":"Object","size":4000}]},{"name":"modify","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000}]},{"name":"deny","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Object","size":4000}]},{"name":"read","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"ManuallyModeledVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"Vulnerability","size":4000}]}]},{"name":"ManualLowImpactVulnerability","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Vulnerability","size":4000},{"name":"lowImpact","entity_name":"ManualLowImpactVulnerability","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"ManualHighImpactVulnerability","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Vulnerability","size":4000},{"name":"codeExecution","entity_name":"Application","size":4000}]}]},{"name":"AutomaticallyModeledVulnerability"},{"name":"AutomaticLowComplexityVulnerability","children":[{"name":"abuse","type":"and","targets":[{"name":"abuse","entity_name":"Vulnerability","size":4000},{"name":"attemptExploit","entity_name":"Exploit","size":4000}]}]},{"name":"AutomaticHighComplexityVulnerability","children":[{"name":"abuse","type":"and","targets":[{"name":"abuse","entity_name":"Vulnerability","size":4000},{"name":"attemptExploit","entity_name":"Exploit","size":4000}]}]},{"name":"LLNNVulnerability"},{"name":"LLNRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"LLLNVulnerability"},{"name":"LLLRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"LLHNVulnerability"},{"name":"LLHRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"NLNNVulnerability"},{"name":"NLNRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"NLLNVulnerability"},{"name":"NLLRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"NLHNVulnerability"},{"name":"NLHRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticLowComplexityVulnerability","size":4000}]}]},{"name":"LHNNVulnerability"},{"name":"LHNRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"LHLNVulnerability"},{"name":"LHLRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"LHHNVulnerability"},{"name":"LHHRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"NHNNVulnerability"},{"name":"NHNRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"NHLNVulnerability"},{"name":"NHLRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"NHHNVulnerability"},{"name":"NHHRVulnerability","children":[{"name":"userInteracts","type":"defense","targets":[{"name":"userInteracts","entity_name":"Vulnerability","size":4000},{"name":"abuse","entity_name":"AutomaticHighComplexityVulnerability","size":4000}]}]},{"name":"Exploit","children":[{"name":"attemptExploit","type":"or","targets":[{"name":"impact","entity_name":"Vulnerability","size":4000}]},{"name":"impact","type":"or","targets":[]}]},{"name":"UnknownExploit"},{"name":"ManualHighComplexityExploit","children":[{"name":"attemptExploit","type":"or","targets":[{"name":"attemptExploit","entity_name":"Exploit","size":4000},{"name":"impact","entity_name":"Vulnerability","size":4000}]}]},{"name":"ManualLowComplexityExploit","children":[{"name":"attemptExploit","type":"or","targets":[{"name":"attemptExploit","entity_name":"Exploit","size":4000},{"name":"impact","entity_name":"Vulnerability","size":4000}]}]},{"name":"AutomaticExploit","children":[{"name":"attemptExploit","type":"or","targets":[{"name":"attemptExploit","entity_name":"Exploit","size":4000},{"name":"impact","entity_name":"Exploit","size":4000}]}]},{"name":"HHHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"codeExecution","entity_name":"Application","size":4000}]}]},{"name":"HHLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"HHLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"HHNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"HLHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"HLHExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"HLLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"HLLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"HLNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"HLNExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"HNHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"HNLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"HNLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"HNNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"LHHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"LHHExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"LHLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"LHLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"LHNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"LHNExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"LLHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"LLHExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"LLLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"LLLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"LLNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"LLNExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"LNHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"LNHExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"LNLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"LNLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"LNNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"LNNExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000}]}]},{"name":"NHHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"NHLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"NHLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"NHNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"NLHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"lowImpact","entity_name":"NLHExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"NLLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"NLLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"NLNExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"NLNExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"modify","entity_name":"Application","size":4000}]}]},{"name":"NNHExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"NNLExploit","children":[{"name":"impact","type":"or","targets":[{"name":"impact","entity_name":"Exploit","size":4000},{"name":"lowImpact","entity_name":"NNLExploit","size":4000}]},{"name":"lowImpact","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"Object","children":[{"name":"attemptUseVulnerability","type":"or","targets":[{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000}]},{"name":"deny","type":"or","targets":[]},{"name":"attemptBypassAccessControl","type":"or","targets":[]}]},{"name":"System","children":[{"name":"connect","type":"or","targets":[{"name":"attemptGainFullAccess","entity_name":"System","size":4000},{"name":"specificAccess","entity_name":"System","size":4000},{"name":"attemptUseVulnerability","entity_name":"Object","size":4000}]},{"name":"allPrivilegeAuthenticate","type":"or","targets":[{"name":"attemptGainFullAccess","entity_name":"System","size":4000}]},{"name":"individualPrivilegeAuthenticate","type":"or","targets":[{"name":"specificAccess","entity_name":"System","size":4000}]},{"name":"attemptGainFullAccess","type":"and","targets":[{"name":"fullAccess","entity_name":"System","size":4000}]},{"name":"fullAccess","type":"or","targets":[{"name":"access","entity_name":"Application","size":4000},{"name":"assume","entity_name":"Identity","size":4000},{"name":"assume","entity_name":"Identity","size":4000},{"name":"attemptAccess","entity_name":"Data","size":4000}]},{"name":"specificAccess","type":"and","targets":[{"name":"localConnect","entity_name":"Application","size":4000}]},{"name":"physicalAccess","type":"or","targets":[{"name":"deny","entity_name":"System","size":4000},{"name":"connect","entity_name":"System","size":4000}]},{"name":"deny","type":"or","targets":[{"name":"deny","entity_name":"Object","size":4000},{"name":"deny","entity_name":"Application","size":4000}]},{"name":"attemptBypassAccessControl","type":"or","targets":[{"name":"attemptBypassAccessControl","entity_name":"Object","size":4000},{"name":"fullAccess","entity_name":"System","size":4000}]}]},{"name":"SoftwareProduct"},{"name":"Application","children":[{"name":"localConnect","type":"or","targets":[{"name":"localAccess","entity_name":"Application","size":4000},{"name":"connectLocalInteraction","entity_name":"Application","size":4000},{"name":"attemptUseVulnerability","entity_name":"Application","size":4000},{"name":"attemptLocalConnectVuln","entity_name":"Application","size":4000}]},{"name":"connectLocalInteraction","type":"or","targets":[{"name":"localInteraction","entity_name":"Application","size":4000}]},{"name":"identityLocalInteraction","type":"or","targets":[{"name":"localInteraction","entity_name":"Application","size":4000}]},{"name":"localInteraction","type":"and","targets":[{"name":"localConnect","entity_name":"Application","size":4000},{"name":"attemptUseVulnerability","entity_name":"Application","size":4000},{"name":"attemptLocalConnectVuln","entity_name":"Application","size":4000}]},{"name":"attemptUseVulnerability","type":"or","targets":[{"name":"attemptUseVulnerability","entity_name":"Object","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000}]},{"name":"attemptLocalConnectVuln","type":"or","targets":[{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000}]},{"name":"attemptNetworkRequestRespondConnectVuln","type":"or","targets":[{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000},{"name":"attemptAbuse","entity_name":"Vulnerability","size":4000}]},{"name":"networkConnect","type":"or","targets":[{"name":"networkAccess","entity_name":"Application","size":4000},{"name":"connectLocalInteraction","entity_name":"Application","size":4000},{"name":"attemptUseVulnerability","entity_name":"Application","size":4000}]},{"name":"accessNetworkAndConnections","type":"or","targets":[{"name":"access","entity_name":"Network","size":4000},{"name":"networkConnect","entity_name":"Application","size":4000},{"name":"transmit","entity_name":"Connection","size":4000},{"name":"transmitResponse","entity_name":"Connection","size":4000}]},{"name":"networkRequestConnect","type":"or","targets":[{"name":"attemptNetworkRequestRespondConnectVuln","entity_name":"Application","size":4000},{"name":"networkConnect","entity_name":"Application","size":4000}]},{"name":"networkRespondConnect","type":"or","targets":[{"name":"attemptNetworkRequestRespondConnectVuln","entity_name":"Application","size":4000},{"name":"networkConnect","entity_name":"Application","size":4000}]},{"name":"authenticate","type":"or","targets":[{"name":"localAccess","entity_name":"Application","size":4000},{"name":"networkAccess","entity_name":"Application","size":4000}]},{"name":"localAccess","type":"and","targets":[{"name":"access","entity_name":"Application","size":4000}]},{"name":"networkAccess","type":"and","targets":[{"name":"access","entity_name":"Application","size":4000}]},{"name":"access","type":"or","targets":[{"name":"read","entity_name":"Application","size":4000},{"name":"modify","entity_name":"Application","size":4000},{"name":"deny","entity_name":"Application","size":4000},{"name":"access","entity_name":"Application","size":4000},{"name":"attemptAccess","entity_name":"Data","size":4000},{"name":"accessNetworkAndConnections","entity_name":"Application","size":4000},{"name":"localConnect","entity_name":"Application","size":4000}]},{"name":"codeExecution","type":"or","targets":[{"name":"access","entity_name":"Application","size":4000},{"name":"assume","entity_name":"Identity","size":4000},{"name":"modify","entity_name":"Application","size":4000}]},{"name":"read","type":"or","targets":[{"name":"attemptRead","entity_name":"Data","size":4000}]},{"name":"modify","type":"or","targets":[{"name":"attemptAccess","entity_name":"Data","size":4000}]},{"name":"deny","type":"or","targets":[{"name":"deny","entity_name":"Object","size":4000},{"name":"attemptDelete","entity_name":"Data","size":4000}]}]},{"name":"PhysicalZone","children":[{"name":"gainPhysicalAccess","type":"or","targets":[{"name":"physicalAccess","entity_name":"System","size":4000}]}]},{"name":"Information","children":[{"name":"attemptAccess","type":"or","targets":[]}]},{"name":"Data","children":[{"name":"attemptAccess","type":"or","targets":[{"name":"access","entity_name":"Data","size":4000}]},{"name":"access","type":"and","targets":[{"name":"attemptRead","entity_name":"Data","size":4000},{"name":"attemptWrite","entity_name":"Data","size":4000},{"name":"attemptDelete","entity_name":"Data","size":4000}]},{"name":"dataEncrypted","type":"defense","targets":[{"name":"decryptData","entity_name":"Data","size":4000}]},{"name":"decryptData","type":"or","targets":[{"name":"access","entity_name":"Data","size":4000},{"name":"readContainedInformation","entity_name":"Data","size":4000},{"name":"read","entity_name":"Data","size":4000},{"name":"write","entity_name":"Data","size":4000},{"name":"delete","entity_name":"Data","size":4000}]},{"name":"dataNotExist","type":"defense","targets":[{"name":"access","entity_name":"Data","size":4000},{"name":"readContainedInformation","entity_name":"Data","size":4000},{"name":"read","entity_name":"Data","size":4000},{"name":"write","entity_name":"Data","size":4000},{"name":"delete","entity_name":"Data","size":4000}]},{"name":"readContainedInformation","type":"and","targets":[{"name":"attemptAccess","entity_name":"Information","size":4000}]},{"name":"attemptRead","type":"or","targets":[{"name":"read","entity_name":"Data","size":4000}]},{"name":"attemptWrite","type":"or","targets":[{"name":"write","entity_name":"Data","size":4000}]},{"name":"attemptDelete","type":"or","targets":[{"name":"delete","entity_name":"Data","size":4000}]},{"name":"read","type":"and","targets":[{"name":"attemptRead","entity_name":"Data","size":4000},{"name":"readContainedInformation","entity_name":"Data","size":4000}]},{"name":"write","type":"and","targets":[{"name":"attemptWrite","entity_name":"Data","size":4000},{"name":"delete","entity_name":"Data","size":4000}]},{"name":"delete","type":"and","targets":[{"name":"attemptDelete","entity_name":"Data","size":4000}]}]},{"name":"Identity","children":[{"name":"twoFactorAuthentication","type":"defense","targets":[{"name":"sucessfullAssume","entity_name":"Identity","size":4000}]},{"name":"attemptAssume","type":"or","targets":[{"name":"sucessfullAssume","entity_name":"Identity","size":4000}]},{"name":"sucessfullAssume","type":"and","targets":[{"name":"assume","entity_name":"Identity","size":4000}]},{"name":"assume","type":"or","targets":[{"name":"individualPrivilegeAuthenticate","entity_name":"System","size":4000},{"name":"allPrivilegeAuthenticate","entity_name":"System","size":4000},{"name":"authenticate","entity_name":"Application","size":4000},{"name":"authenticate","entity_name":"Application","size":4000},{"name":"identityLocalInteraction","entity_name":"Application","size":4000},{"name":"attemptRead","entity_name":"Data","size":4000},{"name":"attemptWrite","entity_name":"Data","size":4000},{"name":"attemptDelete","entity_name":"Data","size":4000}]}]},{"name":"Credentials","children":[{"name":"use","type":"or","targets":[{"name":"attemptAssume","entity_name":"Identity","size":4000},{"name":"decryptData","entity_name":"Data","size":4000},{"name":"attemptSteal2FAtoken","entity_name":"User","size":4000}]},{"name":"attemptAccess","type":"or","targets":[{"name":"attemptAccess","entity_name":"Information","size":4000},{"name":"use","entity_name":"Credentials","size":4000}]},{"name":"credentialTheft","type":"or","targets":[{"name":"use","entity_name":"Credentials","size":4000}]}]},{"name":"User","children":[{"name":"attemptSocialEngineering","type":"or","targets":[{"name":"phishUser","entity_name":"User","size":4000},{"name":"steal2FAtoken","entity_name":"User","size":4000}]},{"name":"attemptCredentialTheft","type":"or","targets":[{"name":"credentialTheft","entity_name":"Credentials","size":4000}]},{"name":"attemptReverseTakeover","type":"or","targets":[{"name":"networkConnect","entity_name":"Application","size":4000}]},{"name":"phishUser","type":"or","targets":[{"name":"attemptCredentialTheft","entity_name":"User","size":4000},{"name":"attemptReverseTakeover","entity_name":"User","size":4000}]},{"name":"attemptSteal2FAtoken","type":"or","targets":[{"name":"steal2FAtoken","entity_name":"User","size":4000}]},{"name":"steal2FAtoken","type":"and","targets":[{"name":"assume","entity_name":"Identity","size":4000}]},{"name":"compromise","type":"or","targets":[{"name":"attemptAssume","entity_name":"Identity","size":4000}]}]},{"name":"Network","children":[{"name":"physicalAccess","type":"or","targets":[{"name":"denialOfService","entity_name":"Network","size":4000}]},{"name":"access","type":"or","targets":[{"name":"networkConnect","entity_name":"Application","size":4000},{"name":"networkForwarding","entity_name":"Network","size":4000},{"name":"denialOfService","entity_name":"Network","size":4000}]},{"name":"networkForwarding","type":"or","targets":[{"name":"access","entity_name":"Network","size":4000},{"name":"networkConnect","entity_name":"Application","size":4000},{"name":"connect","entity_name":"System","size":4000}]},{"name":"denialOfService","type":"or","targets":[{"name":"denialOfService","entity_name":"Connection","size":4000},{"name":"deny","entity_name":"Application","size":4000}]}]},{"name":"RoutingFirewall","children":[{"name":"denialOfService","type":"or","targets":[{"name":"denialOfService","entity_name":"Connection","size":4000}]},{"name":"fullAccess","type":"or","targets":[{"name":"fullAccess","entity_name":"System","size":4000},{"name":"access","entity_name":"Network","size":4000},{"name":"networkConnect","entity_name":"Application","size":4000},{"name":"intercept","entity_name":"Connection","size":4000}]}]},{"name":"Connection","children":[{"name":"intercept","type":"or","targets":[{"name":"attemptAccess","entity_name":"Data","size":4000}]},{"name":"transmitResponse","type":"or","targets":[{"name":"networkRespondConnect","entity_name":"Application","size":4000}]},{"name":"transmit","type":"or","targets":[{"name":"networkRequestConnect","entity_name":"Application","size":4000}]},{"name":"denialOfService","type":"or","targets":[{"name":"deny","entity_name":"Application","size":4000}]}]}]};
+        initialize(root);
+        set_id(root);
+        update();
+
+        function update() {
+
+            var nodes = [];
+            var links = [];
+
+            root.children.forEach(function(entity) {
+                entity.size = 64000
+                entity.opacity = 0.5
+                if (entity.children) {
+                    entity.children.forEach(function(attack_step) {
+                        if (entity.selected) {
+                            attack_step.show = true;
+                            attack_step.hidden = false;
+                            entity.size = 128000
+                            entity.opacity = 0.1
+                        } else {
+                            attack_step.show = false;
+                            //attack_step.show = true;
+                            attack_step.size = 8000
+                        }
+                    })
+                }
+            })
+
+            root.children.forEach(function(entity) {
+                if (entity.children) {
+                    entity.children.forEach(function(attack_step) {
+                        if (attack_step.selected) {
+                            attack_step.show = true;
+                            attack_step.size = 6000
+                            attack_step.target_steps.forEach(function(target_step) {
+                                if (target_step && !target_step.hidden) {
+                                    target_step.show = true;
+                                }
+                            })
+                            attack_step.source_steps.forEach(function(source_step) {
+                                if (source_step && !source_step.hidden) {
+                                    source_step.show = true;
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+
+            nodes.push(root);
+            if (root.children) {
+                root.children.forEach(
+                    function(entity) {
+                        if (!entity.hidden) {
+                            nodes.push(entity);
+                        }
+                        if (entity.children) {
+                            entity.children.forEach(
+                                function(attack_step) {
+                                    if (attack_step.show)
+                                        nodes.push(attack_step);
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (root.children) {
+                root.children.forEach(
+                    function(entity) {
+                        if (entity.children) {
+                            entity.children.forEach(
+                                function(attack_step) {
+                                    if (attack_step.show) {
+                                        if (!entity.hidden) {
+                                            links.push({
+                                                "source": entity,
+                                                "target": attack_step,
+                                                "opacity": 0.25,
+                                                "color": entity.color,
+                                                "arrow": false
+                                            })
+                                        }
+                                        if (attack_step.targets) {
+                                            attack_step.target_steps.forEach(
+                                                function(target_step) {
+                                                    if (target_step)
+                                                        if (target_step.show)
+                                                            links.push({
+                                                                "source": attack_step,
+                                                                "target": target_step,
+                                                                "opacity": 0.5,
+                                                                "color": entity.color,
+                                                                "arrow": true
+                                                            })
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            // Restart the force layout.
+            force
+                .nodes(nodes)
+                .links(links)
+                .start();
+
+            // Update links.
+            link = link.data(links, function(d) {
+                return 10000 * d.source.id + d.target.id;
+            });
+
+            link.exit().remove();
+
+            link.enter().insert("line", ".node")
+                .attr("class", "link").style("opacity", function(d) {
+                    return d.opacity;
+                }).attr("marker-end", function(d) {
+                    if (d.arrow) {
+                        return "url(#end)";
+                    } else {
+                        return "url(#middle)";
+                    }
+                });
+
+            // Update nodes.
+            node = node.data(nodes, function(d) {
+                return d.id;
+            });
+
+            node.exit().remove();
+
+            var nodeEnter = node.enter().append("g")
+                .attr("class", "node")
+                .on("click", click)
+                .call(force.drag);
+
+            nodeEnter.append("circle").filter(function(d) {
+                    return typeof d.type === "undefined";
+                })
+                .attr("r", function(d) {
+                    return Math.sqrt(d.size) / 10 || 4.5;
+                });
+
+            nodeEnter.append("circle").filter(function(d) {
+                    return d.type === "or";
+                })
+                .attr("r", function(d) {
+                    return Math.sqrt(d.size) / 10 || 4.5;
+                });
+
+            nodeEnter.append("rect").filter(function(d) {
+                    return d.type === "and";
+                })
+                .style("fill", function(d) {
+                    return d.color;
+                })
+                .attr("width", function(d) {
+                    return Math.sqrt(d.size) / 5 || 4.5;
+                }).
+            attr("height", function(d) {
+                return Math.sqrt(d.size) / 5 || 4.5;
+            });
+
+            nodeEnter.append("polygon").filter(function(d) {
+                    return d.type === "defense";
+                })
+                .style("fill", function(d) {
+                    return d.color;
+                })
+                .attr("points", "-8,-8, 0,8, 8,-8");
+
+            node.select("circle").filter(function(d) {
+                    return typeof d.type === "undefined";
+                })
+                .attr("r", function(d) {
+                    return Math.sqrt(d.size) / 10 || 4.5;
+                });
+
+            node.select("circle").filter(function(d) {
+                    return d.type === "or";
+                })
+                .attr("r", function(d) {
+                    return Math.sqrt(d.size) / 10 || 4.5;
+                });
+
+            node.select("rect").filter(function(d) {
+                    return d.type === "and";
+                })
+                .style("fill", function(d) {
+                    return d.color;
+                })
+                .attr("width", function(d) {
+                    return Math.sqrt(d.size) / 5 || 4.5;
+                }).
+            attr("height", function(d) {
+                return Math.sqrt(d.size) / 5 || 4.5;
+            });
+
+            nodeEnter.append("polygon").filter(function(d) {
+                    return d.type === "defense";
+                })
+                .style("fill", function(d) {
+                    return d.color;
+                })
+                .attr("points", "-8,-8, 0,8, 8,-8");
+
+            nodeEnter.append("text")
+                .attr("dy", ".35em")
+                .text(function(d) {
+                    return d.name;
+                })
+                .style("opacity", function(d) {
+                    return d.opacity;
+                });;
+
+            node.select("circle")
+                .style("fill", function(d) {
+                    return d.color;
+                }).style("stroke", function(d) {
+                    if (d.selected) return "#000";
+                    else return "#fff";
+                }).style("opacity", function(d) {
+                    return d.opacity;
+                });
+
+            node.select("rect")
+                .style("fill", function(d) {
+                    return d.color;
+                }).style("stroke", function(d) {
+                    if (d.selected) return "#000";
+                    else return "#fff";
+                }).style("opacity", function(d) {
+                    return d.opacity;
+                });
+
+            node.select("polygon")
+                .style("fill", function(d) {
+                    return d.color;
+                }).style("stroke", function(d) {
+                    if (d.selected) return "#000";
+                    else return "#fff";
+                }).style("opacity", function(d) {
+                    return d.opacity;
+                });
+        }
+
+        function tick() {
+            link.attr("x1", function(d) {
+                    return d.source.x;
+                })
+                .attr("y1", function(d) {
+                    return d.source.y;
+                })
+                .attr("x2", function(d) {
+                    return d.target.x;
+                })
+                .attr("y2", function(d) {
+                    return d.target.y;
+                });
+
+            node.select("circle").attr("transform", function(d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+            node.select("rect").attr("transform", function(d) {
+                return "translate(" + (d.x - Math.sqrt(d.size) / 10) + "," + (d.y - Math.sqrt(d.size) / 10) + ")";
+            });
+            node.select("polygon").attr("transform", function(d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+            node.select("text").attr("transform", function(d) {
+                return "translate(" + d.x + "," + (d.y) + ")";
+            });
+
+        }
+
+        function color(d) {
+            return d.children ? "#3182bd" // collapsed package
+                :
+                d.children ? "#c6dbef" // expanded package
+                :
+                "#fd8d3c"; // leaf node
+        }
+
+        // Toggle children on click.
+        function click(d) {
+            if (d3.event.metaKey) {
+                d.fixed = false;
+            } else {
+                d.fixed = true;
+                if (d3.event.shiftKey) {
+                    d.hidden = true;
+                } else {
+                    if (d3.event.defaultPrevented) return; // ignore drag
+                    if (d.selected)
+                        d.selected = false;
+                    else
+                        d.selected = true;
+
+                }
+            }
+            d3.event.stopPropagation();
+            update();
+        }
+
+        // Returns a list of all nodes under the root.
+        function set_id(root) {
+            i = 0;
+            j = 0;
+
+            function recurse(node) {
+                if (node.children) node.children.forEach(recurse);
+                if (!node.id) node.id = ++i;
+                node.show = false
+                node.selected = false
+            }
+
+            recurse(root);
+        }
+
+        function initialize(root) {
+
+            nodes = []
+            nodes.push(root);
+            root.opacity = 0.0
+            if (root.children) {
+                root.children.forEach(function(entity) {
+                    entity.hidden = false;
+                    nodes.push(entity);
+                    if (entity.children) {
+                        entity.children.forEach(function(attack_step) {
+                            attack_step.target_steps = []
+                            attack_step.source_steps = []
+                            attack_step.entity = entity
+                            attack_step.hidden = false;
+                            nodes.push(attack_step);
+                        })
+                    }
+                })
+            }
+
+            if (root.children) {
+                root.children.forEach(function(entity) {
+                    if (entity.children) {
+                        entity.children.forEach(function(attack_step) {
+                            attack_step.color = color(entity.name)
+                            attack_step.opacity = 1
+                            if (attack_step.targets) {
+                                attack_step.targets.forEach(function(target_ref) {
+                                    var target = nodes.filter(function(attack_step) {
+                                        return attack_step.name == target_ref.name && attack_step.entity.name == target_ref.entity_name;
+                                    })[0]
+                                    if (target) {
+                                        attack_step.target_steps.push(target)
+                                        target.source_steps.push(attack_step)
+                                    }
+                                })
+                            }
+                            entity.color = color(entity.name)
+                            entity.opacity = 0.75
+                        })
+                    }
+                })
+            }
+
+            d3.select("body").on('keydown', function() {
+                if (d3.event.keyCode === 32) {
+                    if (root.children) {
+                        root.children.forEach(function(entity) {
+                            if (entity.hidden) {
+                                entity.hidden = false;
+                            } else {
+                                entity.hidden = true;
+                            }
+                            update();
+                        })
+                    }
+                }
+            })
+        }
+    </script>
+    <p style="font-family:verdana;font-size:11px"> 1. Open an entity.</p>
+    <p style="font-family:verdana;font-size:11px"> 2. Select an attack step.</p>
+    <p style="font-family:verdana;font-size:11px"> 3. Close the entity.</p>
+    <p style="font-family:verdana;font-size:11px"> 4. Navigate forward or backward from the selected attack step.</p>
+    <p style="font-family:verdana;font-size:11px">
+        To hide a specific attack step, shift-click it. To make it reappear, re-open the associated entity.
+    </p>
+    <p style="font-family:verdana;font-size:11px"> Zoom in for a closer view.</p>
+    <p style="font-family:verdana;font-size:11px">
+        To avoid confusing clutter, don't have too many attack steps open at the same time.
+    </p>
+</body>
+
+</html>

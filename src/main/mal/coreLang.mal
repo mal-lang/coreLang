@@ -205,8 +205,7 @@ category System {
       developer info: "A physical zone is the location where systems are physically deployed."
     {
       | gainPhysicalAccess
-        ->  systems.connect,
-            systems.physicalAccess
+        ->  systems.physicalAccess
     }
 }
 
