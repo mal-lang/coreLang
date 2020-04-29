@@ -2,16 +2,17 @@
 
 set -e
 
-mkdir -p "$HOME/.aws"
-
-if [ -v FORESEETI_USERNAME ] && [ -v FORESEETI_PASSWORD ]; then
+if [ -n "$FORESEETI_USERNAME" ] && [ -n "$FORESEETI_PASSWORD" ]; then
+  mkdir -p "$HOME/.aws"
   cat << EOF > "$HOME/.aws/credentials"
 [default]
 aws_access_key_id=$FORESEETI_USERNAME
 aws_secret_access_key=$FORESEETI_PASSWORD
 EOF
 
-  mvn -B -V -PsecuriCAD clean verify site
+  echo mvn -B -V -PsecuriCAD clean install site
+  mvn -B -V -PsecuriCAD clean install site
 else
-  mvn -B -V clean verify site
+  echo mvn -B -V clean install site
+  mvn -B -V clean install site
 fi
