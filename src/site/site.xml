@@ -34,13 +34,29 @@
     <footer><![CDATA[
       <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
         <p>
-          Copyright &copy; 2020 <a href="https://mal-lang.org/coreLang/contributors.html">coreLang contributors</a>, Licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.
+          Copyright &copy; 2019-2020
+          <a href="https://mal-lang.org/coreLang/contributors.html"><span style="white-space: nowrap;">coreLang contributors</span></a>,
+          Licensed under the
+          <a href="https://www.apache.org/licenses/LICENSE-2.0"><span style="white-space: nowrap;">Apache License, Version 2.0</span></a>.
         </p>
         <img alt="MAL logo" style="width: 3em; height: 3em;" src="https://mal-lang.org/helmet.svg"/>
         <p>
-          This work, "MAL logo", is a derivative of "<a href="https://thenounproject.com/term/diving-helmet/2448842/">Diving Helmet</a>" by <a href="https://thenounproject.com/madexmadeicons/">Made x Made Icons</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+          This work,
+          &quot;<span style="white-space: nowrap;">MAL logo</span>&quot;,
+          is a derivative of
+          &quot;<a href="https://thenounproject.com/term/diving-helmet/2448842/"><span style="white-space: nowrap;">Diving Helmet</span></a>&quot;
+          icon by
+          <a href="https://thenounproject.com/madexmadeicons/"><span style="white-space: nowrap;">Made x Made Icons</span></a>
+          from
+          <a href="https://thenounproject.com/"><span style="white-space: nowrap;">the Noun Project</span></a>,
+          used under
+          <a href="https://creativecommons.org/licenses/by/3.0/"><span style="white-space: nowrap;">CC BY 3.0</span></a>.
           <br/>
-          "MAL logo" is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> by <a href="https://www.foreseeti.com/">Foreseeti AB</a>.
+          &quot;<span style="white-space: nowrap;">MAL logo</span>&quot;
+          is licensed under
+          <a href="https://creativecommons.org/licenses/by/4.0/"><span style="white-space: nowrap;">CC BY 4.0</span></a>
+          by
+          <a href="https://www.foreseeti.com/"><span style="white-space: nowrap;">Foreseeti AB</span></a>.
         </p>
       </div>
     ]]></footer>
