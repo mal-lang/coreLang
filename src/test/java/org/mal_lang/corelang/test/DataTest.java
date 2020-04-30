@@ -1,6 +1,7 @@
 package org.mal_lang.corelang.test;
 
 import core.Attacker;
+import core.AttackStep;
 import org.junit.jupiter.api.Test;
 
 public class DataTest extends CoreLangTest {
@@ -17,6 +18,9 @@ public class DataTest extends CoreLangTest {
             data1.addContainedData(notexistdata);
             encdata.addEncryptCreds(datacreds);
         }
+        public void addAttacker(Attacker attacker, AttackStep attackpoint) {
+            attacker.addAttackPoint(attackpoint);
+        }
   }
 
     @Test
@@ -24,8 +28,8 @@ public class DataTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new DataTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.data1.attemptAccess);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.data1.attemptAccess);
         attacker.attack();
 
         model.data1.access.assertCompromisedInstantaneously();
@@ -40,7 +44,7 @@ public class DataTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new DataTestModel();
 
-        Attacker attacker = new Attacker();
+        var attacker = new Attacker();
         attacker.attack();
 
         model.data1.access.assertUncompromised();
@@ -69,9 +73,9 @@ public class DataTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new DataTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.data1.attemptAccess);
-        attacker.addAttackPoint(model.datacreds.use);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.data1.attemptAccess);
+        model.addAttacker(attacker,model.datacreds.use);
         attacker.attack();
 
         model.data1.access.assertCompromisedInstantaneously();

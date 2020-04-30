@@ -18,9 +18,14 @@ public class UserTest extends CoreLangTest {
           identity.addCredentials(credentials);
           identity.addExecPrivApps(application);
         }
-  }
 
-  private static class UserTestModelNoCreds {
+        public void addAttacker(Attacker attacker) {
+          attacker.addAttackPoint(user.attemptSocialEngineering);
+        }
+
+    }
+
+    private static class UserTestModelNoCreds {
     
         public final User user = new User("user");
         
@@ -32,15 +37,19 @@ public class UserTest extends CoreLangTest {
           user.addUserIds(identity);
           identity.addExecPrivApps(application);
         }
-  }
+
+        public void addAttacker(Attacker attacker) {
+          attacker.addAttackPoint(user.attemptSocialEngineering);
+        }
+    }
 
     @Test
     public void testPhishingWith2FA() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new UserTestModel(true);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.user.attemptSocialEngineering);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.user.phishUser.assertCompromisedInstantaneously();
@@ -61,8 +70,8 @@ public class UserTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new UserTestModel(false);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.user.attemptSocialEngineering);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.user.phishUser.assertCompromisedInstantaneously();
@@ -83,8 +92,8 @@ public class UserTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new UserTestModelNoCreds(true);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.user.attemptSocialEngineering);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.user.phishUser.assertCompromisedInstantaneously();
@@ -102,8 +111,8 @@ public class UserTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new UserTestModelNoCreds(false);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.user.attemptSocialEngineering);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.user.phishUser.assertCompromisedInstantaneously();

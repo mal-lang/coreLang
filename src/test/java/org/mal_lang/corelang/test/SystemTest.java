@@ -1,6 +1,7 @@
 package org.mal_lang.corelang.test;
 
 import core.Attacker;
+import core.AttackStep;
 import org.junit.jupiter.api.Test;
 
 public class SystemTest extends CoreLangTest {
@@ -10,6 +11,10 @@ public class SystemTest extends CoreLangTest {
         public SystemTestModel() {
 
         }
+
+        public void addAttacker(Attacker attacker, AttackStep attackpoint) {
+            attacker.addAttackPoint(attackpoint);
+        }
   }
 
     @Test
@@ -17,8 +22,8 @@ public class SystemTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new SystemTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.system.connect);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.system.connect);
         attacker.attack();
 
         model.system.specificAccess.assertUncompromised();
@@ -31,9 +36,9 @@ public class SystemTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new SystemTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.system.connect);
-        attacker.addAttackPoint(model.system.specificAccess);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.system.connect);
+        model.addAttacker(attacker,model.system.specificAccess);
         attacker.attack();
 
         model.system.specificAccess.assertCompromisedInstantaneously();
@@ -46,9 +51,9 @@ public class SystemTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new SystemTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.system.connect);
-        attacker.addAttackPoint(model.system.allPrivilegeAuthenticate);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.system.connect);
+        model.addAttacker(attacker,model.system.allPrivilegeAuthenticate);
         attacker.attack();
 
         model.system.specificAccess.assertUncompromised();

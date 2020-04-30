@@ -1,6 +1,7 @@
 package org.mal_lang.corelang.test;
 
 import core.Attacker;
+import core.AttackStep;
 import org.junit.jupiter.api.Test;
 
 public class ApplicationTest extends CoreLangTest {
@@ -10,6 +11,10 @@ public class ApplicationTest extends CoreLangTest {
         public ApplicationTestModel() {
 
         }
+
+        public void addAttacker(Attacker attacker, AttackStep attackpoint) {
+            attacker.addAttackPoint(attackpoint);
+        }
   }
 
     @Test
@@ -17,9 +22,9 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.application.localConnect);
-        attacker.addAttackPoint(model.application.authenticate);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.localConnect);
+        model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertCompromisedInstantaneously();
@@ -35,9 +40,9 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.application.networkConnect);
-        attacker.addAttackPoint(model.application.authenticate);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.networkConnect);
+        model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertCompromisedInstantaneously();
@@ -53,8 +58,8 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.application.authenticate);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertUncompromised();
@@ -70,9 +75,8 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.application.connectLocalInteraction);
-        // attacker.addAttackPoint(model.application.identityLocalInteraction);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.connectLocalInteraction);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertCompromisedInstantaneously();
@@ -86,9 +90,8 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        // attacker.addAttackPoint(model.application.connectLocalInteraction);
-        attacker.addAttackPoint(model.application.identityLocalInteraction);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.identityLocalInteraction);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertUncompromised();
@@ -102,9 +105,9 @@ public class ApplicationTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new ApplicationTestModel();
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.application.connectLocalInteraction);
-        attacker.addAttackPoint(model.application.identityLocalInteraction);
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.application.connectLocalInteraction);
+        model.addAttacker(attacker,model.application.identityLocalInteraction);
         attacker.attack();
 
         model.application.connectLocalInteraction.assertCompromisedInstantaneously();

@@ -10,6 +10,10 @@ public class IdentityTest extends CoreLangTest {
         public IdentityTestModel(boolean twoFA) {
             identity = new Identity("identity", twoFA);
         }
+
+        public void addAttacker(Attacker attacker) {
+          attacker.addAttackPoint(identity.attemptAssume);
+        }
   }
 
     @Test
@@ -17,8 +21,8 @@ public class IdentityTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new IdentityTestModel(true);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.identity.attemptAssume);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.identity.sucessfullAssume.assertUncompromised();
@@ -30,8 +34,8 @@ public class IdentityTest extends CoreLangTest {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new IdentityTestModel(false);
 
-        Attacker attacker = new Attacker();
-        attacker.addAttackPoint(model.identity.attemptAssume);
+        var attacker = new Attacker();
+        model.addAttacker(attacker);
         attacker.attack();
 
         model.identity.sucessfullAssume.assertCompromisedInstantaneously();
