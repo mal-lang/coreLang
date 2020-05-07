@@ -25,7 +25,7 @@ public class IdentityTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.identity.sucessfullAssume.assertUncompromised();
+        model.identity.successfulAssume.assertUncompromised();
         model.identity.assume.assertUncompromised();
     }
 
@@ -38,7 +38,7 @@ public class IdentityTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.identity.sucessfullAssume.assertCompromisedInstantaneously();
+        model.identity.successfulAssume.assertCompromisedInstantaneously();
         model.identity.assume.assertCompromisedInstantaneously();
     }
 

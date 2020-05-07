@@ -4,7 +4,7 @@ import core.Attacker;
 import org.junit.jupiter.api.Test;
 
 public class IAMIntegrationTests extends CoreLangTest {
-    public class IAMIntegrationTestsModel {
+    public class IAMIntegrationTestModel {
         public final System server = new System("Server");
         public final Application rhel = new Application("RHEL");
         public final Application oracle = new Application("Oracle");
@@ -24,7 +24,7 @@ public class IAMIntegrationTests extends CoreLangTest {
         // public final ManualHighImpactVulnerability vuln = new ManualHighImpactVulnerability("ManualHighImpactVulnerability", false, false);
         // public final ManualLowComplexityExploit exploit = new ManualLowComplexityExploit("ManualLowComplexityExploit");
 
-        public IAMIntegrationTestsModel() {
+        public IAMIntegrationTestModel() {
             // Create associations
             rhel.addLowPrivAppIds(rhel_luser);
             rhel.addHighPrivAppIds(rhel_oracle);
@@ -55,14 +55,14 @@ public class IAMIntegrationTests extends CoreLangTest {
             // oracle.attemptUseVulnerability.assertCompromisedInstantaneously();
             vuln.abuse.assertCompromisedWithEffort();
             // vuln.abuse.assertCompromisedInstantaneously();
-            oracle.access.assertCompromisedWithEffort();
+            oracle.fullAccess.assertCompromisedWithEffort();
             rhel_oracle.assume.assertCompromisedWithEffort();
             db.access.assertCompromisedWithEffort();
             table1.read.assertCompromisedWithEffort();
             table2.read.assertCompromisedWithEffort();
-            rhel.access.assertCompromisedWithEffort();
+            rhel.fullAccess.assertCompromisedWithEffort();
             server.fullAccess.assertUncompromised();
-            otherapp.access.assertUncompromised();
+            otherapp.fullAccess.assertUncompromised();
             rhel_root.assume.assertUncompromised();
         }
     }
@@ -74,7 +74,55 @@ public class IAMIntegrationTests extends CoreLangTest {
         */
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         //Create the model
-        var model = new IAMIntegrationTestsModel();
+        var model = new IAMIntegrationTestModel();
+        // Create attacker
+        var atk = new Attacker();
+        model.addAttacker(atk);
+        atk.attack();
+        // Assert model
+        model.assertModel();
+    }
+
+    public class IdentityDataTestModel {
+        public final Network network = new Network("network");
+        public final Application application = new Application("application");
+        public final Identity identity = new Identity("identity");
+        public final Data data = new Data("data");
+
+        public IdentityDataTestModel() {
+            // Create associations
+            network.addApplications(application);
+            application.addContainedData(data);
+            data.addReadingIds(identity);
+        }
+
+        public void addAttacker(Attacker attacker) {
+            attacker.addAttackPoint(identity.assume);
+            attacker.addAttackPoint(network.access);
+        }
+
+        public void assertModel() {
+            // Make assertions
+            network.access.assertCompromisedInstantaneously();
+            application.networkConnect.assertCompromisedInstantaneously();
+            identity.assume.assertCompromisedInstantaneously();
+            data.identityAttemptRead.assertCompromisedInstantaneously();
+            data.identityAttemptWrite.assertUncompromised();
+            data.identityAttemptDelete.assertUncompromised();
+            data.attemptAccess.assertUncompromised();
+            data.attemptAccessFromIdentity.assertUncompromised();
+            data.access.assertUncompromised();
+            data.read.assertUncompromised();
+            data.write.assertUncompromised();
+            data.delete.assertUncompromised();
+        }
+    }
+    
+    @Test
+    public void identityDataIAMTest() {
+        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
+        //Create the model
+        var model = new IdentityDataTestModel();
         // Create attacker
         var atk = new Attacker();
         model.addAttacker(atk);

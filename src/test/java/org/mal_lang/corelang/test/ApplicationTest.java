@@ -27,12 +27,12 @@ public class ApplicationTest extends CoreLangTest {
         model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertCompromisedInstantaneously();
+        model.application.specificAccessFromConnection.assertCompromisedInstantaneously();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
         model.application.attemptLocalConnectVuln.assertCompromisedInstantaneously();
         model.application.localAccess.assertCompromisedInstantaneously();
         model.application.networkAccess.assertUncompromised();
-        model.application.access.assertCompromisedInstantaneously();
+        model.application.fullAccess.assertCompromisedInstantaneously();
     }
 
     @Test
@@ -45,12 +45,12 @@ public class ApplicationTest extends CoreLangTest {
         model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertCompromisedInstantaneously();
+        model.application.specificAccessFromConnection.assertCompromisedInstantaneously();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
         model.application.attemptLocalConnectVuln.assertUncompromised();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertCompromisedInstantaneously();
-        model.application.access.assertCompromisedInstantaneously();
+        model.application.fullAccess.assertCompromisedInstantaneously();
     }
 
     @Test
@@ -62,12 +62,12 @@ public class ApplicationTest extends CoreLangTest {
         model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertUncompromised();
+        model.application.specificAccessFromConnection.assertUncompromised();
         model.application.attemptUseVulnerability.assertUncompromised();
         model.application.attemptLocalConnectVuln.assertUncompromised();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertUncompromised();
-        model.application.access.assertUncompromised();
+        model.application.fullAccess.assertUncompromised();
     }
 
     @Test
@@ -76,13 +76,13 @@ public class ApplicationTest extends CoreLangTest {
         var model = new ApplicationTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.application.connectLocalInteraction);
+        model.addAttacker(attacker,model.application.specificAccessFromConnection);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertCompromisedInstantaneously();
-        model.application.identityLocalInteraction.assertUncompromised();
+        model.application.specificAccessFromConnection.assertCompromisedInstantaneously();
+        model.application.specificAccessFromIdentity.assertUncompromised();
         model.application.attemptUseVulnerability.assertUncompromised();
-        model.application.access.assertUncompromised();
+        model.application.fullAccess.assertUncompromised();
     }
 
     @Test
@@ -91,13 +91,13 @@ public class ApplicationTest extends CoreLangTest {
         var model = new ApplicationTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.application.identityLocalInteraction);
+        model.addAttacker(attacker,model.application.specificAccessFromIdentity);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertUncompromised();
-        model.application.identityLocalInteraction.assertCompromisedInstantaneously();
+        model.application.specificAccessFromConnection.assertUncompromised();
+        model.application.specificAccessFromIdentity.assertCompromisedInstantaneously();
         model.application.attemptUseVulnerability.assertUncompromised();
-        model.application.access.assertUncompromised();
+        model.application.fullAccess.assertUncompromised();
     }
 
     @Test
@@ -106,13 +106,13 @@ public class ApplicationTest extends CoreLangTest {
         var model = new ApplicationTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.application.connectLocalInteraction);
-        model.addAttacker(attacker,model.application.identityLocalInteraction);
+        model.addAttacker(attacker,model.application.specificAccessFromConnection);
+        model.addAttacker(attacker,model.application.specificAccessFromIdentity);
         attacker.attack();
 
-        model.application.connectLocalInteraction.assertCompromisedInstantaneously();
+        model.application.specificAccessFromConnection.assertCompromisedInstantaneously();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
-        model.application.access.assertUncompromised();
+        model.application.fullAccess.assertUncompromised();
     }
 
 }
