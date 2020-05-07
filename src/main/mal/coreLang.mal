@@ -256,8 +256,10 @@ category DataResources {
               attemptWrite,
               attemptDelete
 
-        # dataEncrypted
+        !E dataEncrypted @hidden
           user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
+          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'decryptData' is reached."
+          <-  encryptCreds
           ->  decryptData
 
         | decryptData
