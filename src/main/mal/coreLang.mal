@@ -502,10 +502,10 @@ associations {
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
         developer info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
   // ### Networking associations
-  PhysicalZone     [physicalZone]         * <-- ZoneInclusion         --> *   [systems]                System
+  PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
 
-  RoutingFirewall  [routerFirewalls]      * <-- ConnectionRule        --> *   [connectionRules]        Connection
+  RoutingFirewall  [routerFirewalls]   0..1 <-- ConnectionRule        --> *   [connectionRules]        Connection
       developer info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       developer info: "An application can communicate / be exposed on a network.  A network zone is a set of network accessible applications."
@@ -529,7 +529,7 @@ associations {
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials." 
-  Data             [encryptedData]     0..1 <-- EncryptionCredentials --> *   [encryptCreds]           Credentials
+  Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
