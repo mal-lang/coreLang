@@ -215,7 +215,7 @@ category System {
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this service. Adopted from awsLang."
-        ->  containedData.attemptDelete
+        ->  containedData.deny
 
     }
 
@@ -326,11 +326,15 @@ category DataResources {
         & write {I}
           user info: "The attacker can write to the location of the data, effectively deleting it."
           ->  containedData.attemptWrite,
-              delete
+              attemptDelete
 
         & delete {I,A}
           user info: "The attacker can delete the data."
           ->  containedData.attemptDelete
+
+        | deny {A}
+          user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
+          ->  containedData.deny
     }
 }
 
@@ -486,7 +490,8 @@ category Networking {
         ->  applications.networkRequestConnect
 
       | denialOfService {A}
-        ->  applications.deny
+        ->  applications.deny,
+            data.deny
     }
 
     // abstract asset Proxy extends Object {

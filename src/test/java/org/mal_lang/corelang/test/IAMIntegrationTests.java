@@ -115,6 +115,7 @@ public class IAMIntegrationTests extends CoreLangTest {
             data.read.assertUncompromised();
             data.write.assertUncompromised();
             data.delete.assertUncompromised();
+            data.deny.assertCompromisedInstantaneously(); //Because of network.denialOfService
         }
     }
     
