@@ -146,7 +146,8 @@ category System {
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
             appConnections.transmit,
-            appConnections.transmitResponse
+            appConnections.transmitResponse,
+            appConnections.data.attemptAccess
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
@@ -174,7 +175,8 @@ category System {
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
             attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
-            containedData.attemptAccessFromIdentity // This also enables the use of compromised identites but only after specificAccess is reached
+            containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
+            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
