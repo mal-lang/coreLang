@@ -356,14 +356,14 @@ category IAM {
 
         | assume {C,I,A}
           developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
-          ->  lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              highPrivManagedSystems.allPrivilegeAuthenticate,
-              execPrivApps.authenticate,
-              highPrivApps.authenticate,
-              lowPrivApps.specificAccessFromIdentity,
-              readPrivData.identityAttemptRead,
-              writePrivData.identityAttemptWrite,
-              deletePrivData.identityAttemptDelete
+          ->  parentId*.lowPrivManagedSystems.individualPrivilegeAuthenticate,
+              parentId*.highPrivManagedSystems.allPrivilegeAuthenticate,
+              parentId*.execPrivApps.authenticate,
+              parentId*.highPrivApps.authenticate,
+              parentId*.lowPrivApps.specificAccessFromIdentity,
+              parentId*.readPrivData.identityAttemptRead,
+              parentId*.writePrivData.identityAttemptWrite,
+              parentId*.deletePrivData.identityAttemptDelete
     }
 
     asset Credentials extends Information
@@ -539,6 +539,7 @@ associations {
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
+  Identity         [parentId]             * <-- IdentityHierarchy     --> *   [childId]                Identity
   // First on system level
   Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess  --> *   [highPrivManagedSystems]  System
       user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
