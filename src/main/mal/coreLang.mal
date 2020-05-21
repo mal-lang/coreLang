@@ -21,7 +21,7 @@ include "coreVulnerability.mal"
 include "VulnerabilityManual.mal"
 include "VulnerabilityAutomatic.mal"
 
-category System {
+category ComputeComponents {
 
     abstract asset Object
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
@@ -32,7 +32,7 @@ category System {
       | deny {A}
         user info: "The attacker can deny some or all functionality of an object."
 
-      | attemptBypassAccessControl @hidden {C, I}
+      | bypassAccessControl @hidden {C, I}
         user info: "The attacker can bypass the access control and gain full access after a vulnerability is abused."
     }
 
@@ -75,7 +75,7 @@ category System {
       | deny {A}
         ->  sysExecutedApps.deny
 
-      | attemptBypassAccessControl @hidden {C, I}
+      | bypassAccessControl @hidden {C, I}
         user info: "The attacker can bypass the access control and gain full access after being able to connect to the system and a vulnerability is abused."
         ->  fullAccess
     }
@@ -84,7 +84,7 @@ category System {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
-
+      // This is intentionally left blank
     }
 
     asset Application extends Object
@@ -398,12 +398,20 @@ category User {
           ->  phishUser,
               steal2FAtoken
 
-        | attemptCredentialTheft [Exponential(0.02)]
+        | attemptCredentialTheft
           user info: "Trick the user to provide his/her credentials."
+          ->  credentialTheft
+
+        | credentialTheft [Exponential(0.02)]
+          developer info: "This attack is hard to happen but not harder than reverseTakeover. The probability and its value are subject to change."
           ->  userIds.credentials.credentialTheft
 
-        | attemptReverseTakeover [Exponential(0.01)]
+        | attemptReverseTakeover
           user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
+          ->  reverseTakeover
+
+        | reverseTakeover [Exponential(0.01)]
+          developer info: "This attack is harder to happen because it requires more bad effort from the victim. The probability and its value are subject to change."
           ->  userIds.execPrivApps.networkConnect
 
         | phishUser
@@ -416,7 +424,8 @@ category User {
           ->  steal2FAtoken
 
         & steal2FAtoken [Exponential(0.02)]
-          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
+          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection. The probability and its value are subject to change."
+          developer info: "This attack is hard to happen but not harder than reverseTakeover."
           ->  userIds.assume
 
         | compromise {C}
@@ -425,8 +434,6 @@ category User {
 }
 
 category Networking {
-    // If you have access to a network zone, you shall be able to connect (not log in) to any other service on the same network. (nmap scan) (Joar)
-    // If you have managed to log in to and use a proxy, transparent or not, you shall be able to access any service protected by that proxy. (Joar)
 
     asset Network
       user info: "A network zone is a set of network accessible applications."
@@ -475,7 +482,7 @@ category Networking {
 
     asset Connection
       user info: "This asset is used to model firewall rules between Applications and/or Networks."
-      developer info: "This asset is mainly used to model the functionality of a network connection through a firewall."
+      developer info: "This asset is mainly used to model the functionality of a network connection through a firewall. If Data is added, then it also models the data in transit."
     {
       | intercept {C}
         user info: "By intercepting a connection, access on the contained data can be gained."
@@ -495,9 +502,6 @@ category Networking {
         ->  applications.deny,
             data.deny
     }
-
-    // abstract asset Proxy extends Object {
-    // }
 
 }
 
@@ -525,7 +529,7 @@ associations {
   Network          [inNetworks]           * <-- InNetworkConnection  --> *    [ingoingNetConnections]  Connection
       developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
-      developer info: "And a connection can have data in transit."
+      developer info: "And a connection can have data in transit. Effectively working as a dataflow."
   //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data

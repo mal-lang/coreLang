@@ -54,8 +54,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        model.user.attemptCredentialTheft.assertCompromisedWithEffort();
-        model.user.attemptReverseTakeover.assertCompromisedWithEffort();
+        model.user.credentialTheft.assertCompromisedWithEffort();
+        model.user.reverseTakeover.assertCompromisedWithEffort();
         model.user.attemptSteal2FAtoken.assertCompromisedWithEffort();
         model.user.steal2FAtoken.assertCompromisedWithEffort();
 
@@ -76,8 +76,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        model.user.attemptCredentialTheft.assertCompromisedWithEffort();
-        model.user.attemptReverseTakeover.assertCompromisedWithEffort();
+        model.user.credentialTheft.assertCompromisedWithEffort();
+        model.user.reverseTakeover.assertCompromisedWithEffort();
         model.user.attemptSteal2FAtoken.assertCompromisedWithEffort();
         model.user.steal2FAtoken.assertCompromisedWithEffort();
 
@@ -98,8 +98,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        model.user.attemptCredentialTheft.assertCompromisedWithEffort();
-        model.user.attemptReverseTakeover.assertCompromisedWithEffort();
+        model.user.credentialTheft.assertCompromisedWithEffort();
+        model.user.reverseTakeover.assertCompromisedWithEffort();
         model.user.attemptSteal2FAtoken.assertUncompromised();
         model.user.steal2FAtoken.assertUncompromised();
 
@@ -117,8 +117,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        model.user.attemptCredentialTheft.assertCompromisedWithEffort();
-        model.user.attemptReverseTakeover.assertCompromisedWithEffort();
+        model.user.credentialTheft.assertCompromisedWithEffort();
+        model.user.reverseTakeover.assertCompromisedWithEffort();
         model.user.attemptSteal2FAtoken.assertUncompromised();
         model.user.steal2FAtoken.assertUncompromised();
 
