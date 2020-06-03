@@ -6,10 +6,10 @@ import org.junit.jupiter.api.Test;
 
 public class DataTest extends CoreLangTest {
     private static class DataTestModel {
-        public final Data data1 = new Data("data1",  false);
-        public final Data data2 = new Data("data2", false);
-        public final Data encdata = new Data("encData", false);
-        public final Data notexistdata = new Data("notexistdata", true);
+        public final Data data1 = new Data("data1", false, false);
+        public final Data data2 = new Data("data2", false, false);
+        public final Data encdata = new Data("encData", false, false);
+        public final Data notexistdata = new Data("notexistdata", false, true);
         public final Credentials datacreds = new Credentials("datacreds");
 
         public DataTestModel() {

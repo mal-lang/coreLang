@@ -22,9 +22,9 @@ public class NetworkIntegrationTests extends CoreLangTest {
         public final Network netC = new Network("NetworkC");
         public final Network netD = new Network("NetworkD");
         public final Application app1 = new Application("Application1");
-        public final Connection conn1 = new Connection("Connection1");
-        public final Connection conn2 = new Connection("Connection2");
-        public final Connection conn3 = new Connection("Connection3");
+        public final ConnectionRule conn1 = new ConnectionRule("Connection1");
+        public final ConnectionRule conn2 = new ConnectionRule("Connection2");
+        public final ConnectionRule conn3 = new ConnectionRule("Connection3");
         public final RoutingFirewall routingfw = new RoutingFirewall("RoutingFirewall");
 
         public simpleNetworkTestModel() {
@@ -87,8 +87,8 @@ public class NetworkIntegrationTests extends CoreLangTest {
         public final Network netB = new Network("NetworkB");
         public final Network netC = new Network("NetworkC");
         public final Application app1 = new Application("Application1");
-        public final Connection conn1 = new Connection("Connection1");
-        public final Connection conn2 = new Connection("Connection2");
+        public final ConnectionRule conn1 = new ConnectionRule("Connection1");
+        public final ConnectionRule conn2 = new ConnectionRule("Connection2");
         public final RoutingFirewall routingfw = new RoutingFirewall("RoutingFirewall");
         public final UnknownVulnerability vuln = new UnknownVulnerability("UnknownVulnerability");
         public final UnknownExploit exploit = new UnknownExploit("UnknownExploit");

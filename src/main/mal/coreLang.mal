@@ -145,9 +145,8 @@ category ComputeComponents {
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
-            appConnections.transmit,
-            appConnections.transmitResponse,
-            appConnections.data.attemptAccess
+            appConnections.attemptTransmit,
+            appConnections.attemptTransmitResponse
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
@@ -217,7 +216,7 @@ category ComputeComponents {
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this service. Adopted from awsLang."
-        ->  containedData.deny
+        ->  containedData.attemptDeny
 
     }
 
@@ -240,7 +239,7 @@ category DataResources {
 
     asset Data
       user info: "Any form of data that can be stored or transmitted."
-      developer info: "Adopted from awsLang."
+      developer info: "Adopted from awsLang but significantly changed."
     {
         | attemptAccess
           user info: "Attempt to access the data, this might fail if the dataNotExist defense is used."
@@ -264,25 +263,39 @@ category DataResources {
           <-  encryptCreds
           ->  decryptData
 
-        | decryptData
+        # authenticated
+          user info: "If the data are authenticated, then modifying them is not possible to achieve."
+          ->  applicationRespondConnect,
+              write,
+              manInTheMiddle
+
+        & decryptData
+          ->  accessDecryptedData
+
+        | accessDecryptedData @hidden
+          user info: "Intermediate attack step to only allow effects of 'decryptData' on data after compromising the encryption credentials or encryption is disabled."
           ->  access,
               readContainedInformationAndData,
+              applicationRespondConnect,
+              eavesdrop,
+              manInTheMiddle,
               read,
               write,
               delete
 
         # dataNotExist
-          user info: "It models the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
-          ->  access,
-              readContainedInformationAndData,
-              read,
-              write,
-              delete
+          user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
+          developer info: "This attack step is in series with the decryptData attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+          ->  decryptData,
+              deny
 
         & readContainedInformationAndData
           user info: "From the data, attempt to access also the contained information/data, if exists."
           ->  information.attemptAccess,
               containedData.attemptAccess
+
+        & applicationRespondConnect
+          ->  transitApp.networkRespondConnect
 
         | attemptRead
           user info: "Attempt to read the data."
@@ -334,9 +347,32 @@ category DataResources {
           user info: "The attacker can delete the data."
           ->  containedData.attemptDelete
 
-        | deny {A}
+        | attemptDeny @hidden
+          developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotExist' defense is disabled."
+          ->  deny
+
+        & deny {A}
           user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
           ->  containedData.deny
+
+        | attemptEavesdrop @hidden
+          developer info: "Intermediate attack step to only allow eavesdrop on data after all defenses are disabled."
+          ->  eavesdrop
+
+        | attemptManInTheMiddle @hidden
+          developer info: "Intermediate attack step to only allow MitM on data after all defenses are disabled."
+          ->  manInTheMiddle
+
+        & eavesdrop {C}
+          user info: "Evasdrop on Data could lead to read access on unencrypted Data."
+          ->  attemptRead,
+              applicationRespondConnect
+
+        & manInTheMiddle {C, I}
+          user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
+          ->  attemptRead,
+              attemptWrite,
+              applicationRespondConnect
     }
 }
 
@@ -374,7 +410,7 @@ category IAM {
       | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
-            encryptedData.decryptData,
+            encryptedData.accessDecryptedData,
             identities.users.attemptSteal2FAtoken
 
       | attemptAccess
@@ -438,8 +474,8 @@ category Networking {
     asset Network
       user info: "A network zone is a set of network accessible applications."
     {
-      let allowedNetworks =  (netConnections.routerFirewalls.connectionRules.networks /\ netConnections.networks) \/ (outgoingNetConnections.routerFirewalls.connectionRules.inNetworks /\ outgoingNetConnections.inNetworks)
-      let allowedApplications = (netConnections.routerFirewalls.connectionRules.applications /\ netConnections.applications) \/ (outgoingNetConnections.routerFirewalls.connectionRules.applications /\ outgoingNetConnections.applications)
+      let allowedNetworkConnections =  (netConnections.routerFirewalls.connectionRules /\ netConnections) \/ (outgoingNetConnections.routerFirewalls.connectionRules /\ outgoingNetConnections)
+      let allowedApplicationConnections = (netConnections.routerFirewalls.connectionRules /\ netConnections) \/ (outgoingNetConnections.routerFirewalls.connectionRules /\ outgoingNetConnections)
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
 
       | physicalAccess {A}
@@ -449,19 +485,42 @@ category Networking {
       | access
         user info: "Access provides connect to all reachable applications."
         ->  applications.networkConnect,
+            accessNetworkData,
             networkForwarding,
-            denialOfService
+            denialOfService,
+            eavesdrop,
+            manInTheMiddle
 
       | networkForwarding
         developer info: "By using the allowed connections, forwarding from one network to another can happen. The RoutingFirewall can also be reached."
-          ->  allowedNetworks().access,
-              allowedApplications().networkConnect,
-              allNetConnections().routerFirewalls.connect
+          ->  allowedNetworkConnections().attemptAccessNetworks,
+              allowedApplicationConnections().attemptConnectToApplications,
+              allNetConnections().attemptConnectToRoutingFirewalls
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
-        ->  allNetConnections().denialOfService,
-            applications.deny
+        ->  allNetConnections().attemptDenialOfService,
+            applications.deny,
+            applications.transitData.attemptDeny
+
+      | accessNetworkData
+        user info: "Access also the data that are network-wide available."
+        ->  transitData.attemptAccess,
+            transitData.attemptEavesdrop,
+            transitData.attemptManInTheMiddle
+
+      # switchingNetwork
+        user info: "If the network is a switching network then eavesdrop and MitM attacks are not possible to be done."
+        ->  eavesdrop,
+            manInTheMiddle
+
+      & eavesdrop {C}
+        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
+        ->  applications.transitData.attemptEavesdrop
+
+      & manInTheMiddle {C, I}
+        user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
+        ->  applications.transitData.attemptManInTheMiddle
     }
 
     asset RoutingFirewall extends System 
@@ -470,37 +529,78 @@ category Networking {
       
       | denialOfService {A}
        user info: "A DoS attack should cascade on the connected networks and associated connections"
-        ->  connectionRules.denialOfService
+        ->  connectionRules.attemptDenialOfService
 
       | fullAccess {I, A}
         developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed!"
         +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).access,
-            connectionRules.applications.networkConnect,
-            connectionRules.intercept
+            connectionRules.applications.networkConnect
 
     }
 
-    asset Connection
+    asset ConnectionRule
       user info: "This asset is used to model firewall rules between Applications and/or Networks."
       developer info: "This asset is mainly used to model the functionality of a network connection through a firewall. If Data is added, then it also models the data in transit."
     {
-      | intercept {C}
-        user info: "By intercepting a connection, access on the contained data can be gained."
-        ->  data.attemptAccess
+      # disabled
+        user info: "It should be used to model the probability that the connection rule is actually not existing."
+        ->  accessNetworks,
+            connectToApplications,
+            connectToRoutingFirewalls,
+            transmit,
+            transmitResponse,
+            denialOfService
 
-      | transmitResponse {I}
+      // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
+      | attemptAccessNetworks @hidden
+        developer info: "Intermediate attack step."
+        ->  accessNetworks
+
+      & accessNetworks @hidden
+        developer info: "Access all networks that are associated with this ConnectionRule."
+        ->  networks.access,
+            inNetworks.access
+
+      | attemptConnectToApplications @hidden
+        developer info: "Intermediate attack step."
+        ->  connectToApplications
+
+      & connectToApplications @hidden
+        developer info: "Connect to all the Applications that are associated with this ConnectionRule."
+        ->  applications.networkConnect
+
+      | attemptConnectToRoutingFirewalls @hidden
+        developer info: "Intermediate attack step."
+        ->  connectToRoutingFirewalls
+
+      & connectToRoutingFirewalls @hidden
+        developer info: "Connect all RoutingFirewalls that are associated with this ConnectionRule."
+        ->  routerFirewalls.connect
+
+      | attemptTransmitResponse @hidden
+        developer info: "Intermediate attack step."
+        ->  transmitResponse
+
+      & transmitResponse {I}
         user info: "By transmitting a response towards a network application/service a connection to the application can be achieved."
         developer info: "Adopted from awsLang."
         ->  applications.networkRespondConnect
 
-      | transmit {I}
+      | attemptTransmit @hidden
+        developer info: "Intermediate attack step."
+        ->  transmit
+
+      & transmit {I}
         user info: "By transmitting over a connection towards a network application a connection to the application can be achieved."
         developer info: "Adopted from awsLang."
         ->  applications.networkRequestConnect
 
-      | denialOfService {A}
-        ->  applications.deny,
-            data.deny
+      | attemptDenialOfService @hidden
+        developer info: "Intermediate attack step."
+        ->  denialOfService
+
+      & denialOfService {A}
+        ->  applications.deny
     }
 
 }
@@ -511,31 +611,32 @@ associations {
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
-        developer info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
+      user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
   // ### Networking associations
   PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
-
-  RoutingFirewall  [routerFirewalls]   0..1 <-- ConnectionRule        --> *   [connectionRules]        Connection
-      developer info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
+  RoutingFirewall  [routerFirewalls]   0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
+      user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
-      developer info: "An application can communicate / be exposed on a network.  A network zone is a set of network accessible applications."
-  Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         Connection
-      developer info: "But also, an application can communicate over one or more (mesh type) bidirectional connections."
-  Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         Connection
-      developer info: "Two or more networks can also be inter-connected via a bidirectional connection."
-  Network          [outNetworks]          * <-- OutNetworkConnection --> *    [outgoingNetConnections] Connection
-      developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
-  Network          [inNetworks]           * <-- InNetworkConnection  --> *    [ingoingNetConnections]  Connection
-      developer info: "Two or more networks can also be inter-connected via a uni-directional connection."
-  Connection       [connection]        0..1 <-- DataInTransit         --> *   [data]                   Data 
-      developer info: "And a connection can have data in transit. Effectively working as a dataflow."
+      user info: "An application can communicate / be exposed on a network."
+  Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
+      user info: "An application can communicate over one or more (mesh type) bidirectional connections."
+  Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
+      user info: "Two or more networks can also be inter-connected via a bidirectional connection."
+  Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection."
+  Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection."
   //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
   Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
-      developer info: "An application should be able to contain some data."
+      user info: "An application should be able to contain some data."
+  Data             [transitData]          * <-- DataInTransit         --> *   [transitApp]             Application
+      user info: "An application can also contain some data that are supposed to be transfered over a connection."
+  Data             [transitData]          * <-- DataInTransit         --> *   [transitNetwork]         Network
+      user info: "A network can also contain some data that are supposed to be network-wide available."
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
@@ -547,9 +648,9 @@ associations {
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   Identity         [parentId]             * <-- IdentityHierarchy     --> *   [childId]                Identity
   // First on system level
-  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess  --> *   [highPrivManagedSystems]  System
+  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
       user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess   --> *   [lowPrivManagedSystems]   System
+  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
       user info: "Low privilege access on a System provides individual identity access on the system."
   // Then, Access Control on application level
   Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
@@ -559,7 +660,7 @@ associations {
   Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
       user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
-  Identity         [readingIds]           *   <-- ReadPrivileges      --> *   [readPrivData]           Data
-  Identity         [writingIds]           *   <-- WritePrivileges     --> *   [writePrivData]          Data
-  Identity         [deletingIds]          *   <-- DeletePrivileges    --> *   [deletePrivData]         Data
+  Identity         [readingIds]           * <-- ReadPrivileges        --> *   [readPrivData]           Data
+  Identity         [writingIds]           * <-- WritePrivileges       --> *   [writePrivData]          Data
+  Identity         [deletingIds]          * <-- DeletePrivileges      --> *   [deletePrivData]         Data
 }
