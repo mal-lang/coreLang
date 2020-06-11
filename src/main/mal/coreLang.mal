@@ -27,6 +27,7 @@ category ComputeComponents {
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
     {
       | attemptUseVulnerability
+        user info: "Attempt to use the associated vulnerabilities."
         ->  objvulnerabilities.attemptAbuse
 
       | deny {A}
@@ -47,9 +48,11 @@ category ComputeComponents {
             attemptUseVulnerability
 
       | allPrivilegeAuthenticate @hidden
+        developer info: "Entry point attack step from identity."
         ->  attemptGainFullAccess
 
       | individualPrivilegeAuthenticate @hidden
+        developer info: "Entry point attack step from identity."
         ->  specificAccess
 
       & attemptGainFullAccess
@@ -73,6 +76,7 @@ category ComputeComponents {
             connect
 
       | deny {A}
+        user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
         ->  sysExecutedApps.deny
 
       | bypassAccessControl @hidden {C, I}
@@ -183,9 +187,11 @@ category ComputeComponents {
             networkAccess
 
       & localAccess @hidden
+        developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
         ->  fullAccess
 
       & networkAccess @hidden
+        developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
         ->  fullAccess
 
       | fullAccess {C,I,A}
@@ -215,7 +221,7 @@ category ComputeComponents {
         ->  containedData.attemptAccess
 
       | deny {A}
-        user info: "The attacker can deny some or all functionality and data pertaining to this service. Adopted from awsLang."
+        user info: "The attacker can deny some or all functionality and data pertaining to this application/service. Adopted from awsLang."
         ->  containedData.attemptDeny
 
     }
@@ -224,6 +230,7 @@ category ComputeComponents {
       user info: "A physical zone is the location where systems are physically deployed."
     {
       | gainPhysicalAccess
+        user info: "By gaining access on a physical zone, physical access on the housed systems is also gained."
         ->  systems.physicalAccess
     }
 }
@@ -259,9 +266,9 @@ category DataResources {
 
         !E dataEncrypted @hidden
           user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
-          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'decryptData' is reached."
+          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
           <-  encryptCreds
-          ->  decryptData
+          ->  accessUnencryptedData
 
         # authenticated
           user info: "If the data are authenticated, then modifying them is not possible to achieve."
@@ -269,11 +276,12 @@ category DataResources {
               write,
               manInTheMiddle
 
-        & decryptData
+        & accessUnencryptedData
+          user info: "If data is unencrypted then access them."
           ->  accessDecryptedData
 
         | accessDecryptedData @hidden
-          user info: "Intermediate attack step to only allow effects of 'decryptData' on data after compromising the encryption credentials or encryption is disabled."
+          user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
           ->  access,
               readContainedInformationAndData,
               applicationRespondConnect,
@@ -285,8 +293,8 @@ category DataResources {
 
         # dataNotExist
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
-          developer info: "This attack step is in series with the decryptData attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
-          ->  decryptData,
+          developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+          ->  accessUnencryptedData,
               deny
 
         & readContainedInformationAndData
@@ -295,6 +303,7 @@ category DataResources {
               containedData.attemptAccess
 
         & applicationRespondConnect
+          user info: "If data is eavesdropped then respond connect to the remote server application can be done."
           ->  transitApp.networkRespondConnect
 
         | attemptRead
@@ -387,9 +396,11 @@ category IAM {
           ->  successfulAssume
 
         | attemptAssume
+          user info: "Attempt to assume the identity. If 2FA is enabled this will be not possible without first acquiring the 2FA token."
           ->  successfulAssume
 
         & successfulAssume @hidden
+          developer info: "Intermediate attack step to model the requirements for identity assume."
           ->  assume
 
         | assume {C,I,A}
@@ -465,6 +476,7 @@ category User {
           ->  userIds.assume
 
         | compromise {C}
+          user info: "Compromising the user leads to possible assumption of its identity(ies)."
           ->  userIds.attemptAssume
     }
 }
