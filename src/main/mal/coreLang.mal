@@ -249,7 +249,7 @@ category DataResources {
       developer info: "Adopted from awsLang but significantly changed."
     {
         | attemptAccess
-          user info: "Attempt to access the data, this might fail if the dataNotExist defense is used."
+          user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
           ->  access
 
         | attemptAccessFromIdentity
@@ -291,7 +291,7 @@ category DataResources {
               write,
               delete
 
-        # dataNotExist
+        # dataNotPresent
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
           developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
           ->  accessUnencryptedData,
@@ -357,7 +357,7 @@ category DataResources {
           ->  containedData.attemptDelete
 
         | attemptDeny @hidden
-          developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotExist' defense is disabled."
+          developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
           ->  deny
 
         & deny {A}
