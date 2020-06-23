@@ -106,8 +106,9 @@ category ComputeComponents {
             attemptLocalConnectVuln // And connection to automatically modeled vulnerabilities
 
       | attemptUseVulnerability
-        user info: "Attempt to use the connected 'manual' vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
-        ->  allManualVulnerabilities().attemptAbuse
+        user info: "Attempt to use the connected 'manual' and unknown vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        ->  allManualVulnerabilities().attemptAbuse,
+            allUnknownVulnerabilities().attemptAbuse
 
       | attemptLocalConnectVuln
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
