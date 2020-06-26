@@ -21,7 +21,7 @@ include "coreVulnerability.mal"
 include "VulnerabilityManual.mal"
 include "VulnerabilityAutomatic.mal"
 
-category ComputeComponents {
+category ComputeResources {
 
     abstract asset Object
       developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
@@ -163,6 +163,7 @@ category ComputeComponents {
         user info: "An attacker may be able to respond to requests submitted by an application."
         developer info: "Adopted from awsLang."
         ->  attemptNetworkRequestRespondConnectVuln,
+            attemptUseVulnerability, // Manual vulnerabilities should also be able to be attempted from here.
             networkConnect
 
       | specificAccessFromConnection @hidden
@@ -180,6 +181,8 @@ category ComputeComponents {
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
             attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
+            transitData.attemptAccessFromIdentity,
+            transitData.attemptApplicationRespondConnect,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
       | authenticate
@@ -202,6 +205,8 @@ category ComputeComponents {
             deny,
             appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
             containedData.attemptAccess,   // and access on all the contained data
+            transitData.attemptAccess,
+            transitData.attemptApplicationRespondConnect,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect    // and localConnect on the host application
 
@@ -303,6 +308,10 @@ category DataResources {
           ->  information.attemptAccess,
               containedData.attemptAccess
 
+        | attemptApplicationRespondConnect @hidden
+          developer info: "Intermediate attack step to handle defenses."
+          ->  applicationRespondConnect
+
         & applicationRespondConnect
           user info: "If data is eavesdropped then respond connect to the remote server application can be done."
           ->  transitApp.networkRespondConnect
@@ -376,13 +385,13 @@ category DataResources {
         & eavesdrop {C}
           user info: "Evasdrop on Data could lead to read access on unencrypted Data."
           ->  attemptRead,
-              applicationRespondConnect
+              attemptApplicationRespondConnect
 
         & manInTheMiddle {C, I}
           user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
           ->  attemptRead,
               attemptWrite,
-              applicationRespondConnect
+              attemptApplicationRespondConnect
     }
 }
 
