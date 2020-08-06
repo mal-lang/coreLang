@@ -159,6 +159,7 @@ category ComputeResources {
       | networkRespondConnect [Exponential(0.001)]
         user info: "An attacker may be able to respond to requests submitted by an application."
         developer info: "Adopted from awsLang."
+        modeler info: "The probability and its value are just estimations and are subject to change."
         ->  attemptNetworkRequestRespondConnectVuln,
             attemptUseVulnerability, // Manual vulnerabilities should also be able to be attempted from here.
             networkConnect
@@ -456,8 +457,9 @@ category User {
           user info: "Trick the user to provide his/her credentials."
           ->  credentialTheft
 
-        | credentialTheft [Exponential(0.02)]
-          developer info: "This attack is hard to happen but not harder than reverseTakeover. The probability and its value are subject to change."
+        | credentialTheft [Bernoulli(0.05)]
+          developer info: "This attack is hard to happen but not harder than reverseTakeover."
+          modeler info: "Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed"
           ->  userIds.credentials.credentialTheft
 
         | attemptReverseTakeover
@@ -465,7 +467,8 @@ category User {
           ->  reverseTakeover
 
         | reverseTakeover [Exponential(0.01)]
-          developer info: "This attack is harder to happen because it requires more bad effort from the victim. The probability and its value are subject to change."
+          developer info: "This attack is harder to happen because it requires more bad effort from the victim."
+          modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.execPrivApps.networkConnect
 
         | phishUser
@@ -478,8 +481,9 @@ category User {
           ->  steal2FAtoken
 
         & steal2FAtoken [Exponential(0.02)]
-          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection. The probability and its value are subject to change."
+          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
           developer info: "This attack is hard to happen but not harder than reverseTakeover."
+          modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.assume
 
         | compromise {C}
