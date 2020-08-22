@@ -148,7 +148,8 @@ category ComputeResources {
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
             appConnections.attemptTransmit,
-            appConnections.attemptTransmitResponse
+            appConnections.attemptTransmitResponse,
+            appConnections.attemptAccessNetworks
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application."
@@ -497,8 +498,8 @@ category Networking {
     asset Network
       user info: "A network zone is a set of network accessible applications."
     {
-      let allowedNetworkConnections =  (netConnections.routerFirewalls.connectionRules /\ netConnections) \/ (outgoingNetConnections.routerFirewalls.connectionRules /\ outgoingNetConnections)
-      let allowedApplicationConnections = (netConnections.routerFirewalls.connectionRules /\ netConnections) \/ (outgoingNetConnections.routerFirewalls.connectionRules /\ outgoingNetConnections)
+      let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
+      let allowedApplicationConnections = netConnections \/ outgoingNetConnections
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
 
       | physicalAccess {A}
