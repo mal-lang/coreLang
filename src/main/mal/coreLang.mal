@@ -44,6 +44,11 @@ category ComputeResources {
             specificAccess,
             attemptUseVulnerability
 
+      | attemptConnect [Bernoulli(0.05)]
+        user info: "If an attacker has physical access on the premises of a System, he could (not always) try to connect to that System."
+        modeler info: "The probability and its value are just estimations and are subject to change."
+        ->  connect
+
       | allPrivilegeAuthenticate @hidden
         developer info: "Entry point attack step from identity."
         ->  attemptGainFullAccess
@@ -68,9 +73,10 @@ category ComputeResources {
         ->  sysExecutedApps.localConnect
 
       | physicalAccess
-        user info: "Attacker has physical access on the location where the system is physically deployed."
+        user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
         ->  deny,
-            connect
+            attemptConnect,
+            sysvulnerabilities.attemptAbuse
 
       | deny {A}
         user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
@@ -177,12 +183,20 @@ category ComputeResources {
         user info: "This level of access models a low-privilege access and requires all other privileges to be modeled separately."
         developer info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+            attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
             attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
             transitData.attemptAccessFromIdentity,
             transitData.attemptApplicationRespondConnect,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
+
+      | attemptLocalConnectVulnOnHost [Bernoulli(0.05)]
+        user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
+        developer info: "The value of the Bernoulli distribution should be considered as an adjustable value depending on the model."
+        modeler info: "The probability and its value are just estimations and are subject to change."
+        ->  hostApp.attemptLocalConnectVuln,
+            hostApp.attemptUseVulnerability
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
@@ -534,7 +548,8 @@ category Networking {
             transitData.attemptManInTheMiddle
 
       # switchingNetwork
-        user info: "If the network is a switching network then eavesdrop and MitM attacks are not possible to be done."
+        user info: "If the network is a switching network then eavesdrop and MitM attacks are harder to be performed. If this defense is disabled, then the network is considered a broadcast network."
+        modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
         ->  eavesdrop,
             manInTheMiddle
 
