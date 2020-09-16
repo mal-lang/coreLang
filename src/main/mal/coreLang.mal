@@ -44,7 +44,7 @@ category ComputeResources {
             specificAccess,
             attemptUseVulnerability
 
-      | attemptConnect [Bernoulli(0.05)]
+      | attemptConnect [HardAndUncertain]
         user info: "If an attacker has physical access on the premises of a System, he could (not always) try to connect to that System."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  connect
@@ -163,7 +163,7 @@ category ComputeResources {
         ->  attemptNetworkRequestRespondConnectVuln,
             networkConnect
 
-      | networkRespondConnect [Exponential(0.001)]
+      | networkRespondConnect [VeryHardAndUncertain]
         user info: "An attacker may be able to respond to requests submitted by an application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
@@ -191,9 +191,8 @@ category ComputeResources {
             transitData.attemptApplicationRespondConnect,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
-      | attemptLocalConnectVulnOnHost [Bernoulli(0.05)]
+      | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
-        developer info: "The value of the Bernoulli distribution should be considered as an adjustable value depending on the model."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  hostApp.attemptLocalConnectVuln,
             hostApp.attemptUseVulnerability
@@ -473,16 +472,16 @@ category User {
           user info: "Trick the user to provide his/her credentials."
           ->  credentialTheft
 
-        | credentialTheft [Bernoulli(0.05)]
+        | credentialTheft [HardAndUncertain]
           developer info: "This attack is hard to happen but not harder than reverseTakeover."
-          modeler info: "Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed"
+          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
           ->  userIds.credentials.credentialTheft
 
         | attemptReverseTakeover
           user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
           ->  reverseTakeover
 
-        | reverseTakeover [Exponential(0.01)]
+        | reverseTakeover [VeryHardAndUncertain]
           developer info: "This attack is harder to happen because it requires more bad effort from the victim."
           modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.execPrivApps.networkConnect
@@ -496,9 +495,9 @@ category User {
           developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model."
           ->  steal2FAtoken
 
-        & steal2FAtoken [Exponential(0.02)]
+        & steal2FAtoken [VeryHardAndUncertain]
           user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
-          developer info: "This attack is hard to happen but not harder than reverseTakeover."
+          developer info: "This attack is generally hard to happen but not harder than reverseTakeover."
           modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.assume
 

@@ -54,15 +54,15 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        // model.user.credentialTheft.assertCompromisedWithEffort();
-        model.user.reverseTakeover.assertCompromisedWithEffort();
-        // model.user.attemptSteal2FAtoken.assertCompromisedWithEffort();
-        // model.user.steal2FAtoken.assertCompromisedWithEffort();
+        assertReached(model.user.credentialTheft);
+        assertReached(model.user.reverseTakeover);
+        assertReached(model.user.attemptSteal2FAtoken);
+        assertReached(model.user.steal2FAtoken);
 
-        // model.credentials.credentialTheft.assertCompromisedWithEffort();
-        model.application.networkConnect.assertCompromisedWithEffort();
+        assertReached(model.credentials.credentialTheft);
+        assertReached(model.application.networkConnect);
 
-        // model.identity.assume.assertCompromisedWithEffort();
+        assertReached(model.identity.assume);
     }
 
     @Test
@@ -76,15 +76,15 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        // model.user.credentialTheft.assertCompromisedWithEffort();
-        model.user.reverseTakeover.assertCompromisedWithEffort();
-        // model.user.attemptSteal2FAtoken.assertCompromisedWithEffort();
-        // model.user.steal2FAtoken.assertCompromisedWithEffort();
+        assertReached(model.user.credentialTheft);
+        assertReached(model.user.reverseTakeover);
+        assertReached(model.user.attemptSteal2FAtoken);
+        assertReached(model.user.steal2FAtoken);
 
-        // model.credentials.credentialTheft.assertCompromisedWithEffort();
-        model.application.networkConnect.assertCompromisedWithEffort();
+        assertReached(model.credentials.credentialTheft);
+        assertReached(model.application.networkConnect);
 
-        // model.identity.assume.assertCompromisedWithEffort();
+        assertReached(model.identity.assume);
     }
 
     @Test
@@ -98,8 +98,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        // model.user.credentialTheft.assertCompromisedWithEffort();
-        model.user.reverseTakeover.assertCompromisedWithEffort();
+        assertReached(model.user.credentialTheft);
+        assertReached(model.user.reverseTakeover);
         model.user.attemptSteal2FAtoken.assertUncompromised();
         model.user.steal2FAtoken.assertUncompromised();
 
@@ -117,8 +117,8 @@ public class UserTest extends CoreLangTest {
 
         model.user.phishUser.assertCompromisedInstantaneously();
         model.user.phishUser.assertCompromisedInstantaneously();
-        // model.user.credentialTheft.assertCompromisedWithEffort();
-        model.user.reverseTakeover.assertCompromisedWithEffort();
+        assertReached(model.user.credentialTheft);
+        assertReached(model.user.reverseTakeover);
         model.user.attemptSteal2FAtoken.assertUncompromised();
         model.user.steal2FAtoken.assertUncompromised();
 
