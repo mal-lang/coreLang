@@ -51,7 +51,7 @@ public class NetworkIntegrationTests extends CoreLangTest {
             netC.access.assertUncompromised();
             netD.access.assertCompromisedInstantaneously();
             app1.networkConnect.assertCompromisedInstantaneously();
-            routingfw.attemptUseVulnerability.assertCompromisedInstantaneously();
+            routingfw.attemptUseVulnerability.assertUncompromised();
             routingfw.fullAccess.assertUncompromised();
         }
     }
@@ -107,6 +107,7 @@ public class NetworkIntegrationTests extends CoreLangTest {
         }
 
         public void addAttacker(Attacker attacker) {
+          attacker.addAttackPoint(routingfw.connect);
           attacker.addAttackPoint(netA.access);
         }
 

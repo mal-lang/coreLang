@@ -221,7 +221,8 @@ category ComputeResources {
             transitData.attemptAccess,
             transitData.attemptApplicationRespondConnect,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
-            hostApp.localConnect    // and localConnect on the host application
+            hostApp.localConnect,    // and localConnect on the host application
+            managedRoutingFw.fullAccess // if the routing firewall manager app is compromised the routing firewall should also be compromised
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
@@ -532,8 +533,7 @@ category Networking {
       | networkForwarding
         developer info: "By using the allowed connections, forwarding from one network to another can happen. The RoutingFirewall can also be reached."
           ->  allowedNetworkConnections().attemptAccessNetworks,
-              allowedApplicationConnections().attemptConnectToApplications,
-              allNetConnections().attemptConnectToRoutingFirewalls
+              allowedApplicationConnections().attemptConnectToApplications
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
@@ -585,7 +585,6 @@ category Networking {
         user info: "It should be used to model the probability that the connection rule is actually not existing."
         ->  accessNetworks,
             connectToApplications,
-            connectToRoutingFirewalls,
             transmit,
             transmitResponse,
             denialOfService
@@ -607,14 +606,6 @@ category Networking {
       & connectToApplications @hidden
         developer info: "Connect to all the Applications that are associated with this ConnectionRule."
         ->  applications.networkConnect
-
-      | attemptConnectToRoutingFirewalls @hidden
-        developer info: "Intermediate attack step."
-        ->  connectToRoutingFirewalls
-
-      & connectToRoutingFirewalls @hidden
-        developer info: "Connect all RoutingFirewalls that are associated with this ConnectionRule."
-        ->  routerFirewalls.connect
 
       | attemptTransmitResponse @hidden
         developer info: "Intermediate attack step."
@@ -654,8 +645,10 @@ associations {
   // ### Networking associations
   PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [systems]                System
       developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
-  RoutingFirewall  [routerFirewalls]   0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
+  RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
+  RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1[managerApp]             Application
+      user info: "A routing firewall can have an admin/manager interface (application) that is accesible from a network location."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       user info: "An application can communicate / be exposed on a network."
   Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
