@@ -66,6 +66,8 @@ category ComputeResources {
         ->  sysExecutedApps.fullAccess,
             highPrivSysIds.assume,
             lowPrivSysIds.assume,
+            highPrivSysGroups.compromiseGroup,
+            lowPrivSysGroups.compromiseGroup,
             sysData.attemptAccess
 
       & specificAccess
@@ -228,6 +230,7 @@ category ComputeResources {
         developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
         ->  fullAccess,
             executionPrivIds.assume,
+            executionPrivGroups.compromiseGroup,
             modify
 
       | read {C}
@@ -412,7 +415,7 @@ category IAM {
 
     asset Identity
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
-      developer info: "An identity can be visualised as a user group that can be associated with many credentials."
+      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
         # twoFactorAuthentication
           user info: "Two Factor Authentication (2FA). This defense, if enabled, should block all atempts to assume identity illegitimately."
@@ -427,15 +430,34 @@ category IAM {
           ->  assume
 
         | assume {C,I,A}
-          developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access!"
-          ->  parentId*.lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              parentId*.highPrivManagedSystems.allPrivilegeAuthenticate,
-              parentId*.execPrivApps.authenticate,
-              parentId*.highPrivApps.authenticate,
-              parentId*.lowPrivApps.specificAccessFromIdentity,
-              parentId*.readPrivData.identityAttemptRead,
-              parentId*.writePrivData.identityAttemptWrite,
-              parentId*.deletePrivData.identityAttemptDelete
+          developer info: "After authentication or compromise of an account/identity, assume its privileges. This is both legitimate and illegitimate access! Also asume all the privilegs of the child identities (under this identity)."
+          ->  parentId.assume,
+              memberOf.compromiseGroup,
+              lowPrivManagedSystems.individualPrivilegeAuthenticate,
+              highPrivManagedSystems.allPrivilegeAuthenticate,
+              execPrivApps.authenticate,
+              highPrivApps.authenticate,
+              lowPrivApps.specificAccessFromIdentity,
+              readPrivData.identityAttemptRead,
+              writePrivData.identityAttemptWrite,
+              deletePrivData.identityAttemptDelete
+    }
+
+    asset Group
+      user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
+      modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
+    {
+      | compromiseGroup {C}
+        user info: "If an identity of a group is compromised then the whole group (i.e. all other identities) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
+        ->  parentGroup.compromiseGroup,
+            lowPrivManagedSystems.individualPrivilegeAuthenticate,
+            highPrivManagedSystems.allPrivilegeAuthenticate,
+            execPrivApps.authenticate,
+            highPrivApps.authenticate,
+            lowPrivApps.specificAccessFromIdentity,
+            readPrivData.identityAttemptRead,
+            writePrivData.identityAttemptWrite,
+            deletePrivData.identityAttemptDelete
     }
 
     asset Credentials extends Information
@@ -650,6 +672,7 @@ associations {
       user info: "A routing firewall can have an admin/manager interface (application) that is accesible from a network location."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       user info: "An application can communicate / be exposed on a network."
+      modeler info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
   Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
@@ -658,7 +681,6 @@ associations {
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
-  //Network          [networks]             * <-- NetworkExposure       --> *   [systems]                System  // Systems should be connected to Physical Zones and not to networks. This assumption should also be tested!
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
@@ -677,11 +699,18 @@ associations {
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
-  Identity         [parentId]             * <-- IdentityHierarchy     --> *   [childId]                Identity
+  Identity         [parentId]             * <-- CanAssume             --> *   [childId]                Identity
+  Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
+  Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
   // First on system level
   Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
       user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
   Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
+      user info: "Low privilege access on a System provides individual identity access on the system."
+  // And the same for Groups
+  Group            [highPrivSysGroups]    * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
+      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
+  Group            [lowPrivSysGroups]     * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
       user info: "Low privilege access on a System provides individual identity access on the system."
   // Then, Access Control on application level
   Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
@@ -690,8 +719,19 @@ associations {
       user info: "High privilege application access on an Application results in the compromise of all the child applications."
   Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
       user info: "Low privilege application access on an Application allows only the local interaction with the application."
+  // And the same for Groups
+  Group           [executionPrivGroups]   * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
+      user info: "An application can execute on a system with privileges of a specified group. If the application is compromised then the group privileges should be compromised."
+  Group           [highPrivAppGroups]     * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+      user info: "High privilege application access on an Application results in the compromise of all the child applications."
+  Group           [lowPrivAppGroups]      * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+      user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
   Identity         [readingIds]           * <-- ReadPrivileges        --> *   [readPrivData]           Data
   Identity         [writingIds]           * <-- WritePrivileges       --> *   [writePrivData]          Data
   Identity         [deletingIds]          * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  // And again for Groups
+  Group            [readingGroups]        * <-- ReadPrivileges        --> *   [readPrivData]           Data
+  Group            [writingGroups]        * <-- WritePrivileges       --> *   [writePrivData]          Data
+  Group            [deletingGroups]       * <-- DeletePrivileges      --> *   [deletePrivData]         Data
 }
