@@ -298,7 +298,7 @@ category DataResources {
               write,
               manInTheMiddle
 
-        & accessUnencryptedData
+        & accessUnencryptedData @hidden
           user info: "If data is unencrypted then access them."
           ->  accessDecryptedData
 
@@ -540,7 +540,8 @@ category Networking {
 
       | physicalAccess {A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
-        ->  denialOfService
+        ->  denialOfService,
+            eavesdropAfterPhysicalAccess
 
       | access
         user info: "Access provides connect to all reachable applications."
@@ -572,7 +573,8 @@ category Networking {
         user info: "If the network is a switching network then eavesdrop and MitM attacks are harder to be performed. If this defense is disabled, then the network is considered a broadcast network."
         modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
         ->  eavesdrop,
-            manInTheMiddle
+            manInTheMiddle,
+            eavesdropAfterPhysicalAccess
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
@@ -581,6 +583,11 @@ category Networking {
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
         ->  applications.transitData.attemptManInTheMiddle
+
+      & eavesdropAfterPhysicalAccess {C}
+        user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
+        ->  applications.transitData.attemptEavesdrop,
+            transitData.attemptEavesdrop
     }
 
     asset RoutingFirewall extends System 
