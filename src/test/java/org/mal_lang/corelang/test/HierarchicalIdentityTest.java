@@ -8,13 +8,16 @@ public class HierarchicalIdentityTest extends CoreLangTest {
         public Identity identity;
         public Identity childIdentityA;
         public Identity childIdentityB;
+        public Identity childIdentityC;
 
         public HierarchicalIdentityTestModel(boolean twoFA) {
             identity = new Identity("parentIdentity", twoFA);
             childIdentityA = new Identity("childIdA", twoFA);
             childIdentityB = new Identity("childIdB", twoFA);
+            childIdentityC = new Identity("childIdC", twoFA);
             identity.addChildId(childIdentityA);
             childIdentityA.addChildId(childIdentityB);
+            childIdentityB.addChildId(childIdentityC);
         }
 
         public void addAttacker(Attacker attacker) {
@@ -31,6 +34,7 @@ public class HierarchicalIdentityTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
+        model.childIdentityC.assume.assertUncompromised();
         model.childIdentityB.successfulAssume.assertUncompromised();
         model.childIdentityB.assume.assertUncompromised();
         model.childIdentityA.assume.assertUncompromised();
@@ -46,6 +50,7 @@ public class HierarchicalIdentityTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
+        model.childIdentityC.assume.assertUncompromised();
         model.childIdentityB.successfulAssume.assertCompromisedInstantaneously();
         model.childIdentityB.assume.assertCompromisedInstantaneously();
         model.childIdentityA.assume.assertCompromisedInstantaneously();
