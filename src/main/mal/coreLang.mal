@@ -44,10 +44,14 @@ category ComputeResources {
             specificAccess,
             attemptUseVulnerability
 
-      | attemptConnect [HardAndUncertain]
+      & attemptConnect [HardAndUncertain]
         user info: "If an attacker has physical access on the premises of a System, he could (not always) try to connect to that System."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  connect
+
+      & attemptUsePhysicalVulnerability
+        user info: "Attempt to use the associated physical vulnerabilities."
+        ->  sysvulnerabilities.attemptAbuse
 
       | allPrivilegeAuthenticate @hidden
         developer info: "Entry point attack step from identity."
@@ -57,7 +61,7 @@ category ComputeResources {
         developer info: "Entry point attack step from identity."
         ->  specificAccess
 
-      & attemptGainFullAccess
+      & attemptGainFullAccess @hidden
         developer info: "This is an intermediate step to ensure connection is possible before gaining full access."
         ->  fullAccess
 
@@ -78,7 +82,13 @@ category ComputeResources {
         user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
         ->  deny,
             attemptConnect,
-            sysvulnerabilities.attemptAbuse
+            attemptUsePhysicalVulnerability
+
+      # hardwareModificationsProtection
+        user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
+        developer info: "But it does not protect against denial of service attacks."
+        ->  attemptConnect,
+            attemptUsePhysicalVulnerability
 
       | deny {A}
         user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
@@ -332,11 +342,11 @@ category DataResources {
           user info: "If data is eavesdropped then respond connect to the remote server application can be done."
           ->  transitApp.networkRespondConnect
 
-        | attemptRead
+        | attemptRead @hidden
           user info: "Attempt to read the data."
           ->  read
 
-        | identityAttemptRead
+        | identityAttemptRead @hidden
           user info: "Attempt to read the data through a compormised identity."
           ->  identityRead
 
@@ -344,11 +354,11 @@ category DataResources {
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
           ->  attemptRead
 
-        | attemptWrite
+        | attemptWrite @hidden
           user info: "Attempt to write on the data."
           ->  write
 
-        | identityAttemptWrite
+        | identityAttemptWrite @hidden
           user info: "Attempt to write the data through a compormised identity."
           ->  identityWrite
 
@@ -356,11 +366,11 @@ category DataResources {
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
           ->  attemptWrite
 
-        | attemptDelete
+        | attemptDelete @hidden
            user info: "Attempt to delete the data."
           -> delete
 
-        | identityAttemptDelete
+        | identityAttemptDelete @hidden
           user info: "Attempt to delete the data through a compormised identity."
           ->  identityDelete
 
@@ -516,7 +526,7 @@ category User {
               attemptReverseTakeover
 
         | attemptSteal2FAtoken @hidden
-          developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model."
+          developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model. It is hidden because otherwise it will be shown even though no 2FA token exists."
           ->  steal2FAtoken
 
         & steal2FAtoken [VeryHardAndUncertain]
