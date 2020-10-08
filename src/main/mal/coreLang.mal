@@ -154,7 +154,7 @@ category ComputeResources {
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
-        ->  networks.access,
+        ->  networks.attemptAccess,
             appConnections.attemptTransmit,
             appConnections.attemptTransmitResponse,
             appConnections.attemptAccessNetworks
@@ -541,19 +541,34 @@ category Networking {
       let allowedApplicationConnections = netConnections \/ outgoingNetConnections
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
 
-      | physicalAccess {A}
+      | physicalAccess {C, A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
         ->  denialOfService,
             eavesdropAfterPhysicalAccess
 
-      | access
+      | attemptAccess
+        user info: "Access on a Network can be atempted if accessControl is disabled or bypassed."
+        ->  access,
+            bypassAccessControl
+
+      | bypassAccessControl [VeryHardAndUncertain]
+        user info: "If access control is enabled, the attacker can still try to bypass it and gain access on the network."
+        ->  successfulAccess
+
+      & access
         user info: "Access provides connect to all reachable applications."
+        ->  successfulAccess
+
+      | successfulAccess @hidden
+        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  applications.networkConnect,
             accessNetworkData,
             networkForwarding,
             denialOfService,
             eavesdrop,
-            manInTheMiddle
+            bypassEavesdropProtection,
+            manInTheMiddle,
+            bypassMitMProtection
 
       | networkForwarding
         developer info: "By using the allowed connections, forwarding from one network to another can happen. The RoutingFirewall can also be reached."
@@ -572,22 +587,37 @@ category Networking {
             transitData.attemptEavesdrop,
             transitData.attemptManInTheMiddle
 
-      # switchingNetwork
-        user info: "If the network is a switching network then eavesdrop and MitM attacks are harder to be performed. If this defense is disabled, then the network is considered a broadcast network."
+      # eavesdropDefense
+        user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
         modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
         ->  eavesdrop,
-            manInTheMiddle,
             eavesdropAfterPhysicalAccess
+
+      # manInTheMiddleDefense
+        user info: "This defense protects againsr man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        ->  manInTheMiddle
+
+      # accessControl
+        user info: "Access control protects from unauthorized access on the network."
+        ->  access
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
+        ->  applications.transitData.attemptEavesdrop
+
+      | bypassEavesdropProtection [HardAndUncertain]
+        user info: "The eavesdrop protection can be bypassesed."
         ->  applications.transitData.attemptEavesdrop
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
         ->  applications.transitData.attemptManInTheMiddle
 
-      & eavesdropAfterPhysicalAccess {C}
+      | bypassMitMProtection [HardAndUncertain]
+        user info: "The MitM protection can be bypassesed."
+        ->  applications.transitData.attemptManInTheMiddle
+
+      & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
         ->  applications.transitData.attemptEavesdrop,
             transitData.attemptEavesdrop
@@ -603,7 +633,7 @@ category Networking {
 
       | fullAccess {I, A}
         developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed!"
-        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).access,
+        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).attemptAccess,
             connectionRules.applications.networkConnect
 
     }
@@ -627,8 +657,8 @@ category Networking {
 
       & accessNetworks @hidden
         developer info: "Access all networks that are associated with this ConnectionRule."
-        ->  networks.access,
-            inNetworks.access
+        ->  networks.attemptAccess,
+            inNetworks.attemptAccess
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
