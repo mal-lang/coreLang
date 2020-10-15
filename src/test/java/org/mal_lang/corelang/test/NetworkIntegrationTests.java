@@ -102,12 +102,12 @@ public class NetworkIntegrationTests extends CoreLangTest {
          conn2.addInNetworks(netB);
          routingfw.addConnectionRules(conn1);
          routingfw.addConnectionRules(conn2);
-         routingfw.addObjvulnerabilities(vuln);
+         routingfw.addVulnerabilities(vuln);
          vuln.addExploits(exploit);
         }
 
         public void addAttacker(Attacker attacker) {
-          attacker.addAttackPoint(routingfw.connect);
+          attacker.addAttackPoint(routingfw.networkConnect);
           attacker.addAttackPoint(netA.access);
         }
 

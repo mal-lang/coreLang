@@ -164,7 +164,7 @@ category ComputeResources {
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
-        ->  networks.attemptAccess,
+        ->  networks.access,
             appConnections.attemptTransmit,
             appConnections.attemptTransmitResponse,
             appConnections.attemptAccessNetworks
@@ -552,20 +552,26 @@ category Networking {
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
 
       | physicalAccess {C, A}
-        developer info: "Attacker has physical access on the network. This means he can cut wires/fibers and also connect using iLOs."
+        developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
         ->  denialOfService,
-            eavesdropAfterPhysicalAccess
-
-      | attemptAccess
-        user info: "Access on a Network can be atempted if accessControl is disabled or bypassed."
-        ->  access,
+            eavesdropAfterPhysicalAccess,
+            attemptAccess,
             bypassAccessControl
+
+      # networkAccessControl
+        user info: "Access control protects from unauthorized physical access on the network."
+        ->  eavesdropAfterPhysicalAccess,
+            attemptAccess
 
       | bypassAccessControl [VeryHardAndUncertain]
         user info: "If access control is enabled, the attacker can still try to bypass it and gain access on the network."
         ->  successfulAccess
 
-      & access
+      & attemptAccess @hidden
+        user info: "Access on a Network can be atempted after physicalAccess."
+        ->  access
+
+      | access
         user info: "Access provides connect to all reachable applications."
         ->  successfulAccess
 
@@ -604,12 +610,8 @@ category Networking {
             eavesdropAfterPhysicalAccess
 
       # manInTheMiddleDefense
-        user info: "This defense protects againsr man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
         ->  manInTheMiddle
-
-      # accessControl
-        user info: "Access control protects from unauthorized access on the network."
-        ->  access
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
@@ -633,19 +635,17 @@ category Networking {
             transitData.attemptEavesdrop
     }
 
-    asset RoutingFirewall extends System 
+    asset RoutingFirewall extends Application 
       user info: "A routing firewall specifies a router with firewall capabilities that connects many networks."
-    {
-      
+    { 
       | denialOfService {A}
        user info: "A DoS attack should cascade on the connected networks and associated connections"
         ->  connectionRules.attemptDenialOfService
 
       | fullAccess {I, A}
-        developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed!"
-        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).attemptAccess,
+        developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed! This can happen by compromising the manager application."
+        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).access,
             connectionRules.applications.networkConnect
-
     }
 
     asset ConnectionRule
@@ -667,8 +667,8 @@ category Networking {
 
       & accessNetworks @hidden
         developer info: "Access all networks that are associated with this ConnectionRule."
-        ->  networks.attemptAccess,
-            inNetworks.attemptAccess
+        ->  networks.access,
+            inNetworks.access
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
@@ -766,9 +766,9 @@ associations {
   Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
   Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
-      user info: "High privilege application access on an Application results in the compromise of all the child applications."
+      user info: "High privilege application access on an Application results in the (full) access/compromise of the application and all the child applications."
   Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
-      user info: "Low privilege application access on an Application allows only the local interaction with the application."
+      user info: "Low privilege application access on an Application allows only the local interaction with the application and all the specified privileges."
   // And the same for Groups
   Group           [executionPrivGroups]   * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
       user info: "An application can execute on a system with privileges of a specified group. If the application is compromised then the group privileges should be compromised."
