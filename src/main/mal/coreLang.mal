@@ -103,7 +103,9 @@ category ComputeResources {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
-      // This is intentionally left blank
+      | compromiseApplication
+        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
+        ->  softApplications.fullAccess
     }
 
     asset Application extends Object
@@ -384,9 +386,10 @@ category DataResources {
               readContainedInformationAndData
 
         & write {I}
-          user info: "The attacker can write to the location of the data, effectively deleting it."
+          user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
           ->  containedData.attemptWrite,
-              attemptDelete
+              attemptDelete,
+              compromiseAppOrigin
 
         & delete {I,A}
           user info: "The attacker can delete the data."
@@ -418,6 +421,10 @@ category DataResources {
           ->  attemptRead,
               attemptWrite,
               attemptApplicationRespondConnect
+
+        | compromiseAppOrigin
+          user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
+          ->  originSoftwareProduct.compromiseApplication
     }
 }
 
@@ -745,7 +752,9 @@ associations {
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials." 
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
-      user info: "Encrypted data can be associated with the relevant encryption credentials." 
+      user info: "Encrypted data can be associated with the relevant encryption credentials."
+  Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
+      user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
