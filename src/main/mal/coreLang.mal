@@ -601,9 +601,10 @@ category Networking {
             bypassMitMProtection
 
       | networkForwarding
-        developer info: "By using the allowed connections, forwarding from one network to another can happen. The RoutingFirewall can also be reached."
+        developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen."
           ->  allowedNetworkConnections().attemptAccessNetworks,
-              allowedApplicationConnections().attemptConnectToApplications
+              allowedApplicationConnections().attemptConnectToApplications,
+              ingoingNetConnections.attemptTransmitResponse
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
