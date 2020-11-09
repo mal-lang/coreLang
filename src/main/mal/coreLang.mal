@@ -202,7 +202,7 @@ category ComputeResources {
             attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
             transitData.attemptAccessFromIdentity,
-            transitData.attemptApplicationRespondConnect,
+            attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
@@ -232,10 +232,16 @@ category ComputeResources {
             appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
             containedData.attemptAccess,   // and access on all the contained data
             transitData.attemptAccess,
-            transitData.attemptApplicationRespondConnect,
+            attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess // if the routing firewall manager app is compromised the routing firewall should also be compromised
+
+      | attemptApplicationRespondConnectThroughData @hidden
+        user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
+        modeler info: "This is an intermediate attack step that groups connections to attack steps."
+        ->  transitData.attemptApplicationRespondConnect,
+            containedData.attemptApplicationRespondConnect
 
       | codeExecution
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
@@ -257,6 +263,10 @@ category ComputeResources {
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service. Adopted from awsLang."
         ->  containedData.attemptDeny
+
+      & denyFromConnectionRule @hidden
+        user info: "This is an intermediate attack step to only allow deny on application when all the connection rules are denied, because an app can be serving on many different ports."
+        -> deny
 
     }
 
@@ -341,7 +351,7 @@ category DataResources {
           ->  applicationRespondConnect
 
         & applicationRespondConnect
-          user info: "If data is eavesdropped then respond connect to the remote server application can be done."
+          user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
           ->  transitApp.networkRespondConnect
 
         | attemptRead @hidden
@@ -413,8 +423,7 @@ category DataResources {
 
         & eavesdrop {C}
           user info: "Evasdrop on Data could lead to read access on unencrypted Data."
-          ->  attemptRead,
-              attemptApplicationRespondConnect
+          ->  attemptRead
 
         & manInTheMiddle {C, I}
           user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
@@ -656,7 +665,7 @@ category Networking {
     }
 
     asset ConnectionRule
-      user info: "This asset is used to model firewall rules between Applications and/or Networks."
+      user info: "This asset is used to model firewall rules between Applications and/or Networks. The association selected (bi/uni-directional) only describes the connection initiation."
       developer info: "This asset is mainly used to model the functionality of a network connection through a firewall. If Data is added, then it also models the data in transit."
     {
       # disabled
@@ -708,7 +717,7 @@ category Networking {
         ->  denialOfService
 
       & denialOfService {A}
-        ->  applications.deny
+        ->  applications.denyFromConnectionRule
     }
 
 }
@@ -729,7 +738,8 @@ associations {
       user info: "A routing firewall can have an admin/manager interface (application) that is accesible from a network location."
   Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
       user info: "An application can communicate / be exposed on a network."
-      modeler info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
+      modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
+      developer info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
   Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
@@ -744,7 +754,7 @@ associations {
   Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
       user info: "An application should be able to contain some data."
   Data             [transitData]          * <-- DataInTransit         --> *   [transitApp]             Application
-      user info: "An application can also contain some data that are supposed to be transfered over a connection."
+      user info: "An application can also contain some data that are supposed to be transfered over a connection. This expresses an active connection."
   Data             [transitData]          * <-- DataInTransit         --> *   [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
