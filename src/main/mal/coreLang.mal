@@ -172,17 +172,15 @@ category ComputeResources {
             appConnections.attemptAccessNetworks
       
       | networkRequestConnect
-        user info: "The attacker has successfully sent a request to the application."
+        user info: "The attacker has successfully sent a request to the application. This can be used to exploit a vulnerability."
         developer info: "Adopted from awsLang."
-        ->  attemptNetworkRequestRespondConnectVuln,
-            networkConnect
+        ->  attemptNetworkRequestRespondConnectVuln
 
       | networkRespondConnect [VeryHardAndUncertain]
         user info: "An attacker may be able to respond to requests submitted by an application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  attemptNetworkRequestRespondConnectVuln,
-            attemptUseVulnerability, // Manual vulnerabilities should also be able to be attempted from here.
             networkConnect
 
       | specificAccessFromConnection @hidden
