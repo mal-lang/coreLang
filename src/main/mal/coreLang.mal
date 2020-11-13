@@ -167,8 +167,8 @@ category ComputeResources {
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
+            appConnections.attemptConnectToApplications,
             appConnections.attemptTransmit,
-            appConnections.attemptTransmitResponse,
             appConnections.attemptAccessNetworks
       
       | networkRequestConnect
