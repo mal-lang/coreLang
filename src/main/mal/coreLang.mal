@@ -563,7 +563,7 @@ category Networking {
     {
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
       let allowedApplicationConnections = netConnections \/ outgoingNetConnections
-      let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections
+      let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
 
       | physicalAccess {C, A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
@@ -601,7 +601,7 @@ category Networking {
             bypassMitMProtection
 
       | networkForwarding
-        developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen."
+        developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
           ->  allowedNetworkConnections().attemptAccessNetworks,
               allowedApplicationConnections().attemptConnectToApplications,
               ingoingNetConnections.attemptTransmitResponse
@@ -659,7 +659,7 @@ category Networking {
 
       | fullAccess {I, A}
         developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed! This can happen by compromising the manager application."
-        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks).access,
+        +>  (connectionRules.networks \/ connectionRules.outNetworks \/ connectionRules.inNetworks \/ connectionRules.diodeInNetworks).access,
             connectionRules.applications.networkConnect
     }
 
@@ -682,8 +682,7 @@ category Networking {
 
       & accessNetworks @hidden
         developer info: "Access all networks that are associated with this ConnectionRule."
-        ->  networks.access,
-            inNetworks.access
+        ->  (networks  \/ inNetworks  \/ diodeInNetworks).access
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
@@ -747,6 +746,8 @@ associations {
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
+  Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection--> * [diodeIngoingNetConnections] ConnectionRule
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
       user info: "Data can be contained inside other data."
