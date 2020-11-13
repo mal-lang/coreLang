@@ -562,7 +562,7 @@ category Networking {
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
-      let allowedApplicationConnections = netConnections \/ outgoingNetConnections
+      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications) // The "applications" term should be removed if the "NetworkExposure" association is removed
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
 
       | physicalAccess {C, A}
@@ -591,7 +591,7 @@ category Networking {
 
       | successfulAccess @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  applications.networkConnect,
+        ->  allowedApplicationConnectionsApplications().networkConnect,
             accessNetworkData,
             networkForwarding,
             denialOfService,
@@ -603,14 +603,14 @@ category Networking {
       | networkForwarding
         developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
           ->  allowedNetworkConnections().attemptAccessNetworks,
-              allowedApplicationConnections().attemptConnectToApplications,
+              allowedNetworkConnections().attemptConnectToApplications,
               ingoingNetConnections.attemptTransmitResponse
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
         ->  allNetConnections().attemptDenialOfService,
-            applications.deny,
-            applications.transitData.attemptDeny
+            allowedApplicationConnectionsApplications().denyFromConnectionRule,
+            allowedApplicationConnectionsApplications().transitData.attemptDeny
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
@@ -630,23 +630,23 @@ category Networking {
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
-        ->  applications.transitData.attemptEavesdrop
+        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop
 
       | bypassEavesdropProtection [HardAndUncertain]
         user info: "The eavesdrop protection can be bypassesed."
-        ->  applications.transitData.attemptEavesdrop
+        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
-        ->  applications.transitData.attemptManInTheMiddle
+        ->  allowedApplicationConnectionsApplications().transitData.attemptManInTheMiddle
 
       | bypassMitMProtection [HardAndUncertain]
         user info: "The MitM protection can be bypassesed."
-        ->  applications.transitData.attemptManInTheMiddle
+        ->  allowedApplicationConnectionsApplications().transitData.attemptManInTheMiddle
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
-        ->  applications.transitData.attemptEavesdrop,
+        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop,
             transitData.attemptEavesdrop
     }
 
