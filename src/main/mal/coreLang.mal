@@ -228,7 +228,9 @@ category ComputeResources {
             modify,
             deny,
             appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
-            containedData.attemptAccess,   // and access on all the contained data
+            executionPrivIds.assume,  // Assume also the execution privilege identities of this application
+            executionPrivGroups.compromiseGroup,
+            containedData.attemptAccess,  // and access on all the contained data
             transitData.attemptAccess,
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
@@ -241,13 +243,10 @@ category ComputeResources {
         ->  transitData.attemptApplicationRespondConnect,
             containedData.attemptApplicationRespondConnect
 
-      | codeExecution
+      | codeExecutionAfterVulnerability
         user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
-        developer info: "This attack steps specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
-        ->  fullAccess,
-            executionPrivIds.assume,
-            executionPrivGroups.compromiseGroup,
-            modify
+        developer info: "This attack step specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
+        ->  fullAccess
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
