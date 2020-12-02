@@ -118,7 +118,7 @@ category ComputeResources {
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
-            specificAccessFromConnection,
+            specificAccessFromLocalConnection,
             attemptUseVulnerability, // Connection to all possible (manual) vulnerabilities that might be connected to the Application
             attemptLocalConnectVuln // And connection to automatically modeled vulnerabilities
 
@@ -161,7 +161,7 @@ category ComputeResources {
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
-            specificAccessFromConnection,
+            specificAccessFromNetworkConnection,
             attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | accessNetworkAndConnections
@@ -183,15 +183,15 @@ category ComputeResources {
         ->  attemptNetworkRequestRespondConnectVuln,
             networkConnect
 
-      | specificAccessFromConnection @hidden
-        developer info: "This intermediate step is used to represent that at least one type of connect has happened before being able to get 'specificAccess'."
+      & specificAccessFromLocalConnection @hidden
+        developer info: "This intermediate step is used to represent that localConnect has happened before being able to get 'specificAccess'. Same as 'localAccess' attack step."
         ->  specificAccess
 
-      | specificAccessFromIdentity @hidden
-        developer info: "This intermediate step is needed because if no LowApplicationPrivileges Identity is associated then 'specificAccess' would be instantly compromised after connect."
+      & specificAccessFromNetworkConnection @hidden
+        developer info: "This intermediate step is used to represent that networkConnect has happened before being able to get 'specificAccess'. Same as 'networkAccess' attack step."
         ->  specificAccess
 
-      & specificAccess
+      | specificAccess
         user info: "This level of access models a low-privilege access and requires all other privileges to be modeled separately."
         developer info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
@@ -213,6 +213,11 @@ category ComputeResources {
         user info: "The attacker is able to authenticate with the appropriate credentials."
         ->  localAccess,
             networkAccess
+
+      | specificAccessAuthenticate
+        user info: "The attacker is able to authenticate with the appropriate specific access credentials."
+        ->  specificAccessFromLocalConnection,
+            specificAccessFromNetworkConnection
 
       & localAccess @hidden
         developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
@@ -462,7 +467,7 @@ category IAM {
               highPrivManagedSystems.allPrivilegeAuthenticate,
               execPrivApps.authenticate,
               highPrivApps.authenticate,
-              lowPrivApps.specificAccessFromIdentity,
+              lowPrivApps.specificAccessAuthenticate,
               readPrivData.identityAttemptRead,
               writePrivData.identityAttemptWrite,
               deletePrivData.identityAttemptDelete
@@ -480,7 +485,7 @@ category IAM {
             highPrivManagedSystems.allPrivilegeAuthenticate,
             execPrivApps.authenticate,
             highPrivApps.authenticate,
-            lowPrivApps.specificAccessFromIdentity,
+            lowPrivApps.specificAccessAuthenticate,
             readPrivData.identityAttemptRead,
             writePrivData.identityAttemptWrite,
             deletePrivData.identityAttemptDelete
