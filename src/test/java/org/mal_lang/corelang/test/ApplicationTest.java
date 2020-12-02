@@ -69,7 +69,6 @@ public class ApplicationTest extends CoreLangTest {
         model.application.specificAccessFromLocalConnection.assertUncompromised();
         model.application.specificAccessFromNetworkConnection.assertUncompromised();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
-        model.application.attemptLocalConnectVuln.assertUncompromised();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertCompromisedInstantaneously();
         model.application.fullAccess.assertCompromisedInstantaneously();

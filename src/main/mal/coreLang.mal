@@ -240,7 +240,8 @@ category ComputeResources {
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
-            managedRoutingFw.fullAccess // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | attemptApplicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
