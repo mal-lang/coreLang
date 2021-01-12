@@ -265,8 +265,9 @@ category ComputeResources {
         ->  containedData.attemptAccess
 
       | deny {A}
-        user info: "The attacker can deny some or all functionality and data pertaining to this application/service. Adopted from awsLang."
-        ->  containedData.attemptDeny
+        user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
+        ->  containedData.attemptDeny,
+            appExecutedApps.deny
 
       & denyFromConnectionRule @hidden
         user info: "This is an intermediate attack step to only allow deny on application when all the connection rules are denied, because an app can be serving on many different ports."
