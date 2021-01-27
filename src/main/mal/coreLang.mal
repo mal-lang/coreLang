@@ -115,6 +115,8 @@ category ComputeResources {
       let allUnknownVulnerabilities = vulnerabilities[UnknownVulnerability] \/ appSoftProduct.softProductVulnerabilities[UnknownVulnerability]
       let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities() - allUnknownVulnerabilities()
 
+      let allowedApplicationConnections = (appConnections \/ outgoingAppConnections)
+
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
@@ -167,9 +169,9 @@ category ComputeResources {
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
         ->  networks.access,
-            appConnections.attemptConnectToApplications,
-            appConnections.attemptTransmit,
-            appConnections.attemptAccessNetworks
+            allowedApplicationConnections().attemptConnectToApplications,
+            allowedApplicationConnections().attemptTransmit,
+            allowedApplicationConnections().attemptAccessNetworks
       
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the application. This can be used to exploit a vulnerability."
@@ -569,7 +571,7 @@ category Networking {
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
-      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications) // The "applications" term should be removed if the "NetworkExposure" association is removed
+      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications \/ clientApplications) // The "applications" term should be removed if the "NetworkExposure" association is removed
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
 
       | physicalAccess {C, A}
@@ -674,6 +676,10 @@ category Networking {
       user info: "This asset is used to model firewall rules between Applications and/or Networks. The association selected (bi/uni-directional) only describes the connection initiation."
       developer info: "This asset is mainly used to model the functionality of a network connection through a firewall. If Data is added, then it also models the data in transit."
     {
+      let allApplications = (applications \/ inApplications \/ outApplications)
+      let clientApplications = (applications \/ outApplications)
+      let serverApplications = (applications \/ inApplications)
+
       # disabled
         user info: "It should be used to model the probability that the connection rule is actually not existing."
         ->  accessNetworks,
@@ -697,7 +703,7 @@ category Networking {
 
       & connectToApplications @hidden
         developer info: "Connect to all the Applications that are associated with this ConnectionRule."
-        ->  applications.networkConnect
+        ->  clientApplications().networkConnect
 
       | attemptTransmitResponse @hidden
         developer info: "Intermediate attack step."
@@ -706,23 +712,23 @@ category Networking {
       & transmitResponse {I}
         user info: "By transmitting a response towards a network application/service a connection to the application can be achieved."
         developer info: "Adopted from awsLang."
-        ->  applications.networkRespondConnect
+        ->  serverApplications().networkRespondConnect
 
       | attemptTransmit @hidden
         developer info: "Intermediate attack step."
         ->  transmit
 
       & transmit {I}
-        user info: "By transmitting over a connection towards a network application a connection to the application can be achieved."
+        user info: "By transmitting over a connection towards a network application/client a connection to the application can be achieved."
         developer info: "Adopted from awsLang."
-        ->  applications.networkRequestConnect
+        ->  clientApplications().networkRequestConnect
 
       | attemptDenialOfService @hidden
         developer info: "Intermediate attack step."
         ->  denialOfService
 
       & denialOfService {A}
-        ->  applications.denyFromConnectionRule
+        ->  allApplications().denyFromConnectionRule
     }
 
 }
@@ -745,15 +751,22 @@ associations {
       user info: "An application can communicate / be exposed on a network."
       modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
       developer info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
+  Network          [clientAccessNetworks] * <-- ClientAccess          --> *   [clientApplications]     Application
+      user info: "A client application can communicate over a network."
   Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
+      modeler info: "ConnectionRules associated with Applications are practically expressing a traffic flow."
+  Application      [inApplications]       * <-- InApplicationConnection --> * [ingoingAppConnections]  ConnectionRule
+      user info: "Two or more applications can also be inter-connected via a bidirectional connection."
+  Application      [outApplications]      * <-- OutApplicationConnection --> *[outgoingAppConnections] ConnectionRule
+      user info: "Two or more applications can also be inter-connected via a bidirectional connection."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
       user info: "Two or more networks can also be inter-connected via a bidirectional connection."
   Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
   Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection."
-  Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection--> * [diodeIngoingNetConnections] ConnectionRule
+  Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection --> * [diodeIngoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
@@ -776,6 +789,7 @@ associations {
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   Identity         [parentId]             * <-- CanAssume             --> *   [childId]                Identity
+      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance." 
   Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
   Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
   // First on system level
