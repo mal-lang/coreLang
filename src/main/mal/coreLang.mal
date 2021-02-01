@@ -115,7 +115,9 @@ category ComputeResources {
       let allUnknownVulnerabilities = vulnerabilities[UnknownVulnerability] \/ appSoftProduct.softProductVulnerabilities[UnknownVulnerability]
       let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities() - allUnknownVulnerabilities()
 
-      let allowedApplicationConnections = (appConnections \/ outgoingAppConnections)
+      let allApplicationConnections = (appConnections \/ outgoingAppConnections \/ ingoingAppConnections)
+      let clientApplicationConnections = (appConnections \/ outgoingAppConnections)
+      let serverApplicationConnections = (appConnections \/ ingoingAppConnections)
 
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
@@ -167,19 +169,20 @@ category ComputeResources {
             attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
 
       | accessNetworkAndConnections
-        user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to."
+        user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
         ->  networks.access,
-            allowedApplicationConnections().attemptConnectToApplications,
-            allowedApplicationConnections().attemptTransmit,
-            allowedApplicationConnections().attemptAccessNetworks
+            clientApplicationConnections().attemptConnectToApplications,
+            clientApplicationConnections().attemptTransmit,
+            serverApplicationConnections().attemptTransmitResponse, // Since we are on the Application we want to use the serverAppConnection to initiate trasmitResponse.
+            allApplicationConnections().attemptAccessNetworks
       
       | networkRequestConnect
-        user info: "The attacker has successfully sent a request to the application. This can be used to exploit a vulnerability."
+        user info: "The attacker has successfully sent a request to the (server) application. This can be used to exploit a vulnerability."
         developer info: "Adopted from awsLang."
         ->  attemptNetworkRequestRespondConnectVuln
 
       | networkRespondConnect [VeryHardAndUncertain]
-        user info: "An attacker may be able to respond to requests submitted by an application."
+        user info: "An attacker may be able to respond to requests submitted by a client application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  attemptNetworkRequestRespondConnectVuln,
@@ -269,6 +272,7 @@ category ComputeResources {
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
+            transitData.attemptDeny,
             appExecutedApps.deny
 
       & denyFromConnectionRule @hidden
@@ -571,7 +575,7 @@ category Networking {
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
-      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications \/ clientApplications) // The "applications" term should be removed if the "NetworkExposure" association is removed
+      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications)
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
 
       | physicalAccess {C, A}
@@ -601,6 +605,8 @@ category Networking {
       | successfulAccess @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnectionsApplications().networkConnect,
+            allowedApplicationConnectionsApplications().networkRequestConnect,
+            clientApplications.networkRespondConnect,
             accessNetworkData,
             networkForwarding,
             denialOfService,
@@ -613,13 +619,12 @@ category Networking {
         developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
           ->  allowedNetworkConnections().attemptAccessNetworks,
               allowedNetworkConnections().attemptConnectToApplications,
-              ingoingNetConnections.attemptTransmitResponse
+              allowedNetworkConnections().attemptTransmitResponse
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
         ->  allNetConnections().attemptDenialOfService,
-            allowedApplicationConnectionsApplications().denyFromConnectionRule,
-            allowedApplicationConnectionsApplications().transitData.attemptDeny
+            allowedApplicationConnectionsApplications().denyFromConnectionRule
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
@@ -702,24 +707,24 @@ category Networking {
         ->  connectToApplications
 
       & connectToApplications @hidden
-        developer info: "Connect to all the Applications that are associated with this ConnectionRule."
-        ->  clientApplications().networkConnect
+        developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule."
+        ->  serverApplications().networkConnect
 
       | attemptTransmitResponse @hidden
         developer info: "Intermediate attack step."
         ->  transmitResponse
 
       & transmitResponse {I}
-        user info: "By transmitting a response towards a network application/service a connection to the application can be achieved."
+        user info: "By transmitting a response towards a network application/client a connection to the application can be achieved. This is practically a client-side attack, thus hard to achive."
         developer info: "Adopted from awsLang."
-        ->  serverApplications().networkRespondConnect
+        ->  clientApplications().networkRespondConnect
 
       | attemptTransmit @hidden
         developer info: "Intermediate attack step."
         ->  transmit
 
       & transmit {I}
-        user info: "By transmitting over a connection towards a network application/client a connection to the application can be achieved."
+        user info: "By transmitting over a connection towards a network application/server a connection to the application can be achieved."
         developer info: "Adopted from awsLang."
         ->  clientApplications().networkRequestConnect
 
@@ -757,15 +762,15 @@ associations {
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
       modeler info: "ConnectionRules associated with Applications are practically expressing a traffic flow."
   Application      [inApplications]       * <-- InApplicationConnection --> * [ingoingAppConnections]  ConnectionRule
-      user info: "Two or more applications can also be inter-connected via a bidirectional connection."
+      user info: "Two or more applications can also be inter-connected via a bidirectional connection. In means that this is the server side application, awaiting incoming connections."
   Application      [outApplications]      * <-- OutApplicationConnection --> *[outgoingAppConnections] ConnectionRule
-      user info: "Two or more applications can also be inter-connected via a bidirectional connection."
+      user info: "Two or more applications can also be inter-connected via a bidirectional connection. Out means that this is the client side application initiating connections."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
       user info: "Two or more networks can also be inter-connected via a bidirectional connection."
   Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
-      user info: "Two or more networks can also be inter-connected via a uni-directional connection."
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection. Out means that outgoing traffic from the network is allowed."
   Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
-      user info: "Two or more networks can also be inter-connected via a uni-directional connection."
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection. In means that ingoing traffic to the network is allowed."
   Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection --> * [diodeIngoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
   // ### Data related associations
