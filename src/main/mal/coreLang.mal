@@ -171,6 +171,7 @@ category ComputeResources {
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
         ->  networks.access,
+            clientAccessNetworks.access,
             clientApplicationConnections().attemptConnectToApplications,
             clientApplicationConnections().attemptTransmit,
             serverApplicationConnections().attemptTransmitResponse, // Since we are on the Application we want to use the serverAppConnection to initiate trasmitResponse.
