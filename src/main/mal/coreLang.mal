@@ -347,7 +347,7 @@ category DataResources {
               write,
               delete
 
-        # dataNotPresent
+        # dataNotPresent [Disabled]
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
           developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
           ->  accessUnencryptedData,
@@ -503,11 +503,20 @@ category IAM {
     asset Credentials extends Information
       user info: "A credential is used to get access as an Identity but it can also be used as an encryption key for Data."
     {
+      # notDisclosed [Enabled]
+          user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
+          ->  useLeakedCredentials
+
+      | useLeakedCredentials [EasyAndCertain]
+        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."   
+        ->  use
+
       | use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
-            identities.users.attemptSteal2FAtoken
+            identities.users.attemptSteal2FAtoken,
+            identities.users.oneCredentialCompromised
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
@@ -524,6 +533,18 @@ category User {
     asset User
       user info: "This asset represents the user himself. It is the suitable attack surface for social engineering attacks!"
     {
+        # noPasswordReuse [Enabled]
+          user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
+          ->  passwordReuseCompromise
+
+        | oneCredentialCompromised @hidden
+          developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
+          ->  passwordReuseCompromise
+
+        & passwordReuseCompromise
+          user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
+          ->  userIds.credentials.use
+
         | attemptSocialEngineering
           user info: "An attacker can try to perform social engineering techiniques such as phishing."
           developer info: "In the future, other social engineering techiniques should be connected to this attack step."
@@ -686,7 +707,7 @@ category Networking {
       let clientApplications = (applications \/ outApplications)
       let serverApplications = (applications \/ inApplications)
 
-      # disabled
+      # disabled [Disabled]
         user info: "It should be used to model the probability that the connection rule is actually not existing."
         ->  accessNetworks,
             connectToApplications,
