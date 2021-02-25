@@ -596,7 +596,9 @@ category Networking {
       user info: "A network (zone) is a set of network accessible applications and data."
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
+      let allNetApplications = (clientApplications \/ applications)
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
+      let allowedApplicationConnections = (netConnections \/ outgoingNetConnections)
       let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications)
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
 
@@ -626,8 +628,10 @@ category Networking {
 
       | successfulAccess @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  allowedApplicationConnectionsApplications().networkConnect,
-            allowedApplicationConnectionsApplications().networkRequestConnect,
+        ->  allowedApplicationConnections().attemptConnectToApplications,
+            allowedApplicationConnections().attemptTransmit,
+            applications.networkConnect,
+            applications.networkRequestConnect,
             clientApplications.networkRespondConnect,
             accessNetworkData,
             networkForwarding,
@@ -666,23 +670,28 @@ category Networking {
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
-        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop
+        ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
+            allNetApplications().transitData.attemptEavesdrop
 
       | bypassEavesdropProtection [HardAndUncertain]
         user info: "The eavesdrop protection can be bypassesed."
-        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop
+        ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
+            allNetApplications().transitData.attemptEavesdrop
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
-        ->  allowedApplicationConnectionsApplications().transitData.attemptManInTheMiddle
+        ->  allowedApplicationConnections().attemptManInTheMiddleOnDataInTransit,
+            allNetApplications().transitData.attemptManInTheMiddle
 
       | bypassMitMProtection [HardAndUncertain]
         user info: "The MitM protection can be bypassesed."
-        ->  allowedApplicationConnectionsApplications().transitData.attemptManInTheMiddle
+        ->  allowedApplicationConnections().attemptManInTheMiddleOnDataInTransit,
+            allNetApplications().transitData.attemptManInTheMiddle
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
-        ->  allowedApplicationConnectionsApplications().transitData.attemptEavesdrop,
+        ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
+            allNetApplications().transitData.attemptEavesdrop,
             transitData.attemptEavesdrop
     }
 
@@ -713,7 +722,9 @@ category Networking {
             connectToApplications,
             transmit,
             transmitResponse,
-            denialOfService
+            denialOfService,
+            eavedropOnDataInTransit,
+            mainInTheMiddleOnDataInTransit
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptAccessNetworks @hidden
@@ -756,6 +767,22 @@ category Networking {
 
       & denialOfService {A}
         ->  allApplications().denyFromConnectionRule
+
+      | attemptEavesdropOnDataInTransit @hidden
+        developer info: "Intermediate attack step."
+        ->  eavedropOnDataInTransit
+
+      & eavedropOnDataInTransit
+        user info: "Via a ConnectionRule an eavesdrop attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
+        ->  allApplications().transitData.attemptEavesdrop
+
+      | attemptManInTheMiddleOnDataInTransit @hidden
+        developer info: "Intermediate attack step."
+        ->  mainInTheMiddleOnDataInTransit
+
+      & mainInTheMiddleOnDataInTransit
+        user info: "Via a ConnectionRule a MitM attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
+        ->  allApplications().transitData.attemptManInTheMiddle
     }
 
 }
