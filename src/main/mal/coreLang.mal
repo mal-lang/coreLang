@@ -772,7 +772,7 @@ category Networking {
         developer info: "Intermediate attack step."
         ->  eavedropOnDataInTransit
 
-      & eavedropOnDataInTransit
+      & eavedropOnDataInTransit @hidden
         user info: "Via a ConnectionRule an eavesdrop attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
         ->  allApplications().transitData.attemptEavesdrop
 
@@ -780,7 +780,7 @@ category Networking {
         developer info: "Intermediate attack step."
         ->  mainInTheMiddleOnDataInTransit
 
-      & mainInTheMiddleOnDataInTransit
+      & mainInTheMiddleOnDataInTransit @hidden
         user info: "Via a ConnectionRule a MitM attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
         ->  allApplications().transitData.attemptManInTheMiddle
     }
