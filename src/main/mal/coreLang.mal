@@ -105,7 +105,19 @@ category ComputeResources {
     {
       | compromiseApplication
         user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
-        ->  softApplications.fullAccess
+        ->  softApplications.attemptFullAccessAfterSoftProdVulnerability
+
+      | readApplication
+        user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
+        ->  softApplications.attemptReadAfterSoftProdVulnerability
+
+      | modifyApplication
+        user info: "If the vulnerability has a modify imapct, it should propagate that on all the applications."
+        ->  softApplications.attemptModifyAfterSoftProdVulnerability
+
+      | denyApplication
+        user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
+        ->  softApplications.attemptDenyAfterSoftProdVulnerability
     }
 
     asset Application extends Object
@@ -129,7 +141,11 @@ category ComputeResources {
       | attemptUseVulnerability
         user info: "Attempt to use the connected 'manual' and unknown vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
         ->  allManualVulnerabilities().attemptAbuse,
-            allUnknownVulnerabilities().attemptAbuse
+            allUnknownVulnerabilities().attemptAbuse,
+            fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
 
       | attemptLocalConnectVuln
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
@@ -248,6 +264,47 @@ category ComputeResources {
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+
+      // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
+      | attemptFullAccessAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccessAfterSoftProdVulnerability
+
+      | attemptReadAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  readAfterSoftProdVulnerability
+
+      | attemptModifyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  modifyAfterSoftProdVulnerability
+
+      | attemptDenyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  denyAfterSoftProdVulnerability
+
+      E softwareCheck @hidden
+        user info: "Existence attack step to only allow the connected attacks steps only if a SoftwareProduct is associated."
+        <- appSoftProduct
+        -> fullAccessAfterSoftProdVulnerability,
+           readAfterSoftProdVulnerability,
+           modifyAfterSoftProdVulnerability,
+           denyAfterSoftProdVulnerability
+
+      & fullAccessAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  fullAccess
+
+      & readAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  read
+
+      & modifyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  modify
+
+      & denyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  deny      
 
       | attemptApplicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
