@@ -20,7 +20,7 @@ Since this is a Maven project it is ought to be opened by any compatible IDE or 
 
 ## License
 
-Copyright © 2019-2020 [coreLang contributors](https://mal-lang.org/coreLang/contributors.html)
+Copyright © 2019-2021 [coreLang contributors](https://mal-lang.org/coreLang/contributors.html)
 
 All files distributed in the coreLang project are licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), except for the following files:
 
