@@ -150,33 +150,37 @@ category ComputeResources {
       | attemptLocalConnectVuln
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
         developer info: "Adopted from awsLang."
-        -> allAutomaticVulnerabilities()[LLNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LLNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LLLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LLLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LLHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LLHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse
+        ->  allAutomaticVulnerabilities()[LLNNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LLNRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHNNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHNRVulnerability].attemptAbuse
 
       | attemptNetworkRequestRespondConnectVuln
         developer info: "Adopted from awsLang."
-        -> allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
-           allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse
+        ->  allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse
+
+      | attemptLocalLowPrivVuln
+        ->  allAutomaticVulnerabilities()[LLLNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LLLRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHLNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHLRVulnerability].attemptAbuse
+
+      | attemptLocalHighPrivVuln
+        ->  allAutomaticVulnerabilities()[LLHRVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LLHNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHHNVulnerability].attemptAbuse,
+            allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
@@ -220,6 +224,7 @@ category ComputeResources {
             attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
             attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
+            attemptLocalLowPrivVuln, // And connection to automatically modeled vulnerabilities that require low privilege access
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
             transitData.attemptAccessFromIdentity,
             attemptApplicationRespondConnectThroughData,
@@ -263,7 +268,8 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
+            attemptLocalHighPrivVuln // And connection to automatically modeled vulnerabilities that require high privilege access
 
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
