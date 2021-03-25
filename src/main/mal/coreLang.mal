@@ -375,7 +375,8 @@ category DataResources {
           user info: "Access the data."
           ->  attemptRead,
               attemptWrite,
-              attemptDelete
+              attemptDelete,
+              containedData.attemptAccess
 
         !E dataEncrypted @hidden
           user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
@@ -385,9 +386,9 @@ category DataResources {
 
         # authenticated
           user info: "If the data are authenticated, then modifying them is not possible to achieve."
-          ->  applicationRespondConnect,
-              write,
-              manInTheMiddle
+          ->  containedData*.applicationRespondConnect,
+              containedData*.write,
+              containedData*.manInTheMiddle
 
         & accessUnencryptedData @hidden
           user info: "If data is unencrypted then access them."
@@ -396,7 +397,7 @@ category DataResources {
         | accessDecryptedData @hidden
           user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
           ->  access,
-              readContainedInformationAndData,
+              readContainedInformation,
               applicationRespondConnect,
               eavesdrop,
               manInTheMiddle,
@@ -410,10 +411,9 @@ category DataResources {
           ->  accessUnencryptedData,
               deny
 
-        & readContainedInformationAndData
-          user info: "From the data, attempt to access also the contained information/data, if exists."
-          ->  information.attemptAccess,
-              containedData.attemptAccess
+        & readContainedInformation
+          user info: "From the data, attempt to access also the contained information, if exists."
+          ->  information.attemptAccess
 
         | attemptApplicationRespondConnect @hidden
           developer info: "Intermediate attack step to handle defenses."
@@ -462,7 +462,7 @@ category DataResources {
         & read {C}
           user info: "The attacker can read the data."
           ->  containedData.attemptRead,
-              readContainedInformationAndData
+              readContainedInformation
 
         & write {I}
           user info: "The attacker can write to the location of the data, effectively modifying or deleting it."

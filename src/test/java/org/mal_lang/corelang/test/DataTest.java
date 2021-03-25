@@ -33,7 +33,7 @@ public class DataTest extends CoreLangTest {
         attacker.attack();
 
         model.data1.access.assertCompromisedInstantaneously();
-        model.data1.readContainedInformationAndData.assertCompromisedInstantaneously();
+        model.data1.readContainedInformation.assertCompromisedInstantaneously();
         model.data2.access.assertCompromisedInstantaneously();
         model.encdata.access.assertUncompromised();
         model.notexistdata.access.assertUncompromised();
