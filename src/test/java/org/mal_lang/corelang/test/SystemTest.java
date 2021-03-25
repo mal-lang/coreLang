@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Test;
 
 public class SystemTest extends CoreLangTest {
     private static class SystemTestModel {
-        public final System system = new System("system");
+        public final System system;
 
-        public SystemTestModel() {
+        public SystemTestModel(boolean hardwareAdditionsProtection) {
+            system = new System("system", hardwareAdditionsProtection);
 
         }
 
@@ -20,7 +21,7 @@ public class SystemTest extends CoreLangTest {
     @Test
     public void testNoAuthenticate() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new SystemTestModel();
+        var model = new SystemTestModel(false);
 
         var attacker = new Attacker();
         model.addAttacker(attacker,model.system.connect);
@@ -34,7 +35,7 @@ public class SystemTest extends CoreLangTest {
     @Test
     public void testConnectAndSpecificPrivilegeAuthenticate() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new SystemTestModel();
+        var model = new SystemTestModel(false);
 
         var attacker = new Attacker();
         model.addAttacker(attacker,model.system.connect);
@@ -49,7 +50,7 @@ public class SystemTest extends CoreLangTest {
     @Test
     public void testConnectAndAllPrivilegeAuthenticate() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new SystemTestModel();
+        var model = new SystemTestModel(false);
 
         var attacker = new Attacker();
         model.addAttacker(attacker,model.system.connect);
@@ -59,6 +60,38 @@ public class SystemTest extends CoreLangTest {
         model.system.specificAccess.assertUncompromised();
         model.system.attemptGainFullAccess.assertCompromisedInstantaneously();
         model.system.fullAccess.assertCompromisedInstantaneously();
+    }
+
+    @Test
+    public void testHardwareProtectionDisabled() {
+        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
+        var model = new SystemTestModel(false);
+
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.system.physicalAccess);
+        attacker.attack();
+
+        model.system.attemptConnect.assertCompromisedInstantaneously();
+        model.system.attemptUsePhysicalVulnerability.assertCompromisedInstantaneously();
+        model.system.specificAccess.assertUncompromised();
+        model.system.attemptGainFullAccess.assertUncompromised();
+        model.system.fullAccess.assertUncompromised();
+    }
+
+    @Test
+    public void testHardwareProtectionEnabled() {
+        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
+        var model = new SystemTestModel(true);
+
+        var attacker = new Attacker();
+        model.addAttacker(attacker,model.system.physicalAccess);
+        attacker.attack();
+
+        model.system.attemptConnect.assertUncompromised();
+        model.system.attemptUsePhysicalVulnerability.assertUncompromised();
+        model.system.specificAccess.assertUncompromised();
+        model.system.attemptGainFullAccess.assertUncompromised();
+        model.system.fullAccess.assertUncompromised();
     }
 
 }

@@ -544,7 +544,7 @@ category IAM {
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
       | compromiseGroup {C}
-        user info: "If an identity of a group is compromised then the whole group (i.e. all other identities) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
+        user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inhertited plus additional privileges."
         ->  parentGroup.compromiseGroup,
             lowPrivManagedSystems.individualPrivilegeAuthenticate,
