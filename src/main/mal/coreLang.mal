@@ -131,6 +131,18 @@ category ComputeResources {
       let clientApplicationConnections = (appConnections \/ outgoingAppConnections)
       let serverApplicationConnections = (appConnections \/ ingoingAppConnections)
 
+      # disabled [Disabled]
+        user info: "If application is disabled it should behave as non exisitng, thus all attack vectors are removed."
+        developer info: "This would even allow us to have a much more dynamic and probabilistic aspect on our model and simulations."
+        ->  specificAccessFromLocalConnection,
+            specificAccessFromNetworkConnection,
+            localAccess,
+            networkAccess,
+            fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
+
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
@@ -522,6 +534,11 @@ category IAM {
           user info: "Two Factor Authentication (2FA). This defense, if enabled, should block all atempts to assume identity illegitimately."
           ->  successfulAssume
 
+        # disabled [Disabled]
+        user info: "It should be used to model the probability that the identity is actually not existing."
+          ->  successfulAssume,
+              successfulAssumeAfter2FA
+
         | attemptAssume
           user info: "Attempt to assume the identity. If 2FA is enabled this will be not possible without first acquiring the 2FA token."
           ->  successfulAssume
@@ -530,14 +547,43 @@ category IAM {
           developer info: "Intermediate attack step to model the requirements for identity assume."
           ->  assume
 
+        | attemptAssumeAfter2FA
+          user info:"After 2FA is used, or stolen, assume of the identity can be achieved."
+          ->  successfulAssumeAfter2FA
+
+        & successfulAssumeAfter2FA @hidden
+          developer info: "Intermediate attack step to model the requirements for identity assume."
+          ->  assume
+
         | assume {C,I,A}
           user info: "After authentication or compromise of an account/identity, assume its privileges."
           developer info: "This is both legitimate and illegitimate access! Also asume all the privilegs of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
           ->  parentId.assume,
               memberOf.compromiseGroup,
+              identityPrivileges.attemptAssume,
               lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
               execPrivApps.authenticate,
+              highPrivApps.authenticate,
+              lowPrivApps.specificAccessAuthenticate,
+              readPrivData.identityAttemptRead,
+              writePrivData.identityAttemptWrite,
+              deletePrivData.identityAttemptDelete
+    }
+
+    asset Privileges
+      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+    {
+        # disabled [Disabled]
+        user info: "It should be used to model the probability that the set of privileges is actually not existing."
+          ->  assume
+
+        | attemptAssume
+          user info: "Attempt to assume the privileges. If disabled this will not be possible."
+          ->  assume
+
+        & assume
+          ->  execPrivApps.authenticate,
               highPrivApps.authenticate,
               lowPrivApps.specificAccessAuthenticate,
               readPrivData.identityAttemptRead,
@@ -645,7 +691,7 @@ category User {
           user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
           developer info: "This attack is generally hard to happen but not harder than reverseTakeover."
           modeler info: "The probability and its value are just estimations and are subject to change."
-          ->  userIds.assume
+          ->  userIds.attemptAssumeAfter2FA
 
         | compromise {C}
           user info: "Compromising the user leads to possible assumption of its identity(ies)."
@@ -788,6 +834,10 @@ category Networking {
             denialOfService,
             eavedropOnDataInTransit,
             mainInTheMiddleOnDataInTransit
+
+      # filtered [Disabled]
+        user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only allowed communication (i.e. vulnerabilities cannot be exploited)."
+        ->  connectToApplications
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptAccessNetworks @hidden
@@ -941,4 +991,13 @@ associations {
   Group            [readingGroups]        * <-- ReadPrivileges        --> *   [readPrivData]           Data
   Group            [writingGroups]        * <-- WritePrivileges       --> *   [writePrivData]          Data
   Group            [deletingGroups]       * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  // Associations for the Privileges asset
+  Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *   [identityPrivileges]     Privileges
+      user info: "Any Identity can be associated with a Privileges asset that groups privileges for Applications and Data." 
+  Privileges       [executionPrivAppPriv] * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
+  Privileges       [highPrivAppPriv]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+  Privileges       [lowPrivAppPriv]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+  Privileges       [readingPriv]          * <-- ReadPrivileges        --> *   [readPrivData]           Data
+  Privileges       [writingPriv]          * <-- WritePrivileges       --> *   [writePrivData]          Data
+  Privileges       [deletingPriv]         * <-- DeletePrivileges      --> *   [deletePrivData]         Data
 }

@@ -13,7 +13,7 @@ public class UserTest extends CoreLangTest {
         public Identity identity;
 
         public UserTestModel(boolean twoFA) {
-          identity = new Identity("identity", twoFA);
+          identity = new Identity("identity", twoFA, false);
           user.addUserIds(identity);
           identity.addCredentials(credentials);
           identity.addExecPrivApps(application);
@@ -33,7 +33,7 @@ public class UserTest extends CoreLangTest {
         public Identity identity;
 
         public UserTestModelNoCreds(boolean twoFA) {
-          identity = new Identity("identity", twoFA);
+          identity = new Identity("identity", twoFA, false);
           user.addUserIds(identity);
           identity.addExecPrivApps(application);
         }

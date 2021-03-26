@@ -11,10 +11,10 @@ public class HierarchicalIdentityTest extends CoreLangTest {
         public Identity childIdentityC;
 
         public HierarchicalIdentityTestModel(boolean twoFA) {
-            identity = new Identity("parentIdentity", twoFA);
-            childIdentityA = new Identity("childIdA", twoFA);
-            childIdentityB = new Identity("childIdB", twoFA);
-            childIdentityC = new Identity("childIdC", twoFA);
+            identity = new Identity("parentIdentity", twoFA, false);
+            childIdentityA = new Identity("childIdA", twoFA, false);
+            childIdentityB = new Identity("childIdB", twoFA, false);
+            childIdentityC = new Identity("childIdC", twoFA, false);
             identity.addChildId(childIdentityA);
             childIdentityA.addChildId(childIdentityB);
             childIdentityB.addChildId(childIdentityC);
