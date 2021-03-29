@@ -141,7 +141,8 @@ category ComputeResources {
             fullAccessAfterSoftProdVulnerability,
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
-            denyAfterSoftProdVulnerability
+            denyAfterSoftProdVulnerability,
+            useVulnerability
 
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
@@ -152,6 +153,10 @@ category ComputeResources {
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected 'manual' and unknown vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        ->  useVulnerability
+
+      & useVulnerability @hidden
+        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
         ->  allManualVulnerabilities().attemptAbuse,
             allUnknownVulnerabilities().attemptAbuse,
             fullAccessAfterSoftProdVulnerability,
