@@ -842,7 +842,8 @@ category Networking {
 
       # filtered [Disabled]
         user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only allowed communication (i.e. vulnerabilities cannot be exploited)."
-        ->  connectToApplications
+        ->  transmit,
+            transmitResponse
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptAccessNetworks @hidden
