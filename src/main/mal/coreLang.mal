@@ -841,7 +841,7 @@ category Networking {
             mainInTheMiddleOnDataInTransit
 
       # filtered [Disabled]
-        user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only allowed communication (i.e. vulnerabilities cannot be exploited)."
+        user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication (i.e. network-level vulnerabilities cannot be exploited)."
         ->  transmit,
             transmitResponse
 
