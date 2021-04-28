@@ -81,7 +81,8 @@ category ComputeResources {
         user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
         ->  deny,
             attemptConnect,
-            attemptUsePhysicalVulnerability
+            attemptUsePhysicalVulnerability,
+            sysExecutedApps.physicalAccessAchieved
 
       # hardwareModificationsProtection
         user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
@@ -147,7 +148,7 @@ category ComputeResources {
             specificAccessFromLocalConnection,
             attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().localAccessAchieved,
-            softwareProductLocalAccessAchieved
+            softwareProductVulnerabilityLocalAccessAchieved
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
@@ -168,7 +169,7 @@ category ComputeResources {
             specificAccessFromNetworkConnection,
             attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().networkAccessAchieved,
-            softwareProductNetworkAccessAchieved
+            softwareProductVulnerabilityNetworkAccessAchieved
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
@@ -219,14 +220,14 @@ category ComputeResources {
         ->  localAccess,
             networkAccess,
             allVulnerabilities().highPrivilegesAchieved,
-            softwareProductHighPrivilegesAchieved
+            softwareProductVulnerabilityHighPrivilegesAchieved
 
       | specificAccessAuthenticate
         user info: "The attacker is able to authenticate with the appropriate specific access credentials."
         ->  specificAccessFromLocalConnection,
             specificAccessFromNetworkConnection,
             allVulnerabilities().lowPrivilegesAchieved,
-            softwareProductLowPrivilegesAchieved
+            softwareProductVulnerabilityLowPrivilegesAchieved
 
       & localAccess @hidden
         developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
@@ -251,6 +252,11 @@ category ComputeResources {
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+
+      | physicalAccessAchieved
+        ->  allVulnerabilities().physicalAccessAchieved,
+            softwareProductVulnerabilityPhysicalAccessAchieved,
+            appExecutedApps.physicalAccessAchieved
 
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
@@ -277,22 +283,27 @@ category ComputeResources {
            modifyAfterSoftProdVulnerability,
            denyAfterSoftProdVulnerability
 
-      | softwareProductLocalAccessAchieved
+      | softwareProductVulnerabilityLocalAccessAchieved
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.localAccessAchieved,
            softwareProductAbuse
 
-      | softwareProductNetworkAccessAchieved
+      | softwareProductVulnerabilityNetworkAccessAchieved
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
            softwareProductAbuse
 
-      | softwareProductLowPrivilegesAchieved
+      | softwareProductVulnerabilityPhysicalAccessAchieved
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityLowPrivilegesAchieved
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
            softwareProductAbuse
 
-      | softwareProductHighPrivilegesAchieved
+      | softwareProductVulnerabilityHighPrivilegesAchieved
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
            softwareProductAbuse
