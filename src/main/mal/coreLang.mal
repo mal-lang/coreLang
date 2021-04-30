@@ -101,10 +101,6 @@ category ComputeResources {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
-      | compromiseApplication
-        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
-        ->  softApplications.attemptFullAccessAfterSoftProdVulnerability
-
       | readApplication
         user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
         ->  softApplications.attemptReadAfterSoftProdVulnerability
@@ -340,12 +336,6 @@ category ComputeResources {
         ->  transitData.attemptApplicationRespondConnect,
             containedData.attemptApplicationRespondConnect
 
-      | codeExecutionAfterVulnerability
-        user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
-        modeler info: "This attack step specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
-        developer info: "This attack step is used in order for a more educational attack path to be created when fullAccess is reached via a vulnerability. That means that the language could work even without this attack step."
-        ->  fullAccess
-
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
@@ -353,7 +343,8 @@ category ComputeResources {
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data. Adopted from awsLang."
-        ->  containedData.attemptAccess
+        ->  containedData.attemptAccess,
+            fullAccess
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
@@ -530,7 +521,7 @@ category DataResources {
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-          ->  originSoftwareProduct.compromiseApplication
+          ->  originSoftwareProduct.modifyApplication
     }
 }
 
