@@ -24,7 +24,6 @@ category ComputeResources {
     {
       | attemptUseVulnerability
         user info: "Attempt to use the associated vulnerabilities."
-        ->  objvulnerabilities.attemptAbuse
 
       | deny {A}
         user info: "The attacker can deny some or all functionality of an object."
@@ -50,7 +49,6 @@ category ComputeResources {
 
       & attemptUsePhysicalVulnerability
         user info: "Attempt to use the associated physical vulnerabilities."
-        ->  sysvulnerabilities.attemptAbuse
 
       | allPrivilegeAuthenticate @hidden
         developer info: "Entry point attack step from identity."
