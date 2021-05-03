@@ -157,6 +157,18 @@ category ComputeResources {
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
+      | attemptNetworkConnectFromReverseTakeover
+        developer info: "Intermediate attack step to model an attempted reverse takeover."
+        ->  networkConnectFromReverseTakeover
+
+      & networkConnectFromReverseTakeover
+        developer info: "An attacker may attempt a reverse takeover by having the user initiate an unsafe connection to a system controlled by the attacker."
+        ->  networkConnect
+
+      # airGapped
+        developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
+        ->  networkConnectFromReverseTakeover
+
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
@@ -648,6 +660,10 @@ category User {
           user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
           ->  passwordReuseCompromise
 
+        # securityAwareness
+          user info: "The security awareness of the user makes it less likely that social engineering would be successful."
+          ->  socialEngineering
+
         | oneCredentialCompromised @hidden
           developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
           ->  passwordReuseCompromise
@@ -659,6 +675,9 @@ category User {
         | attemptSocialEngineering
           user info: "An attacker can try to perform social engineering techiniques such as phishing."
           developer info: "In the future, other social engineering techiniques should be connected to this attack step."
+          ->  socialEngineering
+
+        & socialEngineering
           ->  phishUser,
               steal2FAtoken
 
@@ -675,10 +694,10 @@ category User {
           user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
           ->  reverseTakeover
 
-        | reverseTakeover [VeryHardAndUncertain]
+        | reverseTakeover [Exponential(0.1)]
           developer info: "This attack is harder to happen because it requires more bad effort from the victim."
           modeler info: "The probability and its value are just estimations and are subject to change."
-          ->  userIds.execPrivApps.networkConnect
+          ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
 
         | phishUser
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
