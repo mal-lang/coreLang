@@ -247,7 +247,8 @@ category ComputeResources {
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
-      | physicalAccessAchieved
+      | physicalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to propagate physical access to throughout application nesting."
         ->  allVulnerabilities().physicalAccessAchieved,
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
@@ -277,27 +278,27 @@ category ComputeResources {
            modifyAfterSoftProdVulnerability,
            denyAfterSoftProdVulnerability
 
-      | softwareProductVulnerabilityLocalAccessAchieved
+      | softwareProductVulnerabilityLocalAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.localAccessAchieved,
            softwareProductAbuse
 
-      | softwareProductVulnerabilityNetworkAccessAchieved
+      | softwareProductVulnerabilityNetworkAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
            softwareProductAbuse
 
-      | softwareProductVulnerabilityPhysicalAccessAchieved
+      | softwareProductVulnerabilityPhysicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
            softwareProductAbuse
 
-      | softwareProductVulnerabilityLowPrivilegesAchieved
+      | softwareProductVulnerabilityLowPrivilegesAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
            softwareProductAbuse
 
-      | softwareProductVulnerabilityHighPrivilegesAchieved
+      | softwareProductVulnerabilityHighPrivilegesAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
            softwareProductAbuse
@@ -306,7 +307,7 @@ category ComputeResources {
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> softwareProductAbuse
 
-      & softwareProductAbuse
+      & softwareProductAbuse @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> fullAccessAfterSoftProdVulnerability,
            readAfterSoftProdVulnerability,
