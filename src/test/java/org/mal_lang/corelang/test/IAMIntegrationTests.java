@@ -64,6 +64,7 @@ public class IAMIntegrationTests extends CoreLangTest {
     }
 
     // @Test
+    // TODO: Rework this test to work with the new vulnerabilities system.
     public void oracleServerIAMTest() {
         /*
             For a graphical representation take a look on the UC_IAM_vuln(New).sCAD file
