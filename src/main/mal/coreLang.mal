@@ -248,7 +248,7 @@ category ComputeResources {
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
-        developer info: "Intermediate attack step used to propagate physical access to throughout application nesting."
+        developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
         ->  allVulnerabilities().physicalAccessAchieved,
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
@@ -303,7 +303,7 @@ category ComputeResources {
         -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
            softwareProductAbuse
 
-      | attemptSoftwareProductAbuse
+      | attemptSoftwareProductAbuse @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> softwareProductAbuse
 
