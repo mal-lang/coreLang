@@ -30,7 +30,6 @@ public class ApplicationTest extends CoreLangTest {
         model.application.specificAccessFromLocalConnection.assertUncompromised();
         model.application.specificAccessFromNetworkConnection.assertUncompromised();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
-        model.application.attemptLocalConnectVuln.assertCompromisedInstantaneously();
         model.application.localAccess.assertCompromisedInstantaneously();
         model.application.networkAccess.assertUncompromised();
         model.application.fullAccess.assertCompromisedInstantaneously();
@@ -49,7 +48,6 @@ public class ApplicationTest extends CoreLangTest {
         model.application.specificAccessFromLocalConnection.assertCompromisedInstantaneously();
         model.application.specificAccessFromNetworkConnection.assertUncompromised();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
-        model.application.attemptLocalConnectVuln.assertCompromisedInstantaneously();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertUncompromised();
         model.application.fullAccess.assertUncompromised();
@@ -87,7 +85,6 @@ public class ApplicationTest extends CoreLangTest {
         model.application.specificAccessFromLocalConnection.assertUncompromised();
         model.application.specificAccessFromNetworkConnection.assertCompromisedInstantaneously();
         model.application.attemptUseVulnerability.assertCompromisedInstantaneously();
-        model.application.attemptLocalConnectVuln.assertCompromisedInstantaneously();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertUncompromised();
         model.application.fullAccess.assertUncompromised();
@@ -106,7 +103,6 @@ public class ApplicationTest extends CoreLangTest {
         model.application.specificAccessFromLocalConnection.assertUncompromised();
         model.application.specificAccessFromNetworkConnection.assertUncompromised();
         model.application.attemptUseVulnerability.assertUncompromised();
-        model.application.attemptLocalConnectVuln.assertUncompromised();
         model.application.localAccess.assertUncompromised();
         model.application.networkAccess.assertUncompromised();
         model.application.fullAccess.assertUncompromised();

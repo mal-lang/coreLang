@@ -90,8 +90,7 @@ public class NetworkIntegrationTests extends CoreLangTest {
         public final ConnectionRule conn1 = new ConnectionRule("Connection1");
         public final ConnectionRule conn2 = new ConnectionRule("Connection2");
         public final RoutingFirewall routingfw = new RoutingFirewall("RoutingFirewall");
-        public final UnknownVulnerability vuln = new UnknownVulnerability("UnknownVulnerability");
-        public final UnknownExploit exploit = new UnknownExploit("UnknownExploit");
+        public final UnknownSoftwareVulnerability vuln = new UnknownSoftwareVulnerability("UnknownSoftwareVulnerability");
 
         public firewallAttackTestModel() {
          // Create associations
@@ -103,7 +102,6 @@ public class NetworkIntegrationTests extends CoreLangTest {
          routingfw.addConnectionRules(conn1);
          routingfw.addConnectionRules(conn2);
          routingfw.addVulnerabilities(vuln);
-         vuln.addExploits(exploit);
         }
 
         public void addAttacker(Attacker attacker) {

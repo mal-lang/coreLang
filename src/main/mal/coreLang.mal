@@ -15,8 +15,7 @@
  */
 
 include "coreVulnerability.mal"
-include "VulnerabilityManual.mal"
-include "VulnerabilityAutomatic.mal"
+include "SoftwareVulnerability.mal"
 
 category ComputeResources {
 
@@ -25,7 +24,6 @@ category ComputeResources {
     {
       | attemptUseVulnerability
         user info: "Attempt to use the associated vulnerabilities."
-        ->  objvulnerabilities.attemptAbuse
 
       | deny {A}
         user info: "The attacker can deny some or all functionality of an object."
@@ -51,7 +49,6 @@ category ComputeResources {
 
       & attemptUsePhysicalVulnerability
         user info: "Attempt to use the associated physical vulnerabilities."
-        ->  sysvulnerabilities.attemptAbuse
 
       | allPrivilegeAuthenticate @hidden
         developer info: "Entry point attack step from identity."
@@ -82,7 +79,8 @@ category ComputeResources {
         user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
         ->  deny,
             attemptConnect,
-            attemptUsePhysicalVulnerability
+            attemptUsePhysicalVulnerability,
+            sysExecutedApps.physicalAccessAchieved
 
       # hardwareModificationsProtection
         user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
@@ -103,10 +101,6 @@ category ComputeResources {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
-      | compromiseApplication
-        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
-        ->  softApplications.attemptFullAccessAfterSoftProdVulnerability
-
       | readApplication
         user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
         ->  softApplications.attemptReadAfterSoftProdVulnerability
@@ -123,9 +117,7 @@ category ComputeResources {
     asset Application extends Object
       user info: "An application models pretty much everything that is executed or can execute other applications."
     {
-      let allManualVulnerabilities = vulnerabilities[ManuallyModeledVulnerability] \/ appSoftProduct.softProductVulnerabilities[ManuallyModeledVulnerability]
-      let allUnknownVulnerabilities = vulnerabilities[UnknownVulnerability] \/ appSoftProduct.softProductVulnerabilities[UnknownVulnerability]
-      let allAutomaticVulnerabilities = (vulnerabilities \/ appSoftProduct.softProductVulnerabilities) - allManualVulnerabilities() - allUnknownVulnerabilities()
+      let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
 
       let allApplicationConnections = (appConnections \/ outgoingAppConnections \/ ingoingAppConnections)
       let clientApplicationConnections = (appConnections \/ outgoingAppConnections)
@@ -148,62 +140,30 @@ category ComputeResources {
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             specificAccessFromLocalConnection,
-            attemptUseVulnerability, // Connection to all possible (manual) vulnerabilities that might be connected to the Application
-            attemptLocalConnectVuln // And connection to automatically modeled vulnerabilities
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().localAccessAchieved,
+            softwareProductVulnerabilityLocalAccessAchieved
 
       | attemptUseVulnerability
-        user info: "Attempt to use the connected 'manual' and unknown vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
         ->  useVulnerability
 
       & useVulnerability @hidden
         developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
-        ->  allManualVulnerabilities().attemptAbuse,
-            allUnknownVulnerabilities().attemptAbuse,
+        ->  allVulnerabilities().attemptAbuse,
+            attemptSoftwareProductAbuse,
             fullAccessAfterSoftProdVulnerability,
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
-      | attemptLocalConnectVuln
-        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the service."
-        developer info: "Adopted from awsLang."
-        ->  allAutomaticVulnerabilities()[LLNNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LLNRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHNNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHNRVulnerability].attemptAbuse
-
-      | attemptNetworkRequestRespondConnectVuln
-        developer info: "Adopted from awsLang."
-        ->  allAutomaticVulnerabilities()[NLNNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NLNRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NLLNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NLLRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NLHNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NLHRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHNNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHNRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHLNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHLRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHHNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[NHHRVulnerability].attemptAbuse
-
-      | attemptLocalLowPrivVuln
-        ->  allAutomaticVulnerabilities()[LLLNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LLLRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHLNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHLRVulnerability].attemptAbuse
-
-      | attemptLocalHighPrivVuln
-        ->  allAutomaticVulnerabilities()[LLHRVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LLHNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHHNVulnerability].attemptAbuse,
-            allAutomaticVulnerabilities()[LHHRVulnerability].attemptAbuse
-
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
             specificAccessFromNetworkConnection,
-            attemptUseVulnerability // Connection to all possible vulnerabilities that might be connected to the Application
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().networkAccessAchieved,
+            softwareProductVulnerabilityNetworkAccessAchieved
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
@@ -213,18 +173,17 @@ category ComputeResources {
             clientApplicationConnections().attemptTransmit,
             serverApplicationConnections().attemptTransmitResponse, // Since we are on the Application we want to use the serverAppConnection to initiate trasmitResponse.
             allApplicationConnections().attemptAccessNetworks
-      
+
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the (server) application. This can be used to exploit a vulnerability."
         developer info: "Adopted from awsLang."
-        ->  attemptNetworkRequestRespondConnectVuln
+
 
       | networkRespondConnect [VeryHardAndUncertain]
         user info: "An attacker may be able to respond to requests submitted by a client application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
-        ->  attemptNetworkRequestRespondConnectVuln,
-            networkConnect
+        ->  networkConnect
 
       & specificAccessFromLocalConnection @hidden
         developer info: "This intermediate step is used to represent that localConnect has happened before being able to get 'specificAccess'. Same as 'localAccess' attack step."
@@ -240,8 +199,6 @@ category ComputeResources {
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
-            attemptLocalConnectVuln, // And connection to automatically modeled vulnerabilities
-            attemptLocalLowPrivVuln, // And connection to automatically modeled vulnerabilities that require low privilege access
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
             transitData.attemptAccessFromIdentity,
             attemptApplicationRespondConnectThroughData,
@@ -250,18 +207,21 @@ category ComputeResources {
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
         modeler info: "The probability and its value are just estimations and are subject to change."
-        ->  hostApp.attemptLocalConnectVuln,
-            hostApp.attemptUseVulnerability
+        ->  hostApp.attemptUseVulnerability
 
       | authenticate
         user info: "The attacker is able to authenticate with the appropriate credentials."
         ->  localAccess,
-            networkAccess
+            networkAccess,
+            allVulnerabilities().highPrivilegesAchieved,
+            softwareProductVulnerabilityHighPrivilegesAchieved
 
       | specificAccessAuthenticate
         user info: "The attacker is able to authenticate with the appropriate specific access credentials."
         ->  specificAccessFromLocalConnection,
-            specificAccessFromNetworkConnection
+            specificAccessFromNetworkConnection,
+            allVulnerabilities().lowPrivilegesAchieved,
+            softwareProductVulnerabilityLowPrivilegesAchieved
 
       & localAccess @hidden
         developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
@@ -285,8 +245,13 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
-            attemptLocalHighPrivVuln // And connection to automatically modeled vulnerabilities that require high privilege access
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+
+      | physicalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
+        ->  allVulnerabilities().physicalAccessAchieved,
+            softwareProductVulnerabilityPhysicalAccessAchieved,
+            appExecutedApps.physicalAccessAchieved
 
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
@@ -313,6 +278,43 @@ category ComputeResources {
            modifyAfterSoftProdVulnerability,
            denyAfterSoftProdVulnerability
 
+      | softwareProductVulnerabilityLocalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.localAccessAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityNetworkAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityPhysicalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityLowPrivilegesAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityHighPrivilegesAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
+           softwareProductAbuse
+
+      | attemptSoftwareProductAbuse @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> softwareProductAbuse
+
+      & softwareProductAbuse @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> fullAccessAfterSoftProdVulnerability,
+           readAfterSoftProdVulnerability,
+           modifyAfterSoftProdVulnerability,
+           denyAfterSoftProdVulnerability
+
+
       & fullAccessAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
         ->  fullAccess
@@ -327,19 +329,13 @@ category ComputeResources {
 
       & denyAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  deny      
+        ->  deny
 
       | attemptApplicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
         modeler info: "This is an intermediate attack step that groups connections to attack steps."
         ->  transitData.attemptApplicationRespondConnect,
             containedData.attemptApplicationRespondConnect
-
-      | codeExecutionAfterVulnerability
-        user info: "Vulnerabilities in the application could allow an attacker to inject code into the service process, thus assuming the service's privileges on the hosting instance. An attacker could under these circumstances influence other applications or the underlying operating system itself."
-        modeler info: "This attack step specifically models the type of code injections which result in arbitrary code executions (e.g., buffer overflows), where the attacker can redirect the flow of execution, for example, by modifying program counter/instruction pointer of the host. (See CWE-94 on code injection <https://cwe.mitre.org/data/definitions/94.html> and, for example, CAPEC-100 on overflowing buffers <https://capec.mitre.org/data/definitions/100.html>). Adopted from awsLang."
-        developer info: "This attack step is used in order for a more educational attack path to be created when fullAccess is reached via a vulnerability. That means that the language could work even without this attack step."
-        ->  fullAccess
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
@@ -348,7 +344,8 @@ category ComputeResources {
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data. Adopted from awsLang."
-        ->  containedData.attemptAccess
+        ->  containedData.attemptAccess,
+            fullAccess
 
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
@@ -525,7 +522,7 @@ category DataResources {
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-          ->  originSoftwareProduct.compromiseApplication
+          ->  originSoftwareProduct.modifyApplication
     }
 }
 
