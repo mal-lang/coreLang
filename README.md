@@ -1,6 +1,9 @@
 # coreLang
 coreLang is a probabilistic modeling and simulation language for the abstract domain of IT. More specifically, it is a domain specific language (DSL) created with [MAL (the Meta Attack Language)](https://mal-lang.org/).
 
+## About this branch
+
+This "stable" version of the language is the one that was presented on the paper titled "An Attack Simulation Language for the IT Domain" (http://kth.diva-portal.org/smash/record.jsf?pid=diva2%3A1529801&dswid=-8622). If you want to experience the full power of coreLang check out the "master" branch of this repository!
 
 ## Project's file structure
 
