@@ -343,7 +343,7 @@ category ComputeResources {
         ->  containedData.attemptRead
 
       | modify {I}
-        user info: "The attacker can modify some or all of this service's data. Adopted from awsLang."
+        user info: "The attacker can modify some or all of this service's data and/or source code."
         ->  containedData.attemptAccess,
             fullAccess
 
