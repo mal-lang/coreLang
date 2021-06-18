@@ -101,6 +101,10 @@ category ComputeResources {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
+      | compromiseApplication
+        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
+        ->  softApplications.fullAccess
+
       | readApplication
         user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
         ->  softApplications.attemptReadAfterSoftProdVulnerability
@@ -559,7 +563,7 @@ category DataResources {
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-          ->  originSoftwareProduct.modifyApplication
+          ->  originSoftwareProduct.compromiseApplication
     }
 }
 
