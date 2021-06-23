@@ -267,7 +267,8 @@ category ComputeResources {
             appExecutedApps.physicalAccessAchieved
 
 
-      | attemptUnsafeUserActivityWithLowPrivilege
+      | attemptUnsafeUserActivityWithLowPrivileges
+        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
         ->  localConnect,
             networkConnect,
             allVulnerabilities().lowPrivilegesAchieved,
@@ -275,7 +276,8 @@ category ComputeResources {
             softwareProductVulnerabilityLowPrivilegesAchieved,
             softwareProductVulnerabilityUserInteractionAchieved
 
-      | attemptUnsafeUserActivityWithHighPrivilege
+      | attemptUnsafeUserActivityWithHighPrivileges
+        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
         ->  localConnect,
             networkConnect,
             allVulnerabilities().highPrivilegesAchieved,
@@ -684,7 +686,7 @@ category User {
           ->  passwordReuseCompromise
 
         # securityAwareness
-          user info: "The security awareness of the user makes it less likely that social engineering would be successful."
+          user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
               unforcedUnsafeUserActivity
 
@@ -697,11 +699,12 @@ category User {
           ->  userIds.credentials.use
 
         | attemptSocialEngineering
-          user info: "An attacker can try to perform social engineering techiniques such as phishing."
-          developer info: "In the future, other social engineering techiniques should be connected to this attack step."
+          user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
           ->  socialEngineering
 
         & socialEngineering
+          user info: "An attacker can try to perform social engineering techniques such as phishing."
+          developer info: "In the future, other social engineering techniques should be connected to this attack step."
           ->  phishUser,
               steal2FAtoken,
               forcedUnsafeUserActivity
@@ -716,7 +719,7 @@ category User {
           ->  userIds.credentials.credentialTheft
 
         | attemptReverseTakeover
-          user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
+          user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed through its identity."
           ->  reverseTakeover
 
         | reverseTakeover [Exponential(0.1)]
@@ -725,15 +728,20 @@ category User {
           ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
 
         & forcedUnsafeUserActivity [Exponential(0.05)]
+          developer info: "This attack models the unsafe user actions induced by an attacker pursuing social engineering."
+          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
           ->  unsafeUserActivity
 
         & unforcedUnsafeUserActivity [Exponential(0.03)]
+          developer info: "This attack models the unsafe user actions that are not directly caused by the attacker's actions, but rather but a lack of security awareness and training of the user."
+          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
           ->  unsafeUserActivity
 
         | unsafeUserActivity
-          ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivilege,
-              userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivilege,
-              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivilege
+          developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
+          ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
 
         | phishUser
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
