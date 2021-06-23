@@ -927,15 +927,15 @@ associations {
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
       modeler info: "ConnectionRules associated with Applications are practically expressing a traffic flow."
   Application      [inApplications]       * <-- InApplicationConnection --> * [ingoingAppConnections]  ConnectionRule
-      user info: "Two or more applications can also be inter-connected via a bidirectional connection. In means that this is the server side application, awaiting incoming connections."
+      user info: "Two or more applications can also be inter-connected via a uni-directional connection. In means that this is the server side application, awaiting incoming connections."
   Application      [outApplications]      * <-- OutApplicationConnection --> *[outgoingAppConnections] ConnectionRule
-      user info: "Two or more applications can also be inter-connected via a bidirectional connection. Out means that this is the client side application initiating connections."
+      user info: "Two or more applications can also be inter-connected via a uni-directional connection. Out means that this is the client side application initiating connections."
   Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
       user info: "Two or more networks can also be inter-connected via a bidirectional connection."
-  Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
-      user info: "Two or more networks can also be inter-connected via a uni-directional connection. Out means that outgoing traffic from the network is allowed."
   Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection. In means that ingoing traffic to the network is allowed."
+  Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection. Out means that outgoing traffic from the network is allowed."
   Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection --> * [diodeIngoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
   // ### Data related associations
