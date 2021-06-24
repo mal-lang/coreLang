@@ -746,11 +746,7 @@ category Networking {
             clientApplications.networkRespondConnect,
             accessNetworkData,
             networkForwarding,
-            denialOfService,
-            eavesdrop,
-            bypassEavesdropProtection,
-            manInTheMiddle,
-            bypassMitMProtection
+            denialOfService
 
       | networkForwarding
         developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
@@ -765,9 +761,10 @@ category Networking {
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
-        ->  transitData.attemptAccess,
-            transitData.attemptEavesdrop,
-            transitData.attemptManInTheMiddle
+        ->  eavesdrop,
+            bypassEavesdropProtection,
+            manInTheMiddle,
+            bypassMitMProtection
 
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
@@ -782,7 +779,8 @@ category Networking {
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
         ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
-            allNetApplications().transitData.attemptEavesdrop
+            allNetApplications().transitData.attemptEavesdrop,
+            transitData.attemptEavesdrop
 
       | bypassEavesdropProtection [HardAndUncertain]
         user info: "The eavesdrop protection can be bypassesed."
@@ -792,7 +790,8 @@ category Networking {
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
         ->  allowedApplicationConnections().attemptManInTheMiddleOnDataInTransit,
-            allNetApplications().transitData.attemptManInTheMiddle
+            allNetApplications().transitData.attemptManInTheMiddle,
+            transitData.attemptManInTheMiddle
 
       | bypassMitMProtection [HardAndUncertain]
         user info: "The MitM protection can be bypassesed."
@@ -806,9 +805,9 @@ category Networking {
             transitData.attemptEavesdrop
     }
 
-    asset RoutingFirewall extends Application 
+    asset RoutingFirewall extends Application
       user info: "A routing firewall specifies a router with firewall capabilities that connects many networks."
-    { 
+    {
       | denialOfService {A}
        user info: "A DoS attack should cascade on the connected networks and associated connections"
         ->  connectionRules.attemptDenialOfService
