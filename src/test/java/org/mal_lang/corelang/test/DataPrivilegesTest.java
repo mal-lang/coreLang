@@ -233,9 +233,8 @@ public class DataPrivilegesTest extends CoreLangTest {
         model.outerData.write.assertUncompromised();
         model.innerData.write.assertUncompromised();
 
-        // mitm implies delete-privileges
-        model.outerData.delete.assertCompromisedInstantaneously();
-        model.innerData.delete.assertCompromisedInstantaneously();
+        model.outerData.delete.assertUncompromised();
+        model.innerData.delete.assertUncompromised();
     }
 
     private static class DataToDataModel {
