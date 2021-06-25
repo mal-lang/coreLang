@@ -9,7 +9,7 @@ public class SystemTest extends CoreLangTest {
         public final System system;
 
         public SystemTestModel(boolean hardwareAdditionsProtection) {
-            system = new System("system", hardwareAdditionsProtection);
+            system = new System("system", true, hardwareAdditionsProtection);
 
         }
 

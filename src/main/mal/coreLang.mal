@@ -75,6 +75,21 @@ category ComputeResources {
         user info: "Specific access only allows the local connection (through localhost) to the hosted applications."
         ->  sysExecutedApps.localConnect
 
+      | attemptSupplyChainAttack
+        developer info: "Intermediate attack step to allow for the auditing defence."
+        ->  supplyChainAttack
+
+      & supplyChainAttack [VeryHardAndUncertain]
+        user info: "Adversaries may perform supply chain compromise to gain control systems environment access by means of infected hardware of firmware."
+        developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
+        modeler info: "The probability fucntion and its value is just an estimation! The System supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not altierations made to the hardware/firmware once it is operating."
+        ->  bypassAccessControl
+
+      # supplyChainAuditing
+        user info: "Auditing inside the supply chain can detect possible supply chain attacks."
+        developer info: "Mitigation based on the supply chain attack mitigation in icsLang as designed by Sotirios."
+        ->  supplyChainAttack
+
       | physicalAccess
         user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
         ->  deny,
@@ -101,6 +116,10 @@ category ComputeResources {
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
+      | compromiseApplication
+        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
+        ->  softApplications.attemptFullAccessAfterSoftProdCompromise
+
       | readApplication
         user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
         ->  softApplications.attemptReadAfterSoftProdVulnerability
@@ -266,7 +285,6 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-
       | attemptUnsafeUserActivityWithLowPrivileges
         developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
         ->  localConnect,
@@ -284,6 +302,19 @@ category ComputeResources {
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityHighPrivilegesAchieved,
             softwareProductVulnerabilityUserInteractionAchieved
+
+      # supplyChainAuditing
+        user info: "Auditing inside the supply chain can detect possible supply chain attacks."
+        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigationin icsLang as designed by Sotirios."
+        ->  fullAccessAfterSoftProdCompromise
+
+      | attemptFullAccessAfterSoftProdCompromise @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccessAfterSoftProdCompromise
+
+      & fullAccessAfterSoftProdCompromise @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccess
 
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
@@ -559,7 +590,7 @@ category DataResources {
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-          ->  originSoftwareProduct.modifyApplication
+          ->  originSoftwareProduct.compromiseApplication
     }
 }
 
