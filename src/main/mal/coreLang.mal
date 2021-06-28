@@ -157,6 +157,19 @@ category ComputeResources {
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
+      | attemptNetworkConnectFromReverseTakeover
+        developer info: "Intermediate attack step to model an attempted reverse takeover."
+        ->  networkConnectFromReverseTakeover
+
+      & networkConnectFromReverseTakeover
+        developer info: "An attacker may attempt a reverse takeover by having the user initiate an unsafe connection to a system controlled by the attacker."
+        ->  networkConnect,
+            localConnect
+
+      # airGapped
+        developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
+        ->  networkConnectFromReverseTakeover
+
       | networkConnect
         user info: "An attacker can connect to any network exposed application."
         ->  networkAccess,
@@ -253,6 +266,25 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
+
+      | attemptUnsafeUserActivityWithLowPrivileges
+        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  localConnect,
+            networkConnect,
+            allVulnerabilities().lowPrivilegesAchieved,
+            allVulnerabilities().userInteractionAchieved,
+            softwareProductVulnerabilityLowPrivilegesAchieved,
+            softwareProductVulnerabilityUserInteractionAchieved
+
+      | attemptUnsafeUserActivityWithHighPrivileges
+        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  localConnect,
+            networkConnect,
+            allVulnerabilities().highPrivilegesAchieved,
+            allVulnerabilities().userInteractionAchieved,
+            softwareProductVulnerabilityHighPrivilegesAchieved,
+            softwareProductVulnerabilityUserInteractionAchieved
+
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step."
@@ -301,6 +333,11 @@ category ComputeResources {
       | softwareProductVulnerabilityHighPrivilegesAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
         -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
+           softwareProductAbuse
+
+      | softwareProductVulnerabilityUserInteractionAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        -> appSoftProduct.softProductVulnerabilities.userInteractionAchieved,
            softwareProductAbuse
 
       | attemptSoftwareProductAbuse @hidden
@@ -648,6 +685,11 @@ category User {
           user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
           ->  passwordReuseCompromise
 
+        # securityAwareness
+          user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
+          ->  socialEngineering,
+              unforcedUnsafeUserActivity
+
         | oneCredentialCompromised @hidden
           developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
           ->  passwordReuseCompromise
@@ -657,10 +699,15 @@ category User {
           ->  userIds.credentials.use
 
         | attemptSocialEngineering
-          user info: "An attacker can try to perform social engineering techiniques such as phishing."
-          developer info: "In the future, other social engineering techiniques should be connected to this attack step."
+          user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
+          ->  socialEngineering
+
+        & socialEngineering
+          user info: "An attacker can try to perform social engineering techniques such as phishing."
+          developer info: "In the future, other social engineering techniques should be connected to this attack step."
           ->  phishUser,
-              steal2FAtoken
+              steal2FAtoken,
+              forcedUnsafeUserActivity
 
         | attemptCredentialTheft
           user info: "Trick the user to provide his/her credentials."
@@ -672,13 +719,29 @@ category User {
           ->  userIds.credentials.credentialTheft
 
         | attemptReverseTakeover
-          user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed by its identity."
+          user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed through its identity."
           ->  reverseTakeover
 
-        | reverseTakeover [VeryHardAndUncertain]
+        | reverseTakeover [Exponential(0.1)]
           developer info: "This attack is harder to happen because it requires more bad effort from the victim."
           modeler info: "The probability and its value are just estimations and are subject to change."
-          ->  userIds.execPrivApps.networkConnect
+          ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
+
+        & forcedUnsafeUserActivity [Exponential(0.05)]
+          developer info: "This attack models the unsafe user actions induced by an attacker pursuing social engineering."
+          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
+          ->  unsafeUserActivity
+
+        & unforcedUnsafeUserActivity [Exponential(0.03)]
+          developer info: "This attack models the unsafe user actions that are not directly caused by the attacker's actions, but rather but a lack of security awareness and training of the user."
+          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
+          ->  unsafeUserActivity
+
+        | unsafeUserActivity
+          developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
+          ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
 
         | phishUser
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
