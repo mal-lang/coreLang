@@ -125,7 +125,7 @@ public class TestPatriot extends CoreLangTest {
         var internet = new Network("internet");
         var cloud = new Application("cloud");
 
-        var con_internet_cloud = autoconbi("con_internet_cloud", internet, cloud);
+        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
         var sensitiveData = new Data("sensitiveData");
@@ -209,7 +209,7 @@ public class TestPatriot extends CoreLangTest {
 
         var spi = new Network("spi");
 
-        var con_shell_spi = autoconbi("con_shell_spi", shell, spi);
+        var spi_con_shell = autocon("spi_con_shell", spi, shell);
 
         var appData = new Data("appData");
         containerAdd(app, appData);
@@ -1029,8 +1029,8 @@ public class TestPatriot extends CoreLangTest {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autoconbi("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autoconbi("net_con_appB", net, appB); // open port
+        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
+        var net_con_appB = autocon("net_con_appB", net, appB); // open port
 
         var idA = new Identity("idA");
 
@@ -1070,8 +1070,8 @@ public class TestPatriot extends CoreLangTest {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autoconbi("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autoconbi("net_con_appB", net, appB); // open port
+        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
+        var net_con_appB = autocon("net_con_appB", net, appB); // open port
 
         var idA = new Identity("idA");
 
@@ -1130,8 +1130,8 @@ public class TestPatriot extends CoreLangTest {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autoconbi("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autoconbi("net_con_appB", net, appB); // open port
+        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
+        var net_con_appB = autocon("net_con_appB", net, appB); // open port
 
         var idB = new Identity("idB");
         var credsB = new Credentials("credsB");
@@ -1201,7 +1201,7 @@ public class TestPatriot extends CoreLangTest {
         var net = new Network("net");
 
 
-        var con_app_net = autoconbi("con_app_net", app, net);
+        var net_con_app = autocon("net_con_app", net, app);
 
         // generic network vulnerability
         var vuln = vulnerabilityBuilder("vuln").setNetwork().setCIA().build();
@@ -1315,7 +1315,7 @@ public class TestPatriot extends CoreLangTest {
 
         var con_app_lan = autocon("con_app_lan", app, lan);
         var con_lan_internet = autocon("con_lan_internet", lan, internet); // Note: NAT.
-        var con_internet_cloud = autoconbi("con_internet_cloud", internet, cloud);
+        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
 
         // The RoutingFirewall is optional. It is just here to show that the
         // router may actually be a IoT device (that can be hacked): RoutingFirewall extends Application.
@@ -1558,7 +1558,7 @@ public class TestPatriot extends CoreLangTest {
 
         var net = new Network("net");
 
-        var con_app_net = autocon("con_app_net", app, net);
+        var net_con_app = autocon("net_con_app", net, app);
 
         var sensitiveData = new Data("sensitiveData");
 
@@ -1629,7 +1629,7 @@ public class TestPatriot extends CoreLangTest {
 
         var con_app_lan = autocon("con_app_lan", app, lan);
         var con_lan_internet = autocon("con_lan_internet", lan, internet); // Note: NAT.
-        var con_internet_cloud = autoconbi("con_internet_cloud", internet, cloud);
+        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
 
         var routerNat = new RoutingFirewall("routerNat");
         con_lan_internet.addRoutingFirewalls(routerNat);
@@ -1888,7 +1888,7 @@ public class TestPatriot extends CoreLangTest {
         var net = new Network("net");
         var app = new Application("ap");
 
-        var net_con_app = autoconbi("net_con_app", net, app); // open port
+        var net_con_app = autocon("net_con_app", net, app); // open port
 
 
         var admin = new Identity("admin");
@@ -1975,7 +1975,7 @@ public class TestPatriot extends CoreLangTest {
         var app = new Application("app");
         var net = new Network("net");
 
-        var con_app_net = autocon("con_app_net", app, net);
+        var net_con_app = autocon("net_con_app", app, net);
 
         attack(net.access);
 
@@ -2600,22 +2600,19 @@ public class TestPatriot extends CoreLangTest {
 
     public ConnectionRule autoconbi(String name, Application src, Network dst) {
         var connectionRule = new ConnectionRule(name);
-        con(src, connectionRule, dst);
-        con(dst, connectionRule, src);
+        conbi(src, connectionRule, dst);
         return connectionRule;
     }
 
     public ConnectionRule autoconbi(String name, Network src, Application dst) {
         var connectionRule = new ConnectionRule(name);
-        con(src, connectionRule, dst);
-        con(dst, connectionRule, src);
+        conbi(src, connectionRule, dst);
         return connectionRule;
     }
 
     public ConnectionRule autoconbi(String name, Network src, Network dst) {
         var connectionRule = new ConnectionRule(name);
-        con(src, connectionRule, dst);
-        con(dst, connectionRule, src);
+        conbi(src, connectionRule, dst);
         return connectionRule;
     }
 
