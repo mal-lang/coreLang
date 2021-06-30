@@ -872,25 +872,31 @@ category Networking {
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
+        ->  successfulEavesdrop
+
+      | bypassEavesdropProtection {C} [HardAndUncertain]
+        user info: "The eavesdrop protection can be bypassesed."
+        ->  successfulEavesdrop
+
+      | successfulEavesdrop @hidden
+        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
             allNetApplications().transitData.attemptEavesdrop,
             transitData.attemptEavesdrop
 
-      | bypassEavesdropProtection [HardAndUncertain]
-        user info: "The eavesdrop protection can be bypassesed."
-        ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
-            allNetApplications().transitData.attemptEavesdrop
-
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
+        ->  successfulManInTheMiddle
+
+      | bypassMitMProtection {C, I} [HardAndUncertain]
+        user info: "The MitM protection can be bypassesed."
+        ->  successfulManInTheMiddle
+
+      | successfulManInTheMiddle @hidden
+        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnections().attemptManInTheMiddleOnDataInTransit,
             allNetApplications().transitData.attemptManInTheMiddle,
             transitData.attemptManInTheMiddle
-
-      | bypassMitMProtection [HardAndUncertain]
-        user info: "The MitM protection can be bypassesed."
-        ->  allowedApplicationConnections().attemptManInTheMiddleOnDataInTransit,
-            allNetApplications().transitData.attemptManInTheMiddle
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
