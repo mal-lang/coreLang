@@ -900,9 +900,7 @@ category Networking {
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
-        ->  allowedApplicationConnections().attemptEavesdropOnDataInTransit,
-            allNetApplications().transitData.attemptEavesdrop,
-            transitData.attemptEavesdrop
+        ->  successfulEavesdrop
     }
 
     asset RoutingFirewall extends Application
