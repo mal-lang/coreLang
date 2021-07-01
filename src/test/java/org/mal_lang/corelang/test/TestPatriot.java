@@ -23,20 +23,6 @@ public class TestPatriot extends CoreLangTest {
     // TODO Some suggestions on changes to coreLang are marked with "TODO".
     //
 
-//    @Test
-//    public void test_t001() {
-//        // T001 (physical) Sensitive data exposure - Device ID/serial no
-//        // "An attacker could gather more critical information regarding to internals of the device which makes easy to conduct other various attacks."
-//        //
-//        // Interpretation: The device may be physically labeled with IDs (e.g.
-//        // FCC ID, microchip serial ID). While not sensitive by itself, this
-//        // information is useful for further attacks and reverse engineering.
-//        //
-//        // Probably does not make sense to model in coreLang.
-//        //
-//        // See also T002 and T004 on gaining informatino through physical interfaces (e.g. UART, USB, etc).
-//    }
-
     @Test
     public void test_t002() {
         // T002 (physical) Firmware/storage extraction - Insecure external media interfaces
@@ -262,36 +248,6 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, sensitiveData.read);
     }
 
-
-
-//    @Test
-//    public void test_t005() {
-//        // T005 (physical) Firmware/storage extraction - Insecure I2C interface
-//        // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the serial bus protocol I2C."
-//        //
-//        // see T004.
-//    }
-//    @Test
-//    public void test_t006() {
-//        // T006 (physical) Firmware/storage extraction - Insecure UART interface
-//        // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the serial interface UART."
-//        //
-//        // see T004.
-//    }
-//    @Test
-//    public void test_t007() {
-//        // T007 (physical) Firmware/storage extraction - Insecure JTAG interface
-//        // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the debug interface JTAG."
-//        //
-//        // see T004.
-//    }
-//    @Test
-//    public void test_t008() {
-//        // T008 (physical) Firmware/storage extraction - Insecure SWD interface
-//        // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the debug interface SWD."
-//        //
-//        // see T004.
-//    }
     @Test
     public void test_t009() {
         // T009 (physical) Firmware/storage extraction - Insecure SoC
@@ -314,16 +270,7 @@ public class TestPatriot extends CoreLangTest {
         attack(chipA.fullAccess, anyone.assume);
         compromised(1, sensitiveData.read);
     }
-//    @Test
-//    public void test_t010() {
-//        // T010 (physical) Firmware/storage extraction - Insecure eMMC chip
-//        // "An attacker could dump the firmware by tapping if it is stored an embedded Multi Media Card (eMMC) flash chip (embedded SD card). An attacker could dump the firmware by unsoldering chip then reading it with an adapter if it is stored in an embedded Multi Media Card (eMMC) flash chip (embedded SD card)."
-//        //
-//        // Interpretation: Like T004, but we must desolder the eMMC chip
-//        // first before communicating with it.
-//        //
-//        // See T002 and T004.
-//    }
+
     @Test
     public void test_t011() {
         // T011 (physical) Backdoor firmware - Insecure UART interface
@@ -365,31 +312,7 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, firmwareBlob.write); // By writing to the firmwareblob...
         compromised(1, app.fullAccess); //  ... we can exec code.
     }
-//    @Test
-//    public void test_t012() {
-//        // T012 (physical) Backdoor firmware - Insecure JTAG interface
-//        // "An attacker could modify the firmware if access to the flash/EEPROM chip is not restricted through the debug interface JTAG."
-//        //
-//        // See T011.
-//    }
-//    @Test
-//    public void test_t013() {
-//        // T013 (physical) Backdoor firmware - Insecure SWD interface
-//        // "An attacker could modify the firmware if access to the flash/EEPROM chip is not restricted through the debug interface SWD."
-//        //
-//        // See T011.
-//    }
-//    @Test
-//    public void test_t014() {
-//        // T014 (physical) Grant shell access - Insecure UART interface
-//        // "An attacker could grant a command shell if access to the flash/EEPROM chip is not restricted through the serial interface UART."
-//        //
-//        // Interpretation: An IoT device may have hidden physical connectors.
-//        // The attacker may be able to use these connectors to command the
-//        // device (e.g. gain root shell access).
-//        //
-//        // see test_T004_v2.
-//    }
+
     @Test
     public void test_t015() {
         // T015 (physical) Grant shell access - Insecure SPI interface
@@ -424,13 +347,6 @@ public class TestPatriot extends CoreLangTest {
     }
 
 //    @Test
-//    public void test_t016() {
-//        // T016 (physical) Change code execution flow - Insecure JTAG/SWD interface
-//        // "An attacker could debug the libraries/binaries and manipulate the execution flow of firmware if access to the flash/EEPROM chip is not restricted through the debug interface JTAG."
-//        //
-//        // See T015.
-//    }
-//    @Test
 //    public void test_t017() {
 //        // T017 (physical) Reset to insecure state
 //        // "An attacker could misuse reset functionality of the device if resetting results in insecure state."
@@ -441,19 +357,6 @@ public class TestPatriot extends CoreLangTest {
 //        // resulting from the reset. The reset can be modeled as the the
 //        // attacker doing Data.write to a specific Data asset representing the
 //        // reset API-function. See also T035 on rollback attacks.
-//    }
-//
-//    @Test
-//    public void test_t018() {
-//        // T018 (firmware) Sensitive data exposure - Hardcoded credentials
-//        // "An attacker could reveal unchangable credentials including password, hash, private certificate, and API key from storage by reverse engineering and source code analysis."
-//        //
-//        // Interpretation: The firmware blob of a device may contain hardcoded
-//        // credentials. If the attacker can obtain the firmware blob they can
-//        // obtain the credentials.
-//        //
-//        // Example:
-//        //  * see T019.
 //    }
 
     @Test
@@ -532,15 +435,6 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, app.authenticate);
         compromised(1, app.fullAccess);
     }
-
-
-//    @Test
-//    public void test_t020() {
-//        // T020 (firmware) Sensitive data exposure - Encryption keys and algorithms
-//        // "An attacker could identify encryption keys from both storage and memory by reverse engineering and source code analysis. An attacker could gain sensitive data if device has encrypted with the discovered keys."
-//        //
-//        // See T018.
-//    }
 
     @Test
     public void test_t021_v1() {
@@ -802,13 +696,6 @@ public class TestPatriot extends CoreLangTest {
 
 
 //    @Test
-//    public void test_t023() {
-//        // T023 (firmware) Configuration - Lack of data integrity checks
-//        // "An attacker could backdoor the firmware if firmware has insecure or lack of integrity checks."
-//        //
-//        // See T035 about signature verification.
-//    }
-//    @Test
 //    public void test_t024() {
 //        // T024 (firmware) Configuration - Lack of wiping device
 //        // "Lack of deprovisioning/decomissioning. Inability to wipe device's local data storage … <This should be triggered via device web page>"
@@ -823,25 +710,7 @@ public class TestPatriot extends CoreLangTest {
 //        //   * TODO Corelang does not really model state, see T017 and T040.
 //        //   * Alternative, simply model it as sensitive data/credentials being stored on the device, see e.g. T021.
 //    }
-//    @Test
-//    public void test_t025() {
-//        // T025 (firmware) Configuration - Insecure customization of OS platforms
-//        // "Insecure default settings or insufficient ability to harden the system by modifying configurations are the root cause of many vulnerabilities."
-//        //
-//        // Interpretation: The OS platform might have been customized in an
-//        // insecure way, or the default settings are insecure and can't be
-//        // changed. Basically the device could be more hardened, but is not.
-//        //
-//        // This is more like the cause of other vulnerabilities rather than a vulnerability in itself.
-//        // See for example T031 on modeling generic vulnerabilities.
-//    }
-//    @Test
-//    public void test_t026() {
-//        // T026 (firmware) Configuration - Lack of security configurability
-//        // "Insecure default settings or insufficient ability to harden the system by modifying configurations are the root cause of many vulnerabilities."
-//        //
-//        // See T025. Does not really make sense to model. Also, It is tricky to define what is and is not a "configuration".
-//    }
+
     @Test
     public void test_t027_v1() {
         // T027 (firmware) Configuration - Insecure filesystem permissions
@@ -1165,21 +1034,6 @@ public class TestPatriot extends CoreLangTest {
     }
 
 
-//    @Test
-//    public void test_t029() {
-//        // T029 (firmware) Authentication bypass - Device to mobile application
-//        // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // Like T028, but one of the devices is smartphone.
-//    }
-//    @Test
-//    public void test_t030() {
-//        // T030 (firmware) Authentication bypass - Device to cloud
-//        // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // Like T028, but with a cloud API.
-//    }
-
     @Test
     public void test_t031() {
         // T031 (firmware) Update mechanism - Missing update mechanism
@@ -1439,58 +1293,6 @@ public class TestPatriot extends CoreLangTest {
         compromised(0, app.fullAccess);
     }
 
-//    @Test
-//    public void test_t035() {
-//        // T035 (firmware) Update mechanism - Lack of update verification
-//        // "An attacker could backdoor the firmware if firmware update process has insecure or lack of integrity verification."
-//        //
-//        // One form of verification is to verify a signature, see test_T034.
-//        //
-//        // More generally we can model lack of verification as "anyone" having
-//        // access to a write-API. See test_T034.
-//    }
-//    @Test
-//    public void test_t036() {
-//        // T036 (firmware) Update mechanism - Lack of update authentication
-//        // "An attacker could download the firmware if firmware update process has insecure or lack of authentication."
-//        //
-//        // Interpretation: Basically anyone can download the firmware from the internet
-//        // without authentication. That is: the authentication here means the
-//        // IoT authenticating with the cloud to begin downloading the update
-//        // (not the other way around).
-//        //
-//        // See T003.
-//    }
-
-//    @Test
-//    public void test_t037() {
-//        // T037 (firmware) Update mechanism - Intercepting OTA update
-//        // "An attacker could capture firmware even from encrypted traffic if update mechanism is not secure against MitM attacks."
-//        //
-//        // Interpretation: OTA is basically just a fancy way to say that the
-//        // firmware updates are downloaded over a network (usually from the
-//        // internet). Those downloads coult be MITMed -- the attacker either
-//        // just snoops on the data or replaces the firmware on the fly.
-//        //
-//        // How to model in coreLang:
-//        //  * See T033 on transport encryption.
-//        //  * See T034 on firmware signatures and verification.
-//    }
-//
-//    @Test
-//    public void test_t038() {
-//        // T038 (firmware) Update mechanism - Backdoor firmware
-//        // "(Malicious firmware update). An attacker could backdoor the firmware/sensitive data 'on the fly' before reaching the device/hub if update mechanism is not secure against MitM attacks."
-//        //
-//        // Interpretation: The attacker can upload and install firmware to the
-//        // device somehow. This could for example be done via MITM (T037), or the
-//        // update-mechanism be a world-writable API (T039).
-//        //
-//        // How to model in coreLang:
-//        //  * See T037.
-//        //  * See T039.
-//    }
-//
     @Test
     public void test_t039() {
         // T039 (firmware) Update mechanism - World writable update location
@@ -1521,6 +1323,7 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, firmwareBlob.write);
         compromised(1, app.fullAccess);
     }
+
 //    @Test
 //    public void test_t040() {
 //        // T040 (firmware) Update mechanism - Lack of anti-rollback mechanism
@@ -1531,6 +1334,7 @@ public class TestPatriot extends CoreLangTest {
 //        // scenario leading up to the rollback and another model showing the
 //        // situation after the rollback. See also T004.
 //    }
+
     @Test
     public void test_t041() {
         // T041 (device network service) Sensitive data exposure
@@ -1592,14 +1396,6 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, sensitiveData.read);
     }
 
-
-//    @Test
-//    public void test_t042() {
-//        // T042 (device network service) Lack of transport encryption
-//        // "Network services are not properly encrypted HTTPS to prevent eavesdropping or tampering senstive data by attackers."
-//        //
-//        // See T033.
-//    }
 
     @Test
     public void test_t043() {
@@ -1953,18 +1749,6 @@ public class TestPatriot extends CoreLangTest {
 
 
 
-
-//    @Test
-//    public void test_t049() {
-//        // T049 (device network service) Authentication bypass
-//        // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // Model as generic network vulnerability? test_T031?
-//        //
-//        // Alternatively model as multiple APIs (App), where some API can be
-//        // accessed by Identity("anyone").
-//    }
-
     @Test
     public void test_t050() {
         // T050 (device network service) Denial of Service (DoS)
@@ -1982,438 +1766,6 @@ public class TestPatriot extends CoreLangTest {
         compromised(1, net.denialOfService);
         compromised(1, app.deny);
     }
-
-//    @Test
-//    public void test_t051() {
-//        // T051 (device network service) Buffer overflow
-//        // "Buffer Overflow is one of the most common vulnerability shown in network services of devices."
-//        //
-//        // Generic vulnerability. See for example T031.
-//    }
-//    @Test
-//    public void test_t052() {
-//        // T052 (device web) Sensitive data exposure
-//        // "Any kind of senstive data that can be accessible."
-//        //
-//        // See T041.
-//    }
-//    @Test
-//    public void test_t053() {
-//        // T053 (device web) Lack of transport encryption
-//        // "Web services are not properly encrypted HTTPS to prevent eavesdropping or tampering senstive data by attackers."
-//        //
-//        // See T033.
-//    }
-//    @Test
-//    public void test_t054() {
-//        // T054 (device web) Insecure SSL/TLS issues
-//        // "Encryption is implemented however it is improperly configured or is not being properly updated, (e.g. expired and/or self-signed certificates, same certificate used on multiple devices, deprecated SSL versions)"
-//        //
-//        // See T043.
-//    }
-//    @Test
-//    public void test_t055() {
-//        // T055 (device web) Authentication - Username enumeration
-//        // "Ability to collect a set of valid usernames by interacting with the authentication mechanism"
-//        //
-//        // See T044.
-//    }
-//    @Test
-//    public void test_t056() {
-//        // T056 (device web) Authentication - Weak credentials
-//        // "Ability to set account passwords to '1234' or '123456' for example. Usage of pre-programmed default (known) passwords (deffpass.com (Publicly available) - IoT device default password lookup). Easily guessable credentials. Brute-force by dictionaries and rules"
-//        //
-//        // See T045.
-//    }
-//    @Test
-//    public void test_t057() {
-//        // T057 (device web) Authentication - Improper account lockout
-//        // "Ability to continue sending authentication attempts after 3 - 5 failed login attempts"
-//        //
-//        // See T046.
-//    }
-//    @Test
-//    public void test_t058() {
-//        // T058 (device web) Authentication - Weak password recovery
-//        // "Insecure password reset/forgot mechanism could cause authentication bypass."
-//        //
-//        // See T047.
-//    }
-//    @Test
-//    public void test_t059() {
-//        // T059 (device web) Authentication - Lack of two-factor authentication
-//        // "Lack of two-factor authentication mechanisms such as a security token or fingerprint scanner in senstive APIs."
-//        //
-//        // How to model in coreLang:
-//        //  * 2FA is modeled as a defense: Identity.twoFactorAuthentication. Attacks on 2FA include User.steal2FAtoken.
-//        //  * TODO CoreLang could potentially model each factor as a separate Credentials, and have a MultiFactorCredentials that requires all of the Credentials to be assumed.
-//    }
-//    @Test
-//    public void test_t060() {
-//        // T060 (device web) Authentication bypass - Web application to cloud
-//        // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // See T028.
-//    }
-//    @Test
-//    public void test_t061() {
-//        // T061 (device web) Lack of logging options
-//        // "Lack of logging options or secure logging options. Indetailed logging. It might not a vulnerabilty"
-//        //
-//        // TODO lack of intrusion detection. CoreLang does not really model logging.
-//    }
-//    @Test
-//    public void test_t062() {
-//        // T062 (device web) Command injection
-//        // "Unsanitized user input can cause arbitrary code execution."
-//        //
-//        // How to model in coreLang:
-//        //  * Generic vulnerability. See T031.
-//        //  * XSS can be modeled as stealing credentials in sub-application.
-//    }
-//    @Test
-//    public void test_t063() {
-//        // T063 (device web) Direct object references
-//        // "Access to unauthorized data."
-//        //
-//        // Interpretation: The attacker can easily guess the ids
-//        // of objects (e.g. easy to guess url). This is not a vulnerability by
-//        // itself and there would have to additionally be a vulnerability
-//        // in the access control of those objects.
-//        //
-//        // This does not really make sense to model in coreLang (especially
-//        // since coreLang does not model indirection, like references and
-//        // URLs). Rather, just model the data (as APIs) and who has access to
-//        // it. See also test_T048_v3 on horizontal privilege escalation where
-//        // one user has access to another user's data.
-//    }
-//    @Test
-//    public void test_t064() {
-//        // T064 (device web) Business and logic flaws
-//        // "Any vulnerabilities that cause remote code execution or sensitive data disclosure. OWASP Top 10 and testing guideline."
-//        //
-//        // Could be almost anything, so might not make sense to model without
-//        // being more specific.
-//        //
-//        // How to model in coreLang:
-//        //   * Generic vulnerability, see T031.
-//        //   * Access control problems, see T041.
-//        //
-//        // Some IoT examples include:
-//        //   * Sibyl attacks.
-//    }
-//    @Test
-//    public void test_t065() {
-//        // T065 (cloud web) Lack of transport encryption
-//        // "Insecure network communication. Cloud services are not properly encrypted HTTPS to prevent eavesdropping or tampering senstive data by attackers."
-//        //
-//        // See T033.
-//    }
-//    @Test
-//    public void test_t066() {
-//        // T066 (cloud web) Insecure SSL/TLS issues
-//        // "Expired and/or self-signed certificates, Same certificate used on multiple devices, Deprecated SSL versions"
-//        //
-//        // See T043.
-//    }
-//    @Test
-//    public void test_t067() {
-//        // T067 (cloud web) Authentication - Username enumeration
-//        // "Ability to collect a set of valid usernames by interacting with the authentication mechanism"
-//        //
-//        // See T044.
-//    }
-//    @Test
-//    public void test_t068() {
-//        // T068 (cloud web) Authentication - Weak credentials
-//        // "Ability to set account passwords to '1234' or '123456' for example. Usage of pre-programmed (know) default passwords (deffpass.com (Publicly available) - IoT device default password lookup). Easily guessable credentials. Brute-force by dictionaries and rules"
-//        //
-//        // See T045.
-//    }
-//    @Test
-//    public void test_t069() {
-//        // T069 (cloud web) Authentication - Improper account lockout
-//        // "Ability to continue sending authentication attempts after 3 - 5 failed login attempts"
-//        //
-//        // See T046.
-//    }
-//    @Test
-//    public void test_t070() {
-//        // T070 (cloud web) Authentication - Weak password recovery
-//        // "Insecure password reset/forgot mechanism could cause authentication bypass."
-//        //
-//        // See T047.
-//    }
-//    @Test
-//    public void test_t071() {
-//        // T071 (cloud web) Authentication - Lack of two-factor authentication
-//        // "Lack of two-factor authentication mechanisms such as a security token or fingerprint scanner in senstive APIs."
-//        //
-//        // See T059.
-//    }
-//    @Test
-//    public void test_t072() {
-//        // T072 (cloud API) Vendor APIs - Inherent trust of cloud or mobile application
-//        // "Vendor or 3rd party APIs"
-//        //
-//        // See T064.
-//    }
-//    @Test
-//    public void test_t073() {
-//        // T073 (cloud API) Vendor APIs - Authentication bypass
-//        // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // See T028.
-//    }
-//    @Test
-//    public void test_t074() {
-//        // T074 (cloud API) Vendor APIs - Authorization bypass
-//        // "Insecure access controls"
-//        //
-//        // See T028.
-//    }
-//    @Test
-//    public void test_t075() {
-//        // T075 (cloud API) Vendor APIs - Undocumented backdoor API calls
-//        // "Critical API call for testing/debugging purposes left accessible."
-//        //
-//        // See T063.
-//    }
-//    @Test
-//    public void test_t076() {
-//        // T076 (cloud API) Vendor APIs - User data disclosure
-//        // "Insufficient Privacy Protection: Encrypted PII sent + UnEncrypted PII sent. User’s personal information stored on the device or in the ecosystem that is used insecurely, improperly, or without permission. https://arxiv.org/abs/1705.06805"
-//        //
-//        // How to model in coreLang:
-//        //   * TODO CoreLang does not model privacy explicitly, but sensitive
-//        //     information could be modeled as Data/Information.
-//        //   * TODO Combining many small pieces of information (that are
-//        //     otherwise benign) could be used to derive PII (e.g. via
-//        //     statistical analysis). CoreLang does not model this. For
-//        //     example, patterns in traffic could be used to analyze user
-//        //     behavior <https://arxiv.org/abs/1705.06805>.
-//    }
-//    @Test
-//    public void test_t077() {
-//        // T077 (cloud API) Vendor APIs - Device information leakage
-//        // "User/device location disclosure: Requests to the device’s weather service (API) leaks the exact GPS coordinates of the device, since they were sent as part of unencrypted HTTP communications [EST-1]."
-//        //
-//        // See T076.
-//    }
-//    @Test
-//    public void test_t078() {
-//        // T078 (mobile app) Sensitive data exposure - Hardcoded credentials
-//        // "An attacker could reveal unchangable credentials including password, hash, private certificate, and API key from storage by reverse engineering and source code analysis."
-//        //
-//        // Interpretation: Similarly to firmware, mobile apps packages (e.g.
-//        // APKs for android) may containing sensitive information. Packages
-//        // are usually publically available.
-//        //
-//        // See T018.
-//    }
-//    @Test
-//    public void test_t079() {
-//        // T079 (mobile app) Sensitive data exposure - Encryption keys and algorithms
-//        // "An attacker could identify encryption keys from both storage and memory by reverse engineering and source code analysis."
-//        //
-//        // See T018.
-//    }
-//    @Test
-//    public void test_t080() {
-//        // T080 (mobile app) Sensitive data exposure - Other sensitive information
-//        // "An attacker could identify various sensitive data (URLs) from both storage and memory by reverse engineering and source code analysis."
-//        //
-//        // See T021.
-//    }
-//    @Test
-//    public void test_t081() {
-//        // T081 (mobile app) Authentication - Username enumeration
-//        // "Ability to collect a set of valid usernames by interacting with the authentication mechanism"
-//        //
-//        // See T044.
-//    }
-//    @Test
-//    public void test_t082() {
-//        // T082 (mobile app) Authentication - Weak credentials
-//        // "Ability to set account passwords to '1234' or '123456' for example. Usage of pre-programmed (known) default passwords (deffpass.com (Publicly available) - IoT device default password lookup). Easily guessable credentials. Brute-force by dictionaries and rules"
-//        //
-//        // See T045.
-//    }
-//    @Test
-//    public void test_t083() {
-//        // T083 (mobile app) Authentication - Improper account lockout
-//        // "Ability to continue sending authentication attempts after 3 - 5 failed login attempts"
-//        //
-//        // See T046.
-//    }
-//    @Test
-//    public void test_t084() {
-//        // T084 (mobile app) Authentication - Weak password recovery
-//        // "Insecure password reset/forgot mechanism could cause authentication bypass."
-//        //
-//        // See T047.
-//    }
-//    @Test
-//    public void test_t085() {
-//        // T085 (mobile app) Authentication - Lack of two-factor authentication
-//        // "Lack of two-factor authentication mechanisms such as a security token or fingerprint scanner"
-//        //
-//        // See T059.
-//    }
-//    @Test
-//    public void test_t086() {
-//        // T086 (mobile app) Authentication - Mobile application to cloud system
-//        // "Disclosure or reusing of sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
-//        //
-//        // See T028.
-//    }
-//    @Test
-//    public void test_t087() {
-//        // T087 (mobile app) Insecure authorization
-//        // ""
-//        //
-//        // Interpretation: See OWASP mobile top ten. Basically access
-//        // control is broken in some way.
-//        //
-//        // See for example T028.
-//    }
-//    @Test
-//    public void test_t088() {
-//        // T088 (mobile app) Implicitly trusted by device or cloud
-//        // ""
-//        //
-//        // See T064.
-//    }
-//    @Test
-//    public void test_t089() {
-//        // T089 (mobile app) Lack of transport encryption
-//        // "Insecure network communication. Mobile applications are not properly encrypted HTTPS to prevent eavesdropping or tampering senstive data by attackers."
-//        //
-//        // See T033.
-//    }
-//    @Test
-//    public void test_t090() {
-//        // T090 (mobile app) Insecure SSL/TLS issues
-//        // "Expired and/or self-signed certificates, Same certificate used on multiple devices, Deprecated SSL versions"
-//        //
-//        // See T043.
-//    }
-//    @Test
-//    public void test_t091() {
-//        // T091 (mobile app) Insecure data storage
-//        // ""
-//        //
-//        // See T021.
-//    }
-//    @Test
-//    public void test_t092() {
-//        // T092 (mobile app) Outdated 3rd party libraries and SDKs
-//        // "Known vulnerabilities in deprecated libraries."
-//        //
-//        // Generic vulerability, see T031.
-//        // In this case it may make sense to attach the vulnerability to a
-//        // SoftwareProduct rather than directly to an Application.
-//    }
-//    @Test
-//    public void test_t093() {
-//        // T093 (mobile app) Business and logic flaws
-//        // "Insecure Device controlling commands"
-//        //
-//        // See T064.
-//    }
-//    @Test
-//    public void test_t094() {
-//        // T094 (mobile app) Lack of health checks
-//        // "No check whether the device is working as it should. Insecure heartbeats"
-//        //
-//        // How to model in coreLang:
-//        //  * For example as dataflow over network that the attacker can
-//        //    manipulate.
-//        //  * Broken authentication/access control. For example heartbeat API
-//        //    accessible to anyone.
-//        //
-//    }
-//    @Test
-//    public void test_t095() {
-//        // T095 (radio) Lack of transport encryption
-//        // "Attacker can extract sensitive information in clear text from radio packets."
-//        //
-//        // See T033.
-//    }
-//    @Test
-//    public void test_t096() {
-//        // T096 (radio) Man in the middle attack
-//        // "Even TLS connections might be also vulnerable to MitM attacks, since certificate validation is missing. It allows the attackers to conduct additional attacks according to the context [EST-1]."
-//        //
-//        // How to model in coreLang:
-//        //  * Just model radio as a regular Network.
-//    }
-//    @Test
-//    public void test_t097() {
-//        // T097 (radio) Lack of message integrity check
-//        // "The transmission protocol does not include a mechanism for verifying the integrity of the transmitted data, such as a checksum. Or it does not validate or incorrectly validates the integrity check values or "checksums" of a message (header or payload) which will allow modified or corrupted data in transmission."
-//        //
-//        // Examples:
-//        //   * Only part of the packet is encrypted and the unencrypted part
-//        //     of the packet is implicitly trusted.
-//        //
-//        // How to model in coreLang:
-//        //   * See T033 on encryption.
-//        //   * See T034 on signatures.
-//    }
-//    @Test
-//    public void test_t098() {
-//        // T098 (radio) Interception and modification
-//        // "Attacker can intercept live radio communication and then modify the transmitted packets."
-//        //
-//        // See T096.
-//    }
-//    @Test
-//    public void test_t099() {
-//        // T099 (radio) Replay attack
-//        // "Attacker can perform bit-flip attacks on encrypted network traffic. The intruder will first intercept an encrypted message and then alter the payload or header and retransmit the data packet. Actually performing replay attack which is possible when there is no verification and captured data can be re-transmitted. Some type of integrity check methods i.e. ICV are known as vulnerable."
-//        //
-//        // Intepretation: The attack can record and resend radio waves.
-//        // Potentially the recorded waves can be interpreted as packets,
-//        // reverse engineered and more advanced packets can then be sent.
-//        //
-//        // How to model in coreLang:
-//        //  * Lack of authentication.
-//        //  * Generic vulnerability in authentication mechanism.
-//        //  * As credentials being sent in plain text over radio. Note that radio can be modeled using Network.
-//        //  * Non-idempotent messages. No sequence numbering.
-//        //  * TODO It may be useful to model replay attacks explicitly in coreLang. For example Data.replay
-//    }
-//    @Test
-//    public void test_t100() {
-//        // T100 (radio) Jamming attack
-//        // "Due to some controls such as payload verification, a transmitted packet might not be re-transmitted again. For this cases, it is required jamming the signal first and capturing an "unused" radio packet. Then replay attack can be successfully performed."
-//        //
-//        // Interpretation: Jamming can be a form of DoS. It can also be used to block and capture at the same time as a form of MITM attack. This may for example be necessary to perform certain replay attacks.
-//        //
-//        // How to model in coreLang:
-//        //  * Model as DoS on network, see T050.
-//    }
-//    @Test
-//    public void test_t101() {
-//        // T101 (radio) Spoofing attack
-//        // "Attacker can present itself as a legitamate gateway or sensor in radio communication."
-//        //
-//        // See T096.
-//        //
-//        // CoreLang does not really model the details of attacks based on
-//        // redirection and addressing (such as in for example ARP cache
-//        // poisoning). However, it does model the result -- MITM.
-//    }
-//    @Test
-//    public void test_t102() {
-//        // T102 (radio) Denial of service (DoS)
-//        // "Attacker can disrupt radio communication."
-//        //
-//        // See T100.
-//    }
-
-
 
 
     ////////// util ////////////
