@@ -1,7 +1,8 @@
-package org.mal_lang.corelang.test;
+package org.mal_lang.corelang.test.patriot;
 
 import org.junit.jupiter.api.AfterEach;
 
+import org.mal_lang.corelang.test.*;
 import core.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -45,7 +46,7 @@ public class TestPatriot extends CoreLangTest {
         //    ConnectionRules, see T004.
 
         var phy = new PhysicalZone("phy");
-        var sys = new System("sys");
+        var sys = new org.mal_lang.corelang.test.System("sys");
         var app = new Application("app");
 
         containerAdd(phy, sys);
@@ -1158,7 +1159,7 @@ public class TestPatriot extends CoreLangTest {
     public void test_T033_v2() {
         // more complicated example
 
-        var sys = new System("sys");
+        var sys = new org.mal_lang.corelang.test.System("sys");
         var app = new Application("app");
 
         containerAdd(sys, app);
@@ -1176,7 +1177,7 @@ public class TestPatriot extends CoreLangTest {
         var routerNat = new RoutingFirewall("routerNat");
         con_lan_internet.addRoutingFirewalls(routerNat);
 
-        var routerHardware = new System("routerHardware");
+        var routerHardware = new org.mal_lang.corelang.test.System("routerHardware");
         containerAdd(routerHardware, routerNat);
 
         var tcp = new Data("tcp");
@@ -1430,7 +1431,7 @@ public class TestPatriot extends CoreLangTest {
         var routerNat = new RoutingFirewall("routerNat");
         con_lan_internet.addRoutingFirewalls(routerNat);
 
-        var routerHardware = new System("routerHardware");
+        var routerHardware = new org.mal_lang.corelang.test.System("routerHardware");
         containerAdd(routerHardware, routerNat);
 
         var tlsCredentials = new Credentials("tlsCredentials");
@@ -1832,15 +1833,15 @@ public class TestPatriot extends CoreLangTest {
         a.addParentId(b);
     }
 
-    public void containerAdd(PhysicalZone container, System inside) {
+    public void containerAdd(PhysicalZone container, org.mal_lang.corelang.test.System inside) {
         container.addSystems(inside);
     }
 
-    public void containerAdd(System container, Application inside) {
+    public void containerAdd(org.mal_lang.corelang.test.System container, Application inside) {
         container.addSysExecutedApps(inside);
     }
 
-    public void containerAdd(System container, Data inside) {
+    public void containerAdd(org.mal_lang.corelang.test.System container, Data inside) {
         container.addSysData(inside);
     }
 
