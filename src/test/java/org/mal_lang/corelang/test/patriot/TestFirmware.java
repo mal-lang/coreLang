@@ -35,8 +35,6 @@ public class TestFirmware extends Base {
         // backdoor credentials by for example reverse engineering the
         // firmware.
         //
-        // See also T004.
-        //
         // Example:
         //  * The attacker can find the credentials on the internet.
         //  * The attacker can find the credentials inside a firmwareblob from the internet.
@@ -114,10 +112,6 @@ public class TestFirmware extends Base {
         //
         // Examples:
         //   * The device stores sensitive data in plain text in flash.
-        //
-        // How to model in coreLang:
-        //  * Use Application.containedData
-        //  * See also test_T003.
 
         var app = new Application("app");
 
@@ -135,7 +129,7 @@ public class TestFirmware extends Base {
 
     @Test
     public void sensitive_data_stored_encrypted_filesystem() {
-        // Like test_T021_v1, but we encrypt the data.
+        // Like sensitive_data_stored_unencrypted_in_filesystem(), but we encrypt the data.
 
         var app = new Application("app");
 
@@ -214,7 +208,7 @@ public class TestFirmware extends Base {
 
     @Test
     public void hardware_encryption_circumvention_via_app_simplified() {
-        // Like test_T021_v2, but simplified.
+        // Like hardware_encryption_circumvention_via_app(), but simplified.
 
         var hardwareCredentials = new Credentials("hardwareCredentials"); // unobtainable in practice
 
@@ -240,9 +234,9 @@ public class TestFirmware extends Base {
 
         mkReadApi(os, appId, filesystem);
 
-        // While the attacker is not able to access the key directly (see
-        // test_T021_v2), we can still model it as if they could since they
-        // can use the key to decrypt data.
+        // While the attacker is not able to access the key directly
+        // (hardware_encryption_circumvention_via_app), we can still model it
+        // as if they could since they can use the key to decrypt data.
         mkReadApi(os, appId, keyring);
 
         var externalData = new Data("externalData");
@@ -297,9 +291,10 @@ public class TestFirmware extends Base {
         compromised(1, encKey.use);
         compromised(1, sensitiveData.read);
     }
+
     @Test
     public void shared_stored_credentials() {
-        // Like test_T022, but we use the key on another device.
+        // Like encryption_key_stored_in_filesystem(), but we use the key on another device.
 
         var app = new Application("app");
         var flash = new Data("flash");
@@ -331,8 +326,8 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void shard_hardcoded_downloaded_key() {
-        // Like test_T022_v1, but the key is hardcoded into the firmware
+    public void shared_hardcoded_downloaded_key() {
+        // Like shared_stored_credentials(), but the key is hardcoded into the firmware
         // (which the attacker can download from the internet).
 
         var app = new Application("app");
@@ -369,11 +364,11 @@ public class TestFirmware extends Base {
 //        // imperfect.
 //        //
 //        // Example:
-//        //  * Old data is left from previous owner (cloud credentials, wifi passwords, etc.). See also T021.
+//        //  * Old data is left from previous owner (cloud credentials, wifi passwords, etc.).
 //        //
 //        // How to model in coreLang:
-//        //   * TODO Corelang does not really model state, see T017 and T040.
-//        //   * Alternative, simply model it as sensitive data/credentials being stored on the device, see e.g. T021.
+//        //   * TODO Corelang does not really model state.
+//        //   * Alternative, simply model it as sensitive data/credentials being stored on the device.
 //    }
 
 
@@ -382,8 +377,7 @@ public class TestFirmware extends Base {
         // T027 (firmware) Configuration - Insecure filesystem permissions
         // "Insecure default settings or insufficient ability to harden the system by modifying configurations are the root cause of many vulnerabilities."
         //
-        // Intepretation: Like T044, but specifically about how the filesystem
-        // is set up.
+        // Intepretation: Broken access control on the filesystem.
         //
         // Examples:
         //  * Network-connected apps are running as root.
@@ -413,7 +407,7 @@ public class TestFirmware extends Base {
     }
     @Test
     public void app_runs_as_nobody() {
-        // Like test_T027_v1, but we prevent the attack.
+        // Like app_runs_as_root(), but we prevent the attack.
 
         var os = new Application("os");
         var app = new Application("app");
@@ -481,7 +475,7 @@ public class TestFirmware extends Base {
 
     @Test
     public void os_as_api_to_filesystem_and_app_has_restricted_access() {
-        // Like test_T027_v2, but we prevent the attack.
+        // Like os_as_api_to_filesystem_and_app_has_too_much_access(), but we prevent the attack.
 
         var os = new Application("os");
         var app = new Application("app");
@@ -527,7 +521,7 @@ public class TestFirmware extends Base {
         //
         // How to model in coreLang:
         //  * Just as an API being accessible to the "anyone" Identity.
-        //  * Assume the identity of deviceA. See e.g. T021 on stealing credentials from firmware or local storage.
+        //  * Assume the identity of deviceA.
 
 
         // Just an API accessible to anyone:
@@ -950,7 +944,7 @@ public class TestFirmware extends Base {
         // T039 (firmware) Update mechanism - World writable update location
         // "An attacker could modify firmware if storage location for update files is world writable."
         //
-        // * We can model this as a write-API on the device. See also test_T011 and test_T038.
+        // We can model this as a write-API on the device.
 
         var app = new Application("app");
         var net = new Network("net");
@@ -984,6 +978,6 @@ public class TestFirmware extends Base {
 //        // TODO CoreLang does not really model multiple versions of the same application.
 //        // A workaround is to create two models: one model showing the
 //        // scenario leading up to the rollback and another model showing the
-//        // situation after the rollback. See also T004.
+//        // situation after the rollback.
 //    }
 }

@@ -44,7 +44,7 @@ public class TestPhysical extends Base {
         // How to model this in coreLang:
         //  * PhysicalZone is used to model physical attacks on a system.
         //  * Physical interfaces can also be modeled as networks and
-        //    ConnectionRules, see T004.
+        //    ConnectionRules.
 
         var phy = new PhysicalZone("phy");
         var sys = new org.mal_lang.corelang.test.System("sys");
@@ -89,10 +89,6 @@ public class TestPhysical extends Base {
         //  * The attacker can reverse engineer the firmware to find
         //    vulnerabilities faster (as opposed to black-box testing the
         //    device).
-        //
-        // How to model this in coreLang:
-        //  * see test_T001.
-        //  * see test_T001_v2.
 
         var internet = new Network("internet");
 
@@ -159,10 +155,6 @@ public class TestPhysical extends Base {
         //    devices).
         //  * The attacker may desolder the flash component and use SPI to
         //    extract the contents.
-        //
-        // How to model this in coreLang:
-        //  * See test_T002. Basically use PhysicalZone to attach System. TODO not done in coreLang 0.2.0?
-        //  * You can also model SPI as a kind of Network.
 
 
         // SPI as network:
@@ -186,7 +178,7 @@ public class TestPhysical extends Base {
 
     @Test
     public void root_shell_via_hardware_interface() {
-        // Like test_T004, but shows something that looks more like linux.
+        // Like hardware_interfaces_as_networks_example1(), but shows something that looks more like linux.
 
         var os = new Application("os");
         var app = new Application("app");
@@ -255,7 +247,7 @@ public class TestPhysical extends Base {
         // T009 (physical) Firmware/storage extraction - Insecure SoC
         // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the other SoC (System on Chip) (e.g. Bluetooth)."
         //
-        // Like T004, but we are attacking from another chip. Same idea here: use networks to model internal communication like SPI, etc.
+        // Like hardware_interfaces_as_networks_example1(), but we are attacking from another chip. Same idea here: use networks to model internal communication like SPI, etc.
 
         var chipA = new Application("chipA");
         var chipB = new Application("chipB"); // chipB could for example be a flash component or a chip that provides an API to a flash component.
@@ -284,11 +276,6 @@ public class TestPhysical extends Base {
         //
         // Examples:
         //  * The attacker is able to upload, install and run firmware.
-        //
-        // How to model this in coreLang:
-        //  * See T002 and T004 on modeling physical attacks. Additionally use
-        //    SoftwareProduct to model the attacker overwriting existing
-        //    software via Data.
 
 
         var app = new Application("app");
@@ -319,8 +306,6 @@ public class TestPhysical extends Base {
     public void root_shell_via_spi_flash_filesystem_access() {
         // T015 (physical) Grant shell access - Insecure SPI interface
         // "An attacker could grant a command shell if access to the flash/EEPROM chip is not restricted through the serial interface SPI."
-        //
-        // See also T004.
 
         var spi = new Network("spi");
         var flash = new Application("flash");
@@ -358,6 +343,6 @@ public class TestPhysical extends Base {
 //        // scenario leading up to the reset and one shoing the scenario
 //        // resulting from the reset. The reset can be modeled as the the
 //        // attacker doing Data.write to a specific Data asset representing the
-//        // reset API-function. See also T035 on rollback attacks.
+//        // reset API-function. See also rollback attacks.
 //    }
 }

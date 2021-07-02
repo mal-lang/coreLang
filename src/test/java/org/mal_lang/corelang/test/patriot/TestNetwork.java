@@ -11,7 +11,43 @@ import java.util.HashSet;
 import java.util.HashMap;
 
 
+/**
+ * Note that I in many cases use data to model "APIs" here.
+ * This provides more granularity than SoftwareVulnerability.
+ *
+ */
 public class TestNetwork extends Base {
+
+    @Test
+    public void api() {
+        var app = new Application("app");
+        var net = new Network("net");
+
+        var net_con_app = autocon("net_con_app", net, app);
+
+
+        var readApi = new Data("readApi");
+        var writeApi = new Data("writeApi");
+        var readWriteApi = new Data("readWriteApi");
+
+        var id = new Identity("id");
+
+        mkReadApi(app, id, readApi);
+        mkWriteApi(app, id, writeApi);
+        mkReadWriteApi(app, id, readWriteApi);
+
+        attack(net.access, id.assume);
+
+        compromised(1, readApi.read);
+        compromised(0, readApi.write);
+
+        compromised(0, writeApi.read);
+        compromised(1, writeApi.write);
+
+        compromised(1, readWriteApi.read);
+        compromised(1, readWriteApi.write);
+    }
+
     @Test
     public void sensitive_data_on_network() {
         // T041 (device network service) Sensitive data exposure
@@ -23,8 +59,6 @@ public class TestNetwork extends Base {
         //   * MAC-addresses.
         //   * Unprotected APIs.
         //
-        // See e.g. T003 and T028.
-        //
         // How to model this in coreLang:
         //  1. Network-assets may contain "transitData" (Data asset) which can
         //     be used to model sensitive data being available on the network.
@@ -32,7 +66,7 @@ public class TestNetwork extends Base {
         //     data through eavesdropping. Note that we consider reading the
         //     data to be impactful by itself. We do not model the attacker
         //     using the data for anything.
-        //  2. We can also model it using APIs (see test_T001_v2).
+        //  2. We can also model it using APIs.
 
 
         var app = new Application("app");
@@ -273,8 +307,6 @@ public class TestNetwork extends Base {
     public void privilege_escalation_confused_sheriff() {
         // T048 (device network service) Privilege escalation
         // "For example: Exposed services running as root"
-        //
-        // See also T027.
 
 
         // App provides shell access to user A, but the app is running as
