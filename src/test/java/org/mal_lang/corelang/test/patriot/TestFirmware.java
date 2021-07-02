@@ -11,10 +11,20 @@ import java.util.HashSet;
 import java.util.HashMap;
 
 
+/**
+ * Note that most of these tests relate to process of reverse engineering --
+ * which can be considered a form of information gathering.
+ * Since coreLang does not really model information gathering, we only focus on
+ * two types of data that can be found in a firmware blob: credentials, and
+ * "inherently" sensitive data.
+ * 
+ * We also show examples of how the firmware update mechanism can be abused to
+ * install or otherwise gain access to a device.
+ */
 public class TestFirmware extends Base {
 
     @Test
-    public void test_t019() {
+    public void hidden_backdoor_found_via_reverse_engineering() {
         // T019 (firmware) Sensitive data exposure - Backdoor accounts
         // "An attacker could discover (undocumented) backdoor account from non-volatile data by reverse engineering and source code analysis."
         //
@@ -35,6 +45,9 @@ public class TestFirmware extends Base {
         //  * The attacker needs to Application.networkConnect and Credentials.attemptAccess.
         //    Link the Application to the Credentials using an Identity.
 
+        // NOTE: we only show how the backdoor would be used here, not how it
+        // was discovered.
+
         var app = new Application("app");
 
         var net = new Network("net");
@@ -52,7 +65,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T019_v2() {
+    public void shared_hardcoded_credentials() {
         // Gaining creds via physical attack on one device
         // and using to gain network-access to another device.
 
@@ -91,7 +104,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_t021_v1() {
+    public void sensitive_data_stored_unencrypted_in_filesystem() {
         // T021 (firmware) Sensitive data exposure - Other sensitive information
         // "An attacker could identify various sensitive data (e.g. URLs) from both storage and memory by reverse engineering and source code analysis. An attacker could gain sensitive data if device lacks of disk encryption."
         //
@@ -121,7 +134,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T021_v1_defense() {
+    public void sensitive_data_stored_encrypted_filesystem() {
         // Like test_T021_v1, but we encrypt the data.
 
         var app = new Application("app");
@@ -141,7 +154,7 @@ public class TestFirmware extends Base {
         compromised(0, sensitiveData.read);
     }
     @Test
-    public void test_T021_v2() {
+    public void hardware_encryption_circumvention_via_app() {
         // Hardware-based encryption (e.g. keystore on android) can sometimes be circumvented.
 
         var hardwareCredentials = new Credentials("hardwareCredentials"); // unobtainable in practice
@@ -153,7 +166,7 @@ public class TestFirmware extends Base {
         containerAdd(keystore, key);
 
 
-        var os = new Application("app");
+        var os = new Application("os");
         var app = new Application("app");
         containerAdd(os, app);
 
@@ -200,7 +213,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T021_v3() {
+    public void hardware_encryption_circumvention_via_app_simplified() {
         // Like test_T021_v2, but simplified.
 
         var hardwareCredentials = new Credentials("hardwareCredentials"); // unobtainable in practice
@@ -214,7 +227,7 @@ public class TestFirmware extends Base {
         containerAdd(keyring, key);
 
 
-        var os = new Application("app");
+        var os = new Application("os");
         var app = new Application("app");
         containerAdd(os, app);
 
@@ -247,7 +260,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_t022() {
+    public void encryption_key_stored_in_filesystem() {
         // T022 (firmware) Sensitive data exposure - Static and same encryption keys
         // "An attacker could gain sensitive data of other devices if firmware uses static and same encryption keys."
         //
@@ -285,7 +298,7 @@ public class TestFirmware extends Base {
         compromised(1, sensitiveData.read);
     }
     @Test
-    public void test_T022_v2() {
+    public void shared_stored_credentials() {
         // Like test_T022, but we use the key on another device.
 
         var app = new Application("app");
@@ -318,7 +331,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T022_v3() {
+    public void shard_hardcoded_downloaded_key() {
         // Like test_T022_v1, but the key is hardcoded into the firmware
         // (which the attacker can download from the internet).
 
@@ -347,12 +360,10 @@ public class TestFirmware extends Base {
         compromised(1, sensitiveData.read);
     }
 
-
-
 //    @Test
 //    public void test_t024() {
 //        // T024 (firmware) Configuration - Lack of wiping device
-//        // "Lack of deprovisioning/decomissioning. Inability to wipe device's local data storage … <This should be triggered via device web page>"
+//        // "Lack of deprovisioning/decomissioning. Inability to wipe device's local data storage <This should be triggered via device web page>"
 //        //
 //        // Interpretation: Factory reset / deprovisioning functionality is missing or
 //        // imperfect.
@@ -365,8 +376,9 @@ public class TestFirmware extends Base {
 //        //   * Alternative, simply model it as sensitive data/credentials being stored on the device, see e.g. T021.
 //    }
 
+
     @Test
-    public void test_t027_v1() {
+    public void app_runs_as_root() {
         // T027 (firmware) Configuration - Insecure filesystem permissions
         // "Insecure default settings or insufficient ability to harden the system by modifying configurations are the root cause of many vulnerabilities."
         //
@@ -400,7 +412,7 @@ public class TestFirmware extends Base {
         compromised(1, nonappData.read);
     }
     @Test
-    public void test_T027_v1_defense() {
+    public void app_runs_as_nobody() {
         // Like test_T027_v1, but we prevent the attack.
 
         var os = new Application("os");
@@ -433,7 +445,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T027_v2() {
+    public void os_as_api_to_filesystem_and_app_has_too_much_access() {
         // appData as OS API
 
         var os = new Application("os");
@@ -468,7 +480,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T027_v2_defense() {
+    public void os_as_api_to_filesystem_and_app_has_restricted_access() {
         // Like test_T027_v2, but we prevent the attack.
 
         var os = new Application("os");
@@ -503,7 +515,7 @@ public class TestFirmware extends Base {
 
 
     @Test
-    public void test_t028() {
+    public void broken_machine_to_machine_access_control() {
         // T028 (firmware) Authentication bypass - Device to device
         // "Disclosure or reusing of Sensitive data (session key, token, cookie, etc.) could cause authentication bypass."
         //
@@ -544,7 +556,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T028_v2() {
+    public void machine_to_machine_identity_theft() {
         // Attacker assumes the identity of device A after hacking device A
         // and uses that to access a API on device B.
 
@@ -583,7 +595,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T028_v3() {
+    public void machine_to_machine_shared_credential_theft() {
         // Attacker steals credentials of device C (e.g. physical attack).
         // Device A uses the same credentials as device C.
         // The attacker uses the credentials from C to assume the identity of
@@ -641,11 +653,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T028_v4() {
-        // TODO show server-to-client authentication. i.e. client opens the
-        // connection, but server is the one authenticating. Not possible in
-        // CoreLang?
-
+    public void server_identity_theft_and_mitm() {
         // Reverse API: appA connects to appB, but appB is the one
         // authenticating to appA.
 
@@ -689,7 +697,7 @@ public class TestFirmware extends Base {
 
 
     @Test
-    public void test_t031() {
+    public void generic_network_vulnerability() {
         // T031 (firmware) Update mechanism - Missing update mechanism
         // "Devices will eventually remain vulnerable as the device does not have the ability to update."
         //
@@ -724,19 +732,9 @@ public class TestFirmware extends Base {
         compromised(1, app.networkConnect);
         compromised(1, app.fullAccess);
     }
+
     @Test
-    public void test_t032() {
-        // T032 (firmware) Update mechanism - Lack of manual update
-        // "Devices will remain vulnerable until an automatic update is triggered, during which time an attacker could compromise the device. (No ability to manually force an update check for the device)"
-        //
-        // Interpretation: There is no way for the user to manually update the
-        // device, so if the manufacturer sending updates, then newer
-        // vulnerabilities never get fixed.
-        //
-        // See also T031.
-    }
-    @Test
-    public void test_t033_v1() {
+    public void man_in_the_middle() {
         // T033 (firmware) Update mechanism - Lack of transport encryption
         // "An attacker could capture firmware via a transparent proxy if network traffic is unencrypted. (Updates are transmitted over the network without using TLS or encrypting the update file itself)"
         //
@@ -773,7 +771,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T033_v1_defense() {
+    public void man_in_the_middle_encryption_defense() {
         // test_T033_v1, but we implement encryption to prevent the
         // vulnerability.
 
@@ -809,7 +807,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_T033_v2() {
+    public void router_example() {
         // more complicated example
 
         var sys = new org.mal_lang.corelang.test.System("sys");
@@ -859,7 +857,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_t034_v1() {
+    public void firmware_update_man_in_the_middle() {
         // T034 (firmware) Update mechanism - Lack of signature on update file
         // "An attacker could backdoor the firmware if firmware update file has insecure or lack of digital signature."
         //
@@ -909,7 +907,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_t034_v1_defense() {
+    public void firmware_update_with_signature_verification() {
         // LIke test_t034_v1, but we defend against the attack.
 
         var app = new Application("app");
@@ -948,7 +946,7 @@ public class TestFirmware extends Base {
     }
 
     @Test
-    public void test_t039() {
+    public void firmware_install_api() {
         // T039 (firmware) Update mechanism - World writable update location
         // "An attacker could modify firmware if storage location for update files is world writable."
         //

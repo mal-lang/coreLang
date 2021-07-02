@@ -13,7 +13,7 @@ import java.util.HashMap;
 
 public class TestNetwork extends Base {
     @Test
-    public void test_t041() {
+    public void sensitive_data_on_network() {
         // T041 (device network service) Sensitive data exposure
         // "Any kind of senstive data that can be accessible."
         //
@@ -53,7 +53,7 @@ public class TestNetwork extends Base {
         compromised(1, sensitiveData.read);
     }
     @Test
-    public void test_T041_v2() {
+    public void sensitive_data_via_open_api() {
         // We can model the sensitive data as being exposed by an API.
 
         var app = new Application("app");
@@ -75,7 +75,7 @@ public class TestNetwork extends Base {
 
 
     @Test
-    public void test_t043() {
+    public void bypass_tls_by_stealing_credentials() {
         // T043 (device network service) Insecure SSL/TLS issues
         // "Encryption is implemented however it is improperly configured or is not being properly updated, (e.g. expired and/or self-signed certificates, same certificate used on multiple devices, deprecated SSL versions)"
         //
@@ -183,7 +183,7 @@ public class TestNetwork extends Base {
 //    }
 
     @Test
-    public void test_t047() {
+    public void weak_password_recovery_as_open_api() {
         // T047 (device network service) Authentication - Weak password recovery
         // "Insecure password reset/forgot mechanism could cause authentication bypass."
         //
@@ -236,7 +236,7 @@ public class TestNetwork extends Base {
     }
 
     @Test
-    public void test_t047_v2() {
+    public void weak_password_recovery_as_vulnerability() {
         var net = new Network("net");
         var app = new Application("app");
 
@@ -270,7 +270,7 @@ public class TestNetwork extends Base {
     }
 
     @Test
-    public void test_t048() {
+    public void privilege_escalation_confused_sheriff() {
         // T048 (device network service) Privilege escalation
         // "For example: Exposed services running as root"
         //
@@ -297,7 +297,7 @@ public class TestNetwork extends Base {
     }
 
     @Test
-    public void test_T048_v2() {
+    public void privilege_escalation_child_app_to_parent_app_via_vulnerability() {
         // Child app attacks parent app via local Vulnerability.
 
         var parentApp = new Application("parentApp");
@@ -314,19 +314,19 @@ public class TestNetwork extends Base {
         appExecAs(parentApp, root);
         appExecAs(childApp, user);
 
-        var startSet = attack(childApp.localAccess); // sufficient to use vuln
+        var startSet = attack(childApp.fullAccess);
 
+        compromised(1, user.assume);          // because child full access
         compromised(1, parentApp.localConnect);
-        compromised(1, parentApp.read);       // because HXXExploit
-        compromised(1, parentApp.modify);     // because XHXExploit
-        compromised(1, parentApp.deny);       // because XXHExploit
-        compromised(1, parentApp.fullAccess); // because HHHExploit
+        compromised(1, parentApp.read);
+        compromised(1, parentApp.deny);
+        compromised(1, parentApp.modify);      // (always leads to fullAccess)
+        compromised(1, parentApp.fullAccess);
         compromised(1, root.assume);          // because parent fullAccess
-        compromised(1, user.assume);          // because root owns user
     }
 
     @Test
-    public void test_T048_v3() {
+    public void privilege_escalation_child_app_to_parent_app_via_api() {
         // Child app gains access to parent app via exec API.
 
         var parentApp = new Application("parentApp");
@@ -342,19 +342,19 @@ public class TestNetwork extends Base {
         appExecAs(parentApp, root);
         appExecAs(childApp, user);
 
-        var startSet = attack(childApp.localAccess); // sufficient to use vuln
+        var startSet = attack(childApp.fullAccess);
 
+        compromised(1, user.assume);
         compromised(1, parentApp.localConnect);
-        compromised(1, parentApp.read);       // because HXXExploit
-        compromised(1, parentApp.modify);     // because XHXExploit
-        compromised(1, parentApp.deny);       // because XXHExploit
-        compromised(1, parentApp.fullAccess); // because HHHExploit
+        compromised(1, parentApp.read);
+        compromised(1, parentApp.modify);
+        compromised(1, parentApp.deny);
+        compromised(1, parentApp.fullAccess);
         compromised(1, root.assume);          // because parent fullAccess
-        compromised(1, user.assume);          // because root owns user
     }
 
     @Test
-    public void test_T048_v4() {
+    public void privilege_escalation_app_low_to_high_via_vulnerability() {
         // Low privilege user gains high privilege access via
         // network vulnerability.
 
@@ -388,7 +388,7 @@ public class TestNetwork extends Base {
     }
 
     @Test
-    public void test_T048_v5() {
+    public void horizontal_privilege_escalation_user_to_user() {
         // Horizontal privilege escalation: access data of other users.
 
 
@@ -427,7 +427,7 @@ public class TestNetwork extends Base {
 
 
     @Test
-    public void test_t050() {
+    public void network_dos() {
         // T050 (device network service) Denial of Service (DoS)
         // "Service can be attacked in a way that denies service to that service or the entire device"
         //

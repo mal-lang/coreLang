@@ -11,10 +11,22 @@ import java.util.HashSet;
 import java.util.HashMap;
 
 
+/**
+ * Note that most of these tests relate to process of access firmware with the
+ * intent of performing reverse engineering. So it can usually be assumed that
+ * the attacker are "attacking" a device that they themselves own (and would
+ * then use the information gained to exploit other devices on the internet).
+ *
+ * As such there is a lot of focus on modeling the access method itself. Since
+ * coreLang does not really model information gathering, these tests may or
+ * may not be of interest. (Except perhaps to help companies protect their
+ * intellectual property via hardware defenses?).
+ *
+ */
 public class TestPhysical extends Base {
 
     @Test
-    public void test_t002() {
+    public void hardware_vulnerability() {
         // T002 (physical) Firmware/storage extraction - Insecure external media interfaces
         // "An attacker could copy the firmware/storage and even modify firmware if device allows to physically remove the storage media (SD Card, USB)."
         //
@@ -48,10 +60,11 @@ public class TestPhysical extends Base {
         containerAdd(app, appData);
 
         // TODO currently physical exploits are not full implemented in
-        // coreLang 0.2.0. We will just model this as "anyone" having access.
-
+        // coreLang 0.2.0. For now we will just model this as "anyone" having access.
+        // In coreLang 0.1.0 this was modeled as a UnknownVulnerability in the
+        // system itself.
         var anyone = new Identity("anyone");
-        sys.addHighPrivSysIds(anyone); // vulnerability
+        sys.addHighPrivSysIds(anyone);
 
         attack(phy.gainPhysicalAccess, anyone.assume);
 
@@ -60,9 +73,8 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_t003() {
+    public void firmware_is_available_on_the_internet() {
         // T003 (physical) Firmware/storage extraction - Download from the Web
-        // "An attacker could download the firmware from the manufacturer's website if access to the firmware image without authentication is possible."
         //
         // Interpretation: The firmware used for a particular model of IoT
         // device may be publically available on the internet (e.g. can be
@@ -97,7 +109,7 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_T003_v2() {
+    public void firmware_is_available_via_cloud_api() {
         var internet = new Network("internet");
         var cloud = new Application("cloud");
 
@@ -133,7 +145,7 @@ public class TestPhysical extends Base {
 
 
     @Test
-    public void test_t004() {
+    public void hardware_interfaces_as_networks_example1() {
         // T004 (physical) Firmware/storage extraction - Insecure SPI interface
         // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the serial bus protocol SPI."
         //
@@ -173,8 +185,8 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_T004_v2() {
-        // Like test_T004, but with explicit root shell.
+    public void root_shell_via_hardware_interface() {
+        // Like test_T004, but shows something that looks more like linux.
 
         var os = new Application("os");
         var app = new Application("app");
@@ -183,9 +195,9 @@ public class TestPhysical extends Base {
         containerAdd(os, app);
         containerAdd(os, shell);
 
-        var spi = new Network("spi");
+        var ttl = new Network("ttl");
 
-        var spi_con_shell = autocon("spi_con_shell", spi, shell);
+        var ttl_con_shell = autocon("ttl_con_shell", ttl, shell);
 
         var appData = new Data("appData");
         containerAdd(app, appData);
@@ -200,7 +212,7 @@ public class TestPhysical extends Base {
         appExecAs(app, root);
 
         // TODO CoreLang could have an association between PhysicalZone and Network.
-        attack(spi.physicalAccess, anyone.assume);
+        attack(ttl.physicalAccess, anyone.assume);
 
         compromised(1, shell.networkConnect);
         compromised(1, shell.authenticate);
@@ -211,7 +223,7 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_T004_v3() {
+    public void bootloader_shell_via_hardware_interface() {
         // Attack bootloader. This is perhaps more common with TTL/UART than
         // SPI.
 
@@ -239,7 +251,7 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_t009() {
+    public void read_flash_from_adjacant_microprocessor() {
         // T009 (physical) Firmware/storage extraction - Insecure SoC
         // "An attacker could dump the firmware if access to the flash/EEPROM chip is not restricted through the other SoC (System on Chip) (e.g. Bluetooth)."
         //
@@ -262,7 +274,7 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_t011() {
+    public void install_firmware_via_hardware_interface() {
         // T011 (physical) Backdoor firmware - Insecure UART interface
         // "An attacker could modify the firmware if access to the flash/EEPROM chip is not restricted through the serial interface UART."
         //
@@ -304,7 +316,7 @@ public class TestPhysical extends Base {
     }
 
     @Test
-    public void test_t015() {
+    public void root_shell_via_spi_flash_filesystem_access() {
         // T015 (physical) Grant shell access - Insecure SPI interface
         // "An attacker could grant a command shell if access to the flash/EEPROM chip is not restricted through the serial interface SPI."
         //
