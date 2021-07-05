@@ -16,14 +16,16 @@ import java.util.HashMap;
  * This provides more granularity than SoftwareVulnerability.
  *
  */
-public class TestNetwork extends Base {
+public class TestNetwork extends CoreLangTest {
 
     @Test
     public void api() {
         var app = new Application("app");
         var net = new Network("net");
 
-        var net_con_app = autocon("net_con_app", net, app);
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
 
         var readApi = new Data("readApi");
@@ -32,20 +34,32 @@ public class TestNetwork extends Base {
 
         var id = new Identity("id");
 
-        mkReadApi(app, id, readApi);
-        mkWriteApi(app, id, writeApi);
-        mkReadWriteApi(app, id, readWriteApi);
+        id.addLowPrivApps(app);
+        app.addContainedData(readApi);
+        id.addReadPrivData(readApi);
+        id.addLowPrivApps(app);
+        app.addContainedData(writeApi);
+        id.addWritePrivData(writeApi);
+        id.addLowPrivApps(app);
+        app.addContainedData(readWriteApi);
+        id.addReadPrivData(readWriteApi);
+        id.addLowPrivApps(app);
+        app.addContainedData(readWriteApi);
+        id.addWritePrivData(readWriteApi);
 
-        attack(net.access, id.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(id.assume);
+        attacker.attack();
 
-        compromised(1, readApi.read);
-        compromised(0, readApi.write);
+        assertReached(readApi.read);
+        assertNotReached(readApi.write);
 
-        compromised(0, writeApi.read);
-        compromised(1, writeApi.write);
+        assertNotReached(writeApi.read);
+        assertReached(writeApi.write);
 
-        compromised(1, readWriteApi.read);
-        compromised(1, readWriteApi.write);
+        assertReached(readWriteApi.read);
+        assertReached(readWriteApi.write);
     }
 
     @Test
@@ -73,18 +87,22 @@ public class TestNetwork extends Base {
 
         var net = new Network("net");
 
-        var net_con_app = autocon("net_con_app", net, app);
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         var sensitiveData = new Data("sensitiveData");
 
         // The app is broadcasting sensitiveData on the network:
-        //containerAdd(app, sensitiveData);
-        //transferData(app, sensitiveData);  // Not needed, but in larger models this is how we would model the data being transfered around.
-        transferData(net, sensitiveData);
+        //app.addContainedData(sensitiveData);
+        //sensitiveData.addTransitNetwork(app);  // Not needed, but in larger models this is how we would model the data being transfered around.
+        sensitiveData.addTransitNetwork(net);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, sensitiveData.read);
+        assertReached(sensitiveData.read);
     }
     @Test
     public void sensitive_data_via_open_api() {
@@ -94,17 +112,24 @@ public class TestNetwork extends Base {
 
         var net = new Network("net");
 
-        var net_con_app = autocon("net_con_app", net, app); // open port
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app); // open port
 
         var anyone = new Identity("anyone");
 
         var sensitiveData = new Data("sensitiveData");
 
-        mkReadApi(app, anyone, sensitiveData);
+        anyone.addLowPrivApps(app);
+        app.addContainedData(sensitiveData);
+        anyone.addReadPrivData(sensitiveData);
 
-        attack(net.access, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, sensitiveData.read);
+        assertReached(sensitiveData.read);
     }
 
 
@@ -134,15 +159,21 @@ public class TestNetwork extends Base {
         var internet = new Network("internet");
         var cloud = new Application("cloud");
 
-        var con_app_lan = autocon("con_app_lan", app, lan);
-        var con_lan_internet = autocon("con_lan_internet", lan, internet); // Note: NAT.
-        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
+        var con_app_lan = new ConnectionRule("con_app_lan");
+        app.addOutgoingAppConnections(con_app_lan);
+        lan.addIngoingNetConnections(con_app_lan);
+        var con_lan_internet = new ConnectionRule("con_lan_internet");
+        lan.addOutgoingNetConnections(con_lan_internet);
+        internet.addIngoingNetConnections(con_lan_internet); // Note: NAT.
+        var con_internet_cloud = new ConnectionRule("con_internet_cloud");
+        internet.addOutgoingNetConnections(con_internet_cloud);
+        cloud.addIngoingAppConnections(con_internet_cloud);
 
         var routerNat = new RoutingFirewall("routerNat");
         con_lan_internet.addRoutingFirewalls(routerNat);
 
         var routerHardware = new org.mal_lang.corelang.test.System("routerHardware");
-        containerAdd(routerHardware, routerNat);
+        routerHardware.addSysExecutedApps(routerNat);
 
         var tlsCredentials = new Credentials("tlsCredentials");
 
@@ -150,71 +181,23 @@ public class TestNetwork extends Base {
         var tls = new Data("tls");
         var tlsPayload = new Data("tlsPayload");
 
-        containerAdd(tcp, tls);
-        containerAdd(tls, tlsPayload);
+        tcp.addContainedData(tls);
+        tls.addContainedData(tlsPayload);
         tls.addEncryptCreds(tlsCredentials);
 
-        transferData(app, tcp);
-        transferData(lan, tcp);
-        transferData(internet, tcp);
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(lan);
+        tcp.addTransitNetwork(internet);
+        tcp.addTransitApp(cloud);
 
         // Assume the tlsCredentials have been compromised somehow.
-        attack(internet.access, tlsCredentials.attemptAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(internet.access);
+        attacker.addAttackPoint(tlsCredentials.attemptAccess);
+        attacker.attack();
 
-        compromised(1, tlsPayload.read);
+        assertReached(tlsPayload.read);
     }
-
-//    @Test
-//    public void test_t044() {
-//        // T044 (device network service) Authentication - Username enumeration
-//        // "Ability to collect a set of valid usernames by interacting with the authentication mechanism"
-//        //
-//        // Interpretation: An network service on the device provides a way to
-//        // enumerate users.
-//        //
-//        // Examples:
-//        //  * Different authentication failure error message are returned
-//        //    depending on the cause of the failure. So instead of the
-//        //    attacker having to guess both username and password, they can
-//        //    first guess the correct username (with an empty password) and
-//        //    then guess the password. This saves some time.
-//        //
-//        // How to model in corelang:
-//        //   * TODO CoreLang does not really separate usernames from passwords.
-//        //     Username and password form a single Credential. Potentially TTC
-//        //     can be adjusted.
-//        //   * TODO CoreLang also does not model non-credential prerequisites
-//        //     in access/attacks.
-//    }
-//    @Test
-//    public void test_t045() {
-//        // T045 (device network service) Authentication - Weak credentials
-//        // "Ability to set account passwords to '1234' or '123456' for example. Usage of pre-programmed default (known) passwords (deffpass.com (Publicly available) - IoT device default password lookup). Easily guessable credentials. Brute-force by dictionaries and rules"
-//        //
-//        // * TODO CoreLang does not really distinguish between strong and weak
-//        //   credentials. Maybe TTC can be adjusted differently for different
-//        //   credentials?
-//        // * See also the defense Credentials.notDisclosed.
-//    }
-//    @Test
-//    public void test_t046() {
-//        // T046 (device network service) Authentication - Improper account lockout
-//        // "Ability to continue sending authentication attempts after 3 - 5 failed login attempts"
-//        //
-//        // Interpretation: There either is no account lockout mechanism, or
-//        // the mechanism can be easily bypassed.
-//        //
-//        // Examples:
-//        //   * For example, the attacker can keep trying passwords after 3-5
-//        //     failed attempts.
-//        //
-//        // TODO CoreLang does not really seem to model bruteforce attacks. It
-//        // can sort be done via generic vulnerabilities (if the app also
-//        // stores the credentials such that the attacker can obtain them), but the ttc will be
-//        // incorrect. The account lockout mechanism would then be the absence
-//        // of that vulnerability.
-//    }
 
     @Test
     public void weak_password_recovery_as_open_api() {
@@ -237,36 +220,46 @@ public class TestNetwork extends Base {
         var net = new Network("net");
         var app = new Application("app");
 
-        var net_con_app = autocon("net_con_app", net, app); // open port
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app); // open port
 
         var user = new Identity("user");
         var password = new Credentials("password");
         user.addCredentials(password);
 
         var sensitiveData = new Data("sensitiveData");
-        containerAdd(app, sensitiveData);
-        mkReadApi(app, user, sensitiveData);
+        app.addContainedData(sensitiveData);
+        user.addLowPrivApps(app);
+        app.addContainedData(sensitiveData);
+        user.addReadPrivData(sensitiveData);
 
 
         var recoverMechanism = new Application("recoverMechanism");
-        containerAdd(app, recoverMechanism);
-        var net_con_recovery = autocon("net_con_recovery", net, recoverMechanism); // open port
+        app.addAppExecutedApps(recoverMechanism);
+        var net_con_recovery = new ConnectionRule("net_con_recovery");
+        net.addOutgoingNetConnections(net_con_recovery);
+        recoverMechanism.addIngoingAppConnections(net_con_recovery); // open port
 
         var recoveryApi = new Data("recoveryApi");
 
-        containerAdd(recoverMechanism, recoveryApi);
-        containerAdd(recoveryApi, password);
+        recoverMechanism.addContainedData(recoveryApi);
+        recoveryApi.addInformation(password);
 
-        var vuln = vulnerabilityBuilder("vuln").setNetwork().setConfidentiality().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.networkAccessRequired.defaultValue = true;
+        vuln.confidentialityImpactLimitations.defaultValue = false;
         recoverMechanism.addVulnerabilities(vuln);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, recoveryApi.read);
-        compromised(1, password.use);
-        compromised(1, user.assume);
-        compromised(1, app.specificAccessAuthenticate);
-        compromised(1, sensitiveData.read);
+        assertReached(recoveryApi.read);
+        assertReached(password.use);
+        assertReached(user.assume);
+        assertReached(app.specificAccessAuthenticate);
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -274,33 +267,42 @@ public class TestNetwork extends Base {
         var net = new Network("net");
         var app = new Application("app");
 
-        var net_con_app = autocon("net_con_app", net, app); // open port
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app); // open port
 
         var user = new Identity("user");
 
         var sensitiveData = new Data("sensitiveData");
-        containerAdd(app, sensitiveData);
-        mkReadApi(app, user, sensitiveData);
+        app.addContainedData(sensitiveData);
+        user.addLowPrivApps(app);
+        app.addContainedData(sensitiveData);
+        user.addReadPrivData(sensitiveData);
 
         var recoveryUser = new Identity("recoveryUser");
-        aOwnsB(recoveryUser, user); // recoveryUser can assume user
+        recoveryUser.addParentId(user); // recoveryUser can assume user
 
         var recoverMechanism = new Application("recoverMechanism");
-        containerAdd(app, recoverMechanism);
-        appExecAs(recoverMechanism, recoveryUser);
+        app.addAppExecutedApps(recoverMechanism);
+        recoveryUser.addExecPrivApps(recoverMechanism);
 
-        var net_con_recovery = autocon("net_con_recovery", net, recoverMechanism); // open port
+        var net_con_recovery = new ConnectionRule("net_con_recovery");
+        net.addOutgoingNetConnections(net_con_recovery);
+        recoverMechanism.addIngoingAppConnections(net_con_recovery); // open port
 
-        var vuln = vulnerabilityBuilder("vuln").setNetwork().setCIA().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.networkAccessRequired.defaultValue = true;
         recoverMechanism.addVulnerabilities(vuln);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, recoverMechanism.fullAccess);
-        compromised(1, recoveryUser.assume);
-        compromised(1, user.assume);
-        compromised(1, app.specificAccessAuthenticate);
-        compromised(1, sensitiveData.read);
+        assertReached(recoverMechanism.fullAccess);
+        assertReached(recoveryUser.assume);
+        assertReached(user.assume);
+        assertReached(app.specificAccessAuthenticate);
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -317,15 +319,18 @@ public class TestNetwork extends Base {
         var user = new Identity("user");
         var root = new Identity("root");
 
-        mkExecApi(app, user); // vulnerability
-        appExecAs(app, root);
+        user.addHighPrivApps(app); // vulnerability
+        root.addExecPrivApps(app);
 
-        aOwnsB(root, user); // optional
+        root.addParentId(user); // optional
 
         // Attacker escalates from user to root:
-        attack(user.assume, app.networkConnect);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(user.assume);
+        attacker.addAttackPoint(app.networkConnect);
+        attacker.attack();
 
-        compromised(1, root.assume);
+        assertReached(root.assume);
     }
 
     @Test
@@ -334,27 +339,30 @@ public class TestNetwork extends Base {
 
         var parentApp = new Application("parentApp");
         var childApp = new Application("childApp");
-        containerAdd(parentApp, childApp);
+        parentApp.addAppExecutedApps(childApp);
 
-        var vuln = vulnerabilityBuilder("vuln").setLocal().setCIA().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.localAccessRequired.defaultValue = true;
         parentApp.addVulnerabilities(vuln);
 
         var root = new Identity("root");
         var user = new Identity("user"); // optional
-        aOwnsB(root, user); // optional
+        root.addParentId(user); // optional
 
-        appExecAs(parentApp, root);
-        appExecAs(childApp, user);
+        root.addExecPrivApps(parentApp);
+        user.addExecPrivApps(childApp);
 
-        var startSet = attack(childApp.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(childApp.fullAccess);
+        attacker.attack();
 
-        compromised(1, user.assume);          // because child full access
-        compromised(1, parentApp.localConnect);
-        compromised(1, parentApp.read);
-        compromised(1, parentApp.deny);
-        compromised(1, parentApp.modify);      // (always leads to fullAccess)
-        compromised(1, parentApp.fullAccess);
-        compromised(1, root.assume);          // because parent fullAccess
+        assertReached(user.assume);          // because child full access
+        assertReached(parentApp.localConnect);
+        assertReached(parentApp.read);
+        assertReached(parentApp.deny);
+        assertReached(parentApp.modify);      // (always leads to fullAccess)
+        assertReached(parentApp.fullAccess);
+        assertReached(root.assume);          // because parent fullAccess
     }
 
     @Test
@@ -363,26 +371,28 @@ public class TestNetwork extends Base {
 
         var parentApp = new Application("parentApp");
         var childApp = new Application("childApp");
-        containerAdd(parentApp, childApp);
+        parentApp.addAppExecutedApps(childApp);
 
         var root = new Identity("root");
         var user = new Identity("user"); // optional
-        aOwnsB(root, user); // optional
+        root.addParentId(user); // optional
 
-        mkExecApi(parentApp, user); // privilege escalation: anyone -> root
+        user.addHighPrivApps(parentApp); // privilege escalation: anyone -> root
 
-        appExecAs(parentApp, root);
-        appExecAs(childApp, user);
+        root.addExecPrivApps(parentApp);
+        user.addExecPrivApps(childApp);
 
-        var startSet = attack(childApp.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(childApp.fullAccess);
+        attacker.attack();
 
-        compromised(1, user.assume);
-        compromised(1, parentApp.localConnect);
-        compromised(1, parentApp.read);
-        compromised(1, parentApp.modify);
-        compromised(1, parentApp.deny);
-        compromised(1, parentApp.fullAccess);
-        compromised(1, root.assume);          // because parent fullAccess
+        assertReached(user.assume);
+        assertReached(parentApp.localConnect);
+        assertReached(parentApp.read);
+        assertReached(parentApp.modify);
+        assertReached(parentApp.deny);
+        assertReached(parentApp.fullAccess);
+        assertReached(root.assume);          // because parent fullAccess
     }
 
     @Test
@@ -393,30 +403,47 @@ public class TestNetwork extends Base {
         var net = new Network("net");
         var app = new Application("ap");
 
-        var net_con_app = autocon("net_con_app", net, app); // open port
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app); // open port
 
 
         var admin = new Identity("admin");
         var user = new Identity("user");
 
-        appExecAs(app, admin);
+        admin.addExecPrivApps(app);
 
         var userData = new Data("userData");
-        mkReadWriteApi(app, user, userData);
+        user.addLowPrivApps(app);
+        app.addContainedData(userData);
+        user.addReadPrivData(userData);
+        user.addLowPrivApps(app);
+        app.addContainedData(userData);
+        user.addWritePrivData(userData);
 
         var adminData = new Data("adminData");
-        mkReadWriteApi(app, admin, adminData);
+        admin.addLowPrivApps(app);
+        app.addContainedData(adminData);
+        admin.addReadPrivData(adminData);
+        admin.addLowPrivApps(app);
+        app.addContainedData(adminData);
+        admin.addWritePrivData(adminData);
 
-        var vuln = vulnerabilityBuilder("vuln").setNetwork().setPrivLow().setCIA().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.networkAccessRequired.defaultValue = true;
+        vuln.lowPrivilegesRequired.defaultValue = true;
         app.addVulnerabilities(vuln);
 
-        attack(net.access, user.assume); // sufficient to use vuln
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(user.assume);
+        attacker.attack(); // sufficient to use vuln
 
-        compromised(1, user.assume); // ok
-        compromised(1, admin.assume); // escalation
+        assertReached(user.assume); // ok
+        assertReached(admin.assume); // escalation
 
-        compromised(1, userData.read); // ok
-        compromised(1, adminData.read); // escalation
+        assertReached(userData.read); // ok
+        assertReached(adminData.read); // escalation
     }
 
     @Test
@@ -429,12 +456,16 @@ public class TestNetwork extends Base {
         var apiA = new Application("apiA");
         var apiB = new Application("apiB");
 
-        containerAdd(server, apiA);
-        containerAdd(server, apiB);
+        server.addAppExecutedApps(apiA);
+        server.addAppExecutedApps(apiB);
 
         var net = new Network("net");
-        var conA = autocon("conA", net, apiA);
-        var conB = autocon("conB", net, apiB);
+        var conA = new ConnectionRule("conA");
+        net.addOutgoingNetConnections(conA);
+        apiA.addIngoingAppConnections(conA);
+        var conB = new ConnectionRule("conB");
+        net.addOutgoingNetConnections(conB);
+        apiB.addIngoingAppConnections(conB);
 
         var userA = new Identity("userA");
         var userB = new Identity("userB");
@@ -444,16 +475,23 @@ public class TestNetwork extends Base {
         var dataA = new Data("dataA");
         var dataB = new Data("dataB");
 
-        containerAdd(storage, dataA);
-        containerAdd(storage, dataB); // vulnerability
+        storage.addContainedData(dataA);
+        storage.addContainedData(dataB); // vulnerability
 
-        mkReadApi(apiA, userA, storage); // vulnerability
-        mkReadApi(apiB, userB, storage);
+        userA.addLowPrivApps(apiA);
+        apiA.addContainedData(storage);
+        userA.addReadPrivData(storage); // vulnerability
+        userB.addLowPrivApps(apiB);
+        apiB.addContainedData(storage);
+        userB.addReadPrivData(storage);
 
-        attack(net.access, userA.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(userA.assume);
+        attacker.attack();
 
-        compromised(1, dataA.read);
-        compromised(1, dataB.read); // horizontal privilege escalation.
+        assertReached(dataA.read);
+        assertReached(dataB.read); // horizontal privilege escalation.
     }
 
 
@@ -468,11 +506,15 @@ public class TestNetwork extends Base {
         var app = new Application("app");
         var net = new Network("net");
 
-        var net_con_app = autocon("net_con_app", app, net);
+        var net_con_app = new ConnectionRule("net_con_app");
+        app.addOutgoingAppConnections(net_con_app);
+        net.addIngoingNetConnections(net_con_app);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, net.denialOfService);
-        compromised(1, app.deny);
+        assertReached(net.denialOfService);
+        assertReached(app.deny);
     }
 }

@@ -23,7 +23,7 @@ import java.util.HashMap;
  * intellectual property via hardware defenses?).
  *
  */
-public class TestPhysical extends Base {
+public class TestPhysical extends CoreLangTest {
 
     @Test
     public void hardware_vulnerability() {
@@ -50,14 +50,14 @@ public class TestPhysical extends Base {
         var sys = new org.mal_lang.corelang.test.System("sys");
         var app = new Application("app");
 
-        containerAdd(phy, sys);
-        containerAdd(sys, app);
+        phy.addSystems(sys);
+        sys.addSysExecutedApps(app);
 
         var sysData = new Data("sysData");
         var appData = new Data("appData");
 
-        containerAdd(sys, sysData);
-        containerAdd(app, appData);
+        sys.addSysData(sysData);
+        app.addContainedData(appData);
 
         // TODO currently physical exploits are not full implemented in
         // coreLang 0.2.0. For now we will just model this as "anyone" having access.
@@ -66,10 +66,13 @@ public class TestPhysical extends Base {
         var anyone = new Identity("anyone");
         sys.addHighPrivSysIds(anyone);
 
-        attack(phy.gainPhysicalAccess, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(phy.gainPhysicalAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, sysData.read);
-        compromised(1, appData.read);
+        assertReached(sysData.read);
+        assertReached(appData.read);
     }
 
     @Test
@@ -95,13 +98,15 @@ public class TestPhysical extends Base {
         var firmwareBlob = new Data("firmwareBlob");
         var sensitiveData = new Data("sensitiveData");
 
-        transferData(internet, firmwareBlob);
-        containerAdd(firmwareBlob, sensitiveData);
+        firmwareBlob.addTransitNetwork(internet);
+        firmwareBlob.addContainedData(sensitiveData);
 
-        attack(internet.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(internet.access);
+        attacker.attack();
 
-        compromised(1, sensitiveData.read);
-        compromised(1, sensitiveData.write);
+        assertReached(sensitiveData.read);
+        assertReached(sensitiveData.write);
     }
 
     @Test
@@ -109,34 +114,41 @@ public class TestPhysical extends Base {
         var internet = new Network("internet");
         var cloud = new Application("cloud");
 
-        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
+        var con_internet_cloud = new ConnectionRule("con_internet_cloud");
+        internet.addOutgoingNetConnections(con_internet_cloud);
+        cloud.addIngoingAppConnections(con_internet_cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
         var sensitiveData = new Data("sensitiveData");
 
-        containerAdd(cloud, firmwareBlob);
-        containerAdd(firmwareBlob, sensitiveData);
+        cloud.addContainedData(firmwareBlob);
+        firmwareBlob.addContainedData(sensitiveData);
 
         var anyone = new Identity("anyone");
-        mkReadApi(cloud, anyone, firmwareBlob);
+        anyone.addLowPrivApps(cloud);
+        cloud.addContainedData(firmwareBlob);
+        anyone.addReadPrivData(firmwareBlob);
 
-        attack(internet.access, anyone.attemptAssume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(internet.access);
+        attacker.addAttackPoint(anyone.attemptAssume);
+        attacker.attack();
 
 
 
-        compromised(1, cloud.specificAccessAuthenticate);
-        compromised(1, cloud.specificAccess);
+        assertReached(cloud.specificAccessAuthenticate);
+        assertReached(cloud.specificAccess);
 
-        compromised(1, firmwareBlob.attemptAccessFromIdentity);
-        compromised(1, firmwareBlob.identityRead);
-        compromised(1, firmwareBlob.attemptRead);
-        compromised(1, firmwareBlob.read);
+        assertReached(firmwareBlob.attemptAccessFromIdentity);
+        assertReached(firmwareBlob.identityRead);
+        assertReached(firmwareBlob.attemptRead);
+        assertReached(firmwareBlob.read);
 
-        compromised(1, sensitiveData.attemptRead);
-        compromised(1, sensitiveData.read);
+        assertReached(sensitiveData.attemptRead);
+        assertReached(sensitiveData.read);
 
-        compromised(0, firmwareBlob.write);
-        compromised(0, sensitiveData.write);
+        assertNotReached(firmwareBlob.write);
+        assertNotReached(sensitiveData.write);
     }
 
 
@@ -162,18 +174,24 @@ public class TestPhysical extends Base {
         var spi = new Network("spi");
         var app = new Application("app");
 
-        var spi_con_app = autocon("spi_con_app", spi, app);
+        var spi_con_app = new ConnectionRule("spi_con_app");
+        spi.addOutgoingNetConnections(spi_con_app);
+        app.addIngoingAppConnections(spi_con_app);
 
         var appData = new Data("appData");
-        containerAdd(app, appData);
+        app.addContainedData(appData);
 
-        var vuln = vulnerabilityBuilder("vuln").setNetwork().setConfidentiality().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.networkAccessRequired.defaultValue = true;
+        vuln.confidentialityImpactLimitations.defaultValue = false;
         app.addVulnerabilities(vuln);
 
-        var startSet = attack(spi.physicalAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(spi.physicalAccess);
+        attacker.attack();
 
-        compromised(1, vuln.abuse);
-        compromised(1, appData.read);
+        assertReached(vuln.abuse);
+        assertReached(appData.read);
     }
 
     @Test
@@ -184,34 +202,39 @@ public class TestPhysical extends Base {
         var app = new Application("app");
         var shell = new Application("shell");
 
-        containerAdd(os, app);
-        containerAdd(os, shell);
+        os.addAppExecutedApps(app);
+        os.addAppExecutedApps(shell);
 
         var ttl = new Network("ttl");
 
-        var ttl_con_shell = autocon("ttl_con_shell", ttl, shell);
+        var ttl_con_shell = new ConnectionRule("ttl_con_shell");
+        ttl.addOutgoingNetConnections(ttl_con_shell);
+        shell.addIngoingAppConnections(ttl_con_shell);
 
         var appData = new Data("appData");
-        containerAdd(app, appData);
+        app.addContainedData(appData);
 
         var anyone = new Identity("anyone");
         var root = new Identity("root");
 
-        mkExecApi(shell, anyone); // privilege escalation: anyone -> root
+        anyone.addHighPrivApps(shell); // privilege escalation: anyone -> root
 
-        appExecAs(shell, root);
-        appExecAs(os, root);
-        appExecAs(app, root);
+        root.addExecPrivApps(shell);
+        root.addExecPrivApps(os);
+        root.addExecPrivApps(app);
 
         // TODO CoreLang could have an association between PhysicalZone and Network.
-        attack(ttl.physicalAccess, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(ttl.physicalAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, shell.networkConnect);
-        compromised(1, shell.authenticate);
-        compromised(1, shell.fullAccess);
-        compromised(1, os.fullAccess);
-        compromised(1, app.fullAccess);
-        compromised(1, appData.read);
+        assertReached(shell.networkConnect);
+        assertReached(shell.authenticate);
+        assertReached(shell.fullAccess);
+        assertReached(os.fullAccess);
+        assertReached(app.fullAccess);
+        assertReached(appData.read);
     }
 
     @Test
@@ -222,24 +245,29 @@ public class TestPhysical extends Base {
         var bootloader = new Application("bootloader"); // e.g. uboot
         var os = new Application("os");
 
-        containerAdd(bootloader, os);
+        bootloader.addAppExecutedApps(os);
 
         var spi = new Network("spi");
 
-        var spi_con_bootloader = autocon("spi_con_bootloader", spi, bootloader);
+        var spi_con_bootloader = new ConnectionRule("spi_con_bootloader");
+        spi.addOutgoingNetConnections(spi_con_bootloader);
+        bootloader.addIngoingAppConnections(spi_con_bootloader);
 
         var sensitiveData = new Data("sensitiveData");
-        containerAdd(os, sensitiveData);
+        os.addContainedData(sensitiveData);
 
         var anyone = new Identity("anyone");
 
-        mkExecApi(bootloader, anyone);
+        anyone.addHighPrivApps(bootloader);
 
-        attack(spi.physicalAccess, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(spi.physicalAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, bootloader.fullAccess);
-        compromised(1, os.fullAccess);
-        compromised(1, sensitiveData.read);
+        assertReached(bootloader.fullAccess);
+        assertReached(os.fullAccess);
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -253,16 +281,25 @@ public class TestPhysical extends Base {
         var chipB = new Application("chipB"); // chipB could for example be a flash component or a chip that provides an API to a flash component.
 
         var i2c = new Network("i2c");
-        var chipA_con_i2c = autocon("chipA_con_i2c", chipA, i2c); // chipA is a "master"
-        var i2c_con_chipB = autocon("i2c_con_chipB", i2c, chipB); // chipB is a "slave"
+        var chipA_con_i2c = new ConnectionRule("chipA_con_i2c");
+        chipA.addOutgoingAppConnections(chipA_con_i2c);
+        i2c.addIngoingNetConnections(chipA_con_i2c); // chipA is a "master"
+        var i2c_con_chipB = new ConnectionRule("i2c_con_chipB");
+        i2c.addOutgoingNetConnections(i2c_con_chipB);
+        chipB.addIngoingAppConnections(i2c_con_chipB); // chipB is a "slave"
 
         var anyone = new Identity("anyone");
 
         var sensitiveData = new Data("sensitiveData");
-        mkReadApi(chipB, anyone, sensitiveData);
+        anyone.addLowPrivApps(chipB);
+        chipB.addContainedData(sensitiveData);
+        anyone.addReadPrivData(sensitiveData);
 
-        attack(chipA.fullAccess, anyone.assume);
-        compromised(1, sensitiveData.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(chipA.fullAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -282,24 +319,32 @@ public class TestPhysical extends Base {
 
         var ttl = new Network("ttl");
 
-        var ttl_con_app = autocon("ttl_con_app", ttl, app);
+        var ttl_con_app = new ConnectionRule("ttl_con_app");
+        ttl.addOutgoingNetConnections(ttl_con_app);
+        app.addIngoingAppConnections(ttl_con_app);
 
         var firmwareBlob = new Data("firmwareBlob");
-        containerAdd(app, firmwareBlob);
+        app.addContainedData(firmwareBlob);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
 
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var anyone = new Identity("anyone");
 
-        mkWriteApi(app, anyone, firmwareBlob);
+        anyone.addLowPrivApps(app);
+        app.addContainedData(firmwareBlob);
+        anyone.addWritePrivData(firmwareBlob);
 
-        attack(ttl.physicalAccess, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(ttl.physicalAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
 
-        compromised(1, firmwareBlob.write); // By writing to the firmwareblob...
-        compromised(1, app.fullAccess); //  ... we can exec code.
+        assertReached(firmwareBlob.write); // By writing to the firmwareblob...
+        assertReached(app.fullAccess); //  ... we can exec code.
     }
 
     @Test
@@ -311,38 +356,38 @@ public class TestPhysical extends Base {
         var flash = new Application("flash");
         var app = new Application("app");
 
-        var spi_con_app = autocon("spi_con_app", spi, app);
-        var spi_con_flash = autocon("spi_con_app", spi, flash);
+        var spi_con_app = new ConnectionRule("spi_con_app");
+        spi.addOutgoingNetConnections(spi_con_app);
+        app.addIngoingAppConnections(spi_con_app);
+        var spi_con_flash = new ConnectionRule("spi_con_app");
+        spi.addOutgoingNetConnections(spi_con_flash);
+        flash.addIngoingAppConnections(spi_con_flash);
 
         var filesystem = new Data("filesystem");
         var bootscript = new Data("bootscript");
-        containerAdd(flash, filesystem);
-        containerAdd(filesystem, bootscript);
+        flash.addContainedData(filesystem);
+        filesystem.addContainedData(bootscript);
 
         var appProduct = new SoftwareProduct("appProduct");
 
-        execData(bootscript, appProduct, app);
+        appProduct.addOriginData(bootscript);
+        appProduct.addSoftApplications(app);
 
         var anyone = new Identity("anyone");
-        mkReadWriteApi(flash, anyone, filesystem);
+        anyone.addLowPrivApps(flash);
+        flash.addContainedData(filesystem);
+        anyone.addReadPrivData(filesystem);
+        anyone.addLowPrivApps(flash);
+        flash.addContainedData(filesystem);
+        anyone.addWritePrivData(filesystem);
 
-        var startSet = attack(spi.physicalAccess, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(spi.physicalAccess);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, filesystem.write);
-        compromised(1, bootscript.write);
-        compromised(1, app.fullAccess);
+        assertReached(filesystem.write);
+        assertReached(bootscript.write);
+        assertReached(app.fullAccess);
     }
-
-//    @Test
-//    public void test_t017() {
-//        // T017 (physical) Reset to insecure state
-//        // "An attacker could misuse reset functionality of the device if resetting results in insecure state."
-//        //
-//        // TODO coreLang does not really model state changes. We could
-//        // potentially model this as two separate models: one showing the
-//        // scenario leading up to the reset and one shoing the scenario
-//        // resulting from the reset. The reset can be modeled as the the
-//        // attacker doing Data.write to a specific Data asset representing the
-//        // reset API-function. See also rollback attacks.
-//    }
 }

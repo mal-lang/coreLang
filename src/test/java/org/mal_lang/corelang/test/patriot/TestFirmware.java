@@ -21,7 +21,7 @@ import java.util.HashMap;
  * We also show examples of how the firmware update mechanism can be abused to
  * install or otherwise gain access to a device.
  */
-public class TestFirmware extends Base {
+public class TestFirmware extends CoreLangTest {
 
     @Test
     public void hidden_backdoor_found_via_reverse_engineering() {
@@ -50,16 +50,21 @@ public class TestFirmware extends Base {
 
         var net = new Network("net");
 
-        var net_con_app = autocon("con_app_net", net, app);
+        var net_con_app = new ConnectionRule("con_app_net");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         var identity = new Identity("identity");
         var credentials = new Credentials("credentials");
         identity.addCredentials(credentials);
         app.addExecutionPrivIds(identity);
 
-        attack(net.access, credentials.attemptAccess); // assume attacker already has credentials (e.g. from internet)
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(credentials.attemptAccess);
+        attacker.attack(); // assume attacker already has credentials (e.g. from internet)
 
-        compromised(1, app.fullAccess);
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -75,7 +80,9 @@ public class TestFirmware extends Base {
 
 
 
-        var net_con_app = autocon("con_app_net", net, app);
+        var net_con_app = new ConnectionRule("con_app_net");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         var identity = new Identity("identity");
         var credentials = new Credentials("credentials");
@@ -85,20 +92,23 @@ public class TestFirmware extends Base {
         var credStore = new Data("credStore");
         var credStoreRE = new Data("credStoreRE");
 
-        containerAdd(app, credStore);         // optional
-        containerAdd(credStore, credentials); // optional
+        app.addContainedData(credStore);         // optional
+        credStore.addInformation(credentials); // optional
 
-        containerAdd(appRE, credStoreRE);
-        containerAdd(credStoreRE, credentials);
+        appRE.addContainedData(credStoreRE);
+        credStoreRE.addInformation(credentials);
 
-        attack(net.access, appRE.fullAccess); // assume attacker already hacked inside appRE
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(appRE.fullAccess);
+        attacker.attack(); // assume attacker already hacked inside appRE
 
-        compromised(1, appRE.fullAccess);
-        compromised(1, credStoreRE.read);
-        compromised(1, credentials.use);
-        compromised(1, app.networkConnect);
-        compromised(1, app.authenticate);
-        compromised(1, app.fullAccess);
+        assertReached(appRE.fullAccess);
+        assertReached(credStoreRE.read);
+        assertReached(credentials.use);
+        assertReached(app.networkConnect);
+        assertReached(app.authenticate);
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -118,13 +128,15 @@ public class TestFirmware extends Base {
         var flash = new Data("flash");
         var sensitiveData = new Data("sensitiveData");
 
-        containerAdd(app, flash);
-        containerAdd(flash, sensitiveData);
+        app.addContainedData(flash);
+        flash.addContainedData(sensitiveData);
 
-        attack(app.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.read);
+        attacker.attack();
 
-        compromised(1, flash.read);
-        compromised(1, sensitiveData.read);
+        assertReached(flash.read);
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -136,16 +148,18 @@ public class TestFirmware extends Base {
         var flash = new Data("flash");
         var sensitiveData = new Data("sensitiveData");
 
-        containerAdd(app, flash);
-        containerAdd(flash, sensitiveData);
+        app.addContainedData(flash);
+        flash.addContainedData(sensitiveData);
 
         var enc = new Credentials("enc");
         sensitiveData.addEncryptCreds(enc);
 
-        attack(app.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.read);
+        attacker.attack();
 
-        compromised(1, flash.read);
-        compromised(0, sensitiveData.read);
+        assertReached(flash.read);
+        assertNotReached(sensitiveData.read);
     }
     @Test
     public void hardware_encryption_circumvention_via_app() {
@@ -157,17 +171,17 @@ public class TestFirmware extends Base {
         keystore.addEncryptCreds(hardwareCredentials);
 
         var key = new Credentials("key");
-        containerAdd(keystore, key);
+        keystore.addInformation(key);
 
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var filesystem = new Data("filesystem");
-        containerAdd(filesystem, keystore);
+        filesystem.addContainedData(keystore);
 
-        containerAdd(os, filesystem);
+        os.addContainedData(filesystem);
 
         var appId = new Identity("appId");
 
@@ -182,28 +196,36 @@ public class TestFirmware extends Base {
         var decryptApiInputPayload = new Data("externalData");
         decryptApiInputPayload.addEncryptCreds(key);
 
-        containerAdd(decryptApiInput, decryptApiInputPayload);
+        decryptApiInput.addContainedData(decryptApiInputPayload);
 
         var decryptApiOutput = new Data("externalData");
 
-        containerAdd(decryptApiInputPayload, decryptApiOutput);
+        decryptApiInputPayload.addContainedData(decryptApiOutput);
 
-        appExecAs(app, appId);
+        appId.addExecPrivApps(app);
 
-        mkReadApi(os, appId, filesystem);
-        mkWriteApi(os, appId, decryptApiInput);
-        mkReadApi(os, appId, decryptApiOutput); // decryption as service
+        appId.addLowPrivApps(os);
+        os.addContainedData(filesystem);
+        appId.addReadPrivData(filesystem);
+        appId.addLowPrivApps(os);
+        os.addContainedData(decryptApiInput);
+        appId.addWritePrivData(decryptApiInput);
+        appId.addLowPrivApps(os);
+        os.addContainedData(decryptApiOutput);
+        appId.addReadPrivData(decryptApiOutput); // decryption as service
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
         // Can not access the key:
-        compromised(1, filesystem.read);
-        compromised(0, keystore.read);
-        compromised(0, key.use);
+        assertReached(filesystem.read);
+        assertNotReached(keystore.read);
+        assertNotReached(key.use);
 
         // but can access the decryption API:
-        compromised(1, decryptApiInput.write);
-        compromised(1, decryptApiOutput.read);
+        assertReached(decryptApiInput.write);
+        assertReached(decryptApiOutput.read);
     }
 
     @Test
@@ -217,40 +239,46 @@ public class TestFirmware extends Base {
 
         var keyring = new Data("keyring");
         var key = new Credentials("key");
-        containerAdd(keystore, keyring);
-        containerAdd(keyring, key);
+        keystore.addContainedData(keyring);
+        keyring.addInformation(key);
 
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var filesystem = new Data("filesystem");
-        containerAdd(os, filesystem);
-        containerAdd(filesystem, keystore);
+        os.addContainedData(filesystem);
+        filesystem.addContainedData(keystore);
 
         var appId = new Identity("appId");
-        appExecAs(app, appId);
+        appId.addExecPrivApps(app);
 
-        mkReadApi(os, appId, filesystem);
+        appId.addLowPrivApps(os);
+        os.addContainedData(filesystem);
+        appId.addReadPrivData(filesystem);
 
         // While the attacker is not able to access the key directly
         // (hardware_encryption_circumvention_via_app), we can still model it
         // as if they could since they can use the key to decrypt data.
-        mkReadApi(os, appId, keyring);
+        appId.addLowPrivApps(os);
+        os.addContainedData(keyring);
+        appId.addReadPrivData(keyring);
 
         var externalData = new Data("externalData");
         externalData.addEncryptCreds(key);
-        containerAdd(app, externalData);
+        app.addContainedData(externalData);
 
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
-        compromised(1, filesystem.read);
-        compromised(0, keystore.read);
-        compromised(1, key.attemptAccess);
-        compromised(1, key.use);
-        compromised(1, externalData.read);
+        assertReached(filesystem.read);
+        assertNotReached(keystore.read);
+        assertReached(key.attemptAccess);
+        assertReached(key.use);
+        assertReached(externalData.read);
     }
 
     @Test
@@ -279,17 +307,19 @@ public class TestFirmware extends Base {
         var sensitiveData = new Data("sensitiveData");
         var encKey = new Credentials("encKey");
 
-        containerAdd(app, flash);
-        containerAdd(flash, sensitiveData);
-        containerAdd(flash, encKey);
+        app.addContainedData(flash);
+        flash.addContainedData(sensitiveData);
+        flash.addInformation(encKey);
 
         sensitiveData.addEncryptCreds(encKey);
 
-        attack(app.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.read);
+        attacker.attack();
 
-        compromised(1, flash.read);
-        compromised(1, encKey.use);
-        compromised(1, sensitiveData.read);
+        assertReached(flash.read);
+        assertReached(encKey.use);
+        assertReached(sensitiveData.read);
     }
 
     @Test
@@ -305,24 +335,27 @@ public class TestFirmware extends Base {
         var flash2 = new Data("flash2");
         var sensitiveData2 = new Data("sensitiveData2");
 
-        containerAdd(app, flash);
-        containerAdd(flash, sensitiveData);
-        containerAdd(flash, encKey);
+        app.addContainedData(flash);
+        flash.addContainedData(sensitiveData);
+        flash.addInformation(encKey);
         sensitiveData.addEncryptCreds(encKey);
 
 
-        containerAdd(app2, flash2);
-        containerAdd(flash2, sensitiveData2);
+        app2.addContainedData(flash2);
+        flash2.addContainedData(sensitiveData2);
         sensitiveData2.addEncryptCreds(encKey); // same key
 
-        attack(app.read, app2.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.read);
+        attacker.addAttackPoint(app2.read);
+        attacker.attack();
 
-        compromised(1, flash.read);
-        compromised(1, encKey.use);
-        compromised(1, sensitiveData.read);
+        assertReached(flash.read);
+        assertReached(encKey.use);
+        assertReached(sensitiveData.read);
 
-        compromised(1, flash2.read);
-        compromised(1, sensitiveData2.read);
+        assertReached(flash2.read);
+        assertReached(sensitiveData2.read);
     }
 
     @Test
@@ -334,43 +367,30 @@ public class TestFirmware extends Base {
 
         var firmwareBlob = new Data("firmwareBlob");
         var encKey = new Credentials("encKey");
-        containerAdd(firmwareBlob, encKey);
+        firmwareBlob.addInformation(encKey);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var flash = new Data("flash");
         var sensitiveData = new Data("sensitiveData");
 
 
-        containerAdd(app, flash);
-        containerAdd(flash, sensitiveData);
+        app.addContainedData(flash);
+        flash.addContainedData(sensitiveData);
 
         sensitiveData.addEncryptCreds(encKey);
 
-        attack(app.read, firmwareBlob.read);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.read);
+        attacker.addAttackPoint(firmwareBlob.read);
+        attacker.attack();
 
-        compromised(1, flash.read);
-        compromised(1, encKey.use);
-        compromised(1, sensitiveData.read);
+        assertReached(flash.read);
+        assertReached(encKey.use);
+        assertReached(sensitiveData.read);
     }
-
-//    @Test
-//    public void test_t024() {
-//        // T024 (firmware) Configuration - Lack of wiping device
-//        // "Lack of deprovisioning/decomissioning. Inability to wipe device's local data storage <This should be triggered via device web page>"
-//        //
-//        // Interpretation: Factory reset / deprovisioning functionality is missing or
-//        // imperfect.
-//        //
-//        // Example:
-//        //  * Old data is left from previous owner (cloud credentials, wifi passwords, etc.).
-//        //
-//        // How to model in coreLang:
-//        //   * TODO Corelang does not really model state.
-//        //   * Alternative, simply model it as sensitive data/credentials being stored on the device.
-//    }
-
 
     @Test
     public void app_runs_as_root() {
@@ -384,26 +404,28 @@ public class TestFirmware extends Base {
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var root = new Identity("root");
-        appExecAs(os, root);
-        appExecAs(app, root);
+        root.addExecPrivApps(os);
+        root.addExecPrivApps(app);
 
         var filesystem = new Data("filesystem");
         var appData = new Data("appData");
         var nonappData = new Data("nonappData");
-        containerAdd(filesystem, appData);
-        containerAdd(filesystem, nonappData);
+        filesystem.addContainedData(appData);
+        filesystem.addContainedData(nonappData);
 
-        containerAdd(os, filesystem);
-        containerAdd(app, appData);
+        os.addContainedData(filesystem);
+        app.addContainedData(appData);
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
-        compromised(1, os.fullAccess);
-        compromised(1, appData.read);
-        compromised(1, nonappData.read);
+        assertReached(os.fullAccess);
+        assertReached(appData.read);
+        assertReached(nonappData.read);
     }
     @Test
     public void app_runs_as_nobody() {
@@ -411,31 +433,33 @@ public class TestFirmware extends Base {
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var root = new Identity("root");
-        appExecAs(os, root);
+        root.addExecPrivApps(os);
 
         var nobody = new Identity("nobody");
-        appExecAs(app, nobody);
+        nobody.addExecPrivApps(app);
 
-        aOwnsB(root, nobody); // optional. (root can do everything nobody can do)
+        root.addParentId(nobody); // optional. (root can do everything nobody can do)
 
         var filesystem = new Data("filesystem");
         var appData = new Data("appData");
         var nonappData = new Data("nonappData");
 
-        containerAdd(filesystem, appData);
-        containerAdd(filesystem, nonappData);
+        filesystem.addContainedData(appData);
+        filesystem.addContainedData(nonappData);
 
-        containerAdd(os, filesystem);
-        containerAdd(app, appData);
+        os.addContainedData(filesystem);
+        app.addContainedData(appData);
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
-        compromised(0, os.fullAccess);
-        compromised(1, appData.read);
-        compromised(0, nonappData.read);
+        assertNotReached(os.fullAccess);
+        assertReached(appData.read);
+        assertNotReached(nonappData.read);
     }
 
     @Test
@@ -444,33 +468,39 @@ public class TestFirmware extends Base {
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var root = new Identity("root");
-        appExecAs(os, root);
+        root.addExecPrivApps(os);
 
         var appId = new Identity("appId");
-        appExecAs(app, appId);
+        appId.addExecPrivApps(app);
 
-        aOwnsB(root, appId); // optional. (root can do everything appId can do)
+        root.addParentId(appId); // optional. (root can do everything appId can do)
 
         var filesystem = new Data("filesystem");
         var appData = new Data("appData");
         var nonappData = new Data("nonappData");
 
-        containerAdd(filesystem, appData);
-        containerAdd(filesystem, nonappData);
+        filesystem.addContainedData(appData);
+        filesystem.addContainedData(nonappData);
 
-        containerAdd(os, filesystem);
+        os.addContainedData(filesystem);
 
-        mkReadApi(os, appId, appData);
-        mkReadApi(os, appId, nonappData); // vulnerability
+        appId.addLowPrivApps(os);
+        os.addContainedData(appData);
+        appId.addReadPrivData(appData);
+        appId.addLowPrivApps(os);
+        os.addContainedData(nonappData);
+        appId.addReadPrivData(nonappData); // vulnerability
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
-        compromised(0, os.fullAccess);
-        compromised(1, appData.read);
-        compromised(1, nonappData.read);
+        assertNotReached(os.fullAccess);
+        assertReached(appData.read);
+        assertReached(nonappData.read);
     }
 
     @Test
@@ -479,32 +509,36 @@ public class TestFirmware extends Base {
 
         var os = new Application("os");
         var app = new Application("app");
-        containerAdd(os, app);
+        os.addAppExecutedApps(app);
 
         var root = new Identity("root");
-        appExecAs(os, root);
+        root.addExecPrivApps(os);
 
         var appId = new Identity("appId");
-        appExecAs(app, appId);
+        appId.addExecPrivApps(app);
 
-        aOwnsB(root, appId); // optional. (root can do everything appId can do)
+        root.addParentId(appId); // optional. (root can do everything appId can do)
 
         var filesystem = new Data("filesystem");
         var appData = new Data("appData");
         var nonappData = new Data("nonappData");
 
-        containerAdd(filesystem, appData);
-        containerAdd(filesystem, nonappData);
+        filesystem.addContainedData(appData);
+        filesystem.addContainedData(nonappData);
 
-        containerAdd(os, filesystem);
+        os.addContainedData(filesystem);
 
-        mkReadApi(os, appId, appData);
+        appId.addLowPrivApps(os);
+        os.addContainedData(appData);
+        appId.addReadPrivData(appData);
 
-        attack(app.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(app.fullAccess);
+        attacker.attack();
 
-        compromised(0, os.fullAccess);
-        compromised(1, appData.read);
-        compromised(0, nonappData.read);
+        assertNotReached(os.fullAccess);
+        assertReached(appData.read);
+        assertNotReached(nonappData.read);
     }
 
 
@@ -529,24 +563,33 @@ public class TestFirmware extends Base {
         var net = new Network("net");
         var app = new Application("app");
 
-        var net_con_app = autocon("net_con_app", net, app);
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         var anyone = new Identity("anyone");
 
         var readData = new Data("readData");
         var writeData = new Data("writeData");
 
-        mkReadApi(app, anyone, readData);
-        mkWriteApi(app, anyone, writeData);
+        anyone.addLowPrivApps(app);
+        app.addContainedData(readData);
+        anyone.addReadPrivData(readData);
+        anyone.addLowPrivApps(app);
+        app.addContainedData(writeData);
+        anyone.addWritePrivData(writeData);
 
-        attack(net.access, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, readData.read);
-        compromised(1, writeData.write);
+        assertReached(readData.read);
+        assertReached(writeData.write);
 
-        compromised(0, readData.write);
-        compromised(0, writeData.read);
-        compromised(0, app.fullAccess);
+        assertNotReached(readData.write);
+        assertNotReached(writeData.read);
+        assertNotReached(app.fullAccess);
     }
 
     @Test
@@ -558,34 +601,44 @@ public class TestFirmware extends Base {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autocon("net_con_appB", net, appB); // open port
+        var appA_con_net = new ConnectionRule("appA_con_net");
+        appA.addOutgoingAppConnections(appA_con_net);
+        net.addIngoingNetConnections(appA_con_net); // outgoing connection
+        var net_con_appB = new ConnectionRule("net_con_appB");
+        net.addOutgoingNetConnections(net_con_appB);
+        appB.addIngoingAppConnections(net_con_appB); // open port
 
         var idA = new Identity("idA");
 
-        appExecAs(appA, idA);
+        idA.addExecPrivApps(appA);
 
         var sensitiveData = new Data("sensitiveData");
         var sensitiveCall = new Data("sensitiveCall");
-        mkReadApi(appB, idA, sensitiveData);
-        mkWriteApi(appB, idA, sensitiveCall);
+        idA.addLowPrivApps(appB);
+        appB.addContainedData(sensitiveData);
+        idA.addReadPrivData(sensitiveData);
+        idA.addLowPrivApps(appB);
+        appB.addContainedData(sensitiveCall);
+        idA.addWritePrivData(sensitiveCall);
 
 
         var regularCommunication = new Data("regularCommunication"); // optional, just to show m2m
         regularCommunication.authenticated.defaultValue = true;
-        transferData(appA, regularCommunication);
-        transferData(net, regularCommunication);
-        transferData(appB, regularCommunication); // TODO coreLang has no way to show that regularCommunication is copied to sensitiveCall. There could perhaps be something like a "copy"-association for Data.
+        regularCommunication.addTransitApp(appA);
+        regularCommunication.addTransitNetwork(net);
+        regularCommunication.addTransitApp(appB); // TODO coreLang has no way to show that regularCommunication is copied to sensitiveCall. There could perhaps be something like a "copy"-association for Data.
 
 
-        attack(appA.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(appA.fullAccess);
+        attacker.attack();
 
-        compromised(1, net.access);
-        compromised(1, idA.assume);
-        compromised(1, appB.specificAccess); // assume idA to talk to appB
-        compromised(1, sensitiveData.read);
-        compromised(1, sensitiveCall.write);
-        //compromised(1, regularCommunication.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
+        assertReached(net.access);
+        assertReached(idA.assume);
+        assertReached(appB.specificAccess); // assume idA to talk to appB
+        assertReached(sensitiveData.read);
+        assertReached(sensitiveCall.write);
+        //assertReached(regularCommunication.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
     }
 
     @Test
@@ -599,24 +652,32 @@ public class TestFirmware extends Base {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autocon("net_con_appB", net, appB); // open port
+        var appA_con_net = new ConnectionRule("appA_con_net");
+        appA.addOutgoingAppConnections(appA_con_net);
+        net.addIngoingNetConnections(appA_con_net); // outgoing connection
+        var net_con_appB = new ConnectionRule("net_con_appB");
+        net.addOutgoingNetConnections(net_con_appB);
+        appB.addIngoingAppConnections(net_con_appB); // open port
 
         var idA = new Identity("idA");
 
-        appExecAs(appA, idA);
+        idA.addExecPrivApps(appA);
 
         var sensitiveData = new Data("sensitiveData");
         var sensitiveCall = new Data("sensitiveCall");
-        mkReadApi(appB, idA, sensitiveData);
-        mkWriteApi(appB, idA, sensitiveCall);
+        idA.addLowPrivApps(appB);
+        appB.addContainedData(sensitiveData);
+        idA.addReadPrivData(sensitiveData);
+        idA.addLowPrivApps(appB);
+        appB.addContainedData(sensitiveCall);
+        idA.addWritePrivData(sensitiveCall);
 
 
         var regularCommunication = new Data("regularCommunication"); // optional, just to show m2m
         regularCommunication.authenticated.defaultValue = true;
-        transferData(appA, regularCommunication);
-        transferData(net, regularCommunication);
-        transferData(appB, regularCommunication); // TODO coreLang has no way to show that regularCommunication is calling the API on appB. There could perhaps be something like a "copy"-association for Data.
+        regularCommunication.addTransitApp(appA);
+        regularCommunication.addTransitNetwork(net);
+        regularCommunication.addTransitApp(appB); // TODO coreLang has no way to show that regularCommunication is calling the API on appB. There could perhaps be something like a "copy"-association for Data.
 
 
 
@@ -625,25 +686,28 @@ public class TestFirmware extends Base {
         var credsC = new Credentials("credsC");
 
         var storageC = new Data("storageC");
-        containerAdd(appC, storageC);
-        containerAdd(storageC, credsC);
+        appC.addContainedData(storageC);
+        storageC.addInformation(credsC);
 
         var credsA = credsC;
         idA.addCredentials(credsA);
         idC.addCredentials(credsC);
 
-        attack(net.access, appC.fullAccess);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(appC.fullAccess);
+        attacker.attack();
 
-        compromised(1, credsC.use);
-        compromised(1, idC.assume);
+        assertReached(credsC.use);
+        assertReached(idC.assume);
 
-        compromised(1, net.access);
+        assertReached(net.access);
 
-        compromised(1, idA.assume);
-        compromised(1, appB.specificAccess); // assume idA to talk to appB
-        compromised(1, sensitiveData.read);
-        compromised(1, sensitiveCall.write);
-        //compromised(1, regularCommunication.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
+        assertReached(idA.assume);
+        assertReached(appB.specificAccess); // assume idA to talk to appB
+        assertReached(sensitiveData.read);
+        assertReached(sensitiveCall.write);
+        //assertReached(regularCommunication.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
     }
 
     @Test
@@ -655,38 +719,49 @@ public class TestFirmware extends Base {
         var appB = new Application("appB");
         var net = new Network("net");
 
-        var appA_con_net = autocon("appA_con_net", appA, net); // outgoing connection
-        var net_con_appB = autocon("net_con_appB", net, appB); // open port
+        var appA_con_net = new ConnectionRule("appA_con_net");
+        appA.addOutgoingAppConnections(appA_con_net);
+        net.addIngoingNetConnections(appA_con_net); // outgoing connection
+        var net_con_appB = new ConnectionRule("net_con_appB");
+        net.addOutgoingNetConnections(net_con_appB);
+        appB.addIngoingAppConnections(net_con_appB); // open port
 
         var idB = new Identity("idB");
         var credsB = new Credentials("credsB");
         idB.addCredentials(credsB);
 
-        appExecAs(appB, idB);
+        idB.addExecPrivApps(appB);
 
         var sensitiveData = new Data("sensitiveData");
         var sensitiveCall = new Data("sensitiveCall");
-        mkReadApi(appA, idB, sensitiveData);
-        mkWriteApi(appA, idB, sensitiveCall);
+        idB.addLowPrivApps(appA);
+        appA.addContainedData(sensitiveData);
+        idB.addReadPrivData(sensitiveData);
+        idB.addLowPrivApps(appA);
+        appA.addContainedData(sensitiveCall);
+        idB.addWritePrivData(sensitiveCall);
 
 
         var regularCommunicationAB = new Data("regularCommunication"); // optional, just to show m2m
-        transferData(appA, regularCommunicationAB);
-        transferData(net,  regularCommunicationAB);
-        transferData(appB, regularCommunicationAB);
+        regularCommunicationAB.addTransitApp(appA);
+        regularCommunicationAB.addTransitNetwork(net);
+        regularCommunicationAB.addTransitApp(appB);
 
 
         var regularCommunicationBA = new Data("regularCommunication"); // optional, just to show m2m
         regularCommunicationBA.authenticated.defaultValue = true;
-        transferData(appB, regularCommunicationBA);
-        transferData(net,  regularCommunicationBA);
-        transferData(appA, regularCommunicationBA);
+        regularCommunicationBA.addTransitApp(appB);
+        regularCommunicationBA.addTransitNetwork(net);
+        regularCommunicationBA.addTransitApp(appA);
 
-        attack(net.access, credsB.use);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(credsB.use);
+        attacker.attack();
 
-        compromised(1, sensitiveData.read);
-        compromised(1, sensitiveCall.write);
-        //compromised(1, regularCommunicationBA.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
+        assertReached(sensitiveData.read);
+        assertReached(sensitiveCall.write);
+        //assertReached(regularCommunicationBA.write); // TODO Would work if the authenticated defense was based on credentials instead, like Data.encryptCreds
     }
 
 
@@ -711,20 +786,25 @@ public class TestFirmware extends Base {
         var net = new Network("net");
 
 
-        var net_con_app = autocon("net_con_app", net, app);
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         // generic network vulnerability
-        var vuln = vulnerabilityBuilder("vuln").setNetwork().setCIA().build();
+        var vuln = new SoftwareVulnerability("vuln");
+        vuln.networkAccessRequired.defaultValue = true;
 
         var prod = new SoftwareProduct("prod");
         prod.addSoftApplications(app);
 
         prod.addSoftProductVulnerabilities(vuln); // alternatively: vuln in app
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, app.networkConnect);
-        compromised(1, app.fullAccess);
+        assertReached(app.networkConnect);
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -743,25 +823,32 @@ public class TestFirmware extends Base {
         var net = new Network("lan");
         var cloud = new Application("cloud");
 
-        var app_con_net = autocon("app_con_net", app, net);
-        var net_con_cloud = autocon("net_con_cloud", net, cloud);
+        var app_con_net = new ConnectionRule("app_con_net");
+        app.addOutgoingAppConnections(app_con_net);
+        net.addIngoingNetConnections(app_con_net);
+        var net_con_cloud = new ConnectionRule("net_con_cloud");
+        net.addOutgoingNetConnections(net_con_cloud);
+        cloud.addIngoingAppConnections(net_con_cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var tcp = new Data("tcp");
-        containerAdd(tcp, firmwareBlob);
+        tcp.addContainedData(firmwareBlob);
 
-        transferData(app, tcp);
-        transferData(net, tcp); // mitm point
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(net); // mitm point
+        tcp.addTransitApp(cloud);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(1, firmwareBlob.write); // mitm
-        compromised(1, app.fullAccess);
+        assertReached(firmwareBlob.write); // mitm
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -773,13 +860,18 @@ public class TestFirmware extends Base {
         var net = new Network("lan");
         var cloud = new Application("cloud");
 
-        var app_con_net = autocon("app_con_net", app, net);
-        var net_con_cloud = autocon("net_con_cloud", net, cloud);
+        var app_con_net = new ConnectionRule("app_con_net");
+        app.addOutgoingAppConnections(app_con_net);
+        net.addIngoingNetConnections(app_con_net);
+        var net_con_cloud = new ConnectionRule("net_con_cloud");
+        net.addOutgoingNetConnections(net_con_cloud);
+        cloud.addIngoingAppConnections(net_con_cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var tcp = new Data("tcp");
 
@@ -787,17 +879,19 @@ public class TestFirmware extends Base {
         var tlsCreds = new Credentials("tlsCreds");
         tls.addEncryptCreds(tlsCreds);
 
-        containerAdd(tcp, tls);
-        containerAdd(tls, firmwareBlob);
+        tcp.addContainedData(tls);
+        tls.addContainedData(firmwareBlob);
 
-        transferData(app, tcp);
-        transferData(net, tcp); // mitm point
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(net); // mitm point
+        tcp.addTransitApp(cloud);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
-        compromised(0, firmwareBlob.write); // mitm not possible
-        compromised(0, app.fullAccess);
+        assertNotReached(firmwareBlob.write); // mitm not possible
+        assertNotReached(app.fullAccess);
     }
 
     @Test
@@ -807,15 +901,21 @@ public class TestFirmware extends Base {
         var sys = new org.mal_lang.corelang.test.System("sys");
         var app = new Application("app");
 
-        containerAdd(sys, app);
+        sys.addSysExecutedApps(app);
 
         var lan = new Network("lan");
         var internet = new Network("internet");
         var cloud = new Application("cloud");
 
-        var con_app_lan = autocon("con_app_lan", app, lan);
-        var con_lan_internet = autocon("con_lan_internet", lan, internet); // Note: NAT.
-        var con_internet_cloud = autocon("con_internet_cloud", internet, cloud);
+        var con_app_lan = new ConnectionRule("con_app_lan");
+        app.addOutgoingAppConnections(con_app_lan);
+        lan.addIngoingNetConnections(con_app_lan);
+        var con_lan_internet = new ConnectionRule("con_lan_internet");
+        lan.addOutgoingNetConnections(con_lan_internet);
+        internet.addIngoingNetConnections(con_lan_internet); // Note: NAT.
+        var con_internet_cloud = new ConnectionRule("con_internet_cloud");
+        internet.addOutgoingNetConnections(con_internet_cloud);
+        cloud.addIngoingAppConnections(con_internet_cloud);
 
         // The RoutingFirewall is optional. It is just here to show that the
         // router may actually be a IoT device (that can be hacked): RoutingFirewall extends Application.
@@ -823,31 +923,34 @@ public class TestFirmware extends Base {
         con_lan_internet.addRoutingFirewalls(routerNat);
 
         var routerHardware = new org.mal_lang.corelang.test.System("routerHardware");
-        containerAdd(routerHardware, routerNat);
+        routerHardware.addSysExecutedApps(routerNat);
 
         var tcp = new Data("tcp");
 
         var firmwareBlob = new Data("firmwareBlob");
 
-        containerAdd(tcp, firmwareBlob);
+        tcp.addContainedData(firmwareBlob);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
-        transferData(app, tcp);
-        transferData(lan, tcp);
-        transferData(internet, tcp);
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(lan);
+        tcp.addTransitNetwork(internet);
+        tcp.addTransitApp(cloud);
 
 
         var identity = new Identity("identity");
         sys.addHighPrivSysIds(identity);
         app.addExecutionPrivIds(identity); // NOTE: You can not gain privileges if there are no privileges defined.
 
-        attack(internet.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(internet.access);
+        attacker.attack();
 
-        compromised(1, firmwareBlob.write); // mitm
-        compromised(1, app.fullAccess);
+        assertReached(firmwareBlob.write); // mitm
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -869,35 +972,42 @@ public class TestFirmware extends Base {
         var net = new Network("lan");
         var cloud = new Application("cloud");
 
-        var app_con_net = autocon("app_con_net", app, net);
-        var net_con_cloud = autocon("net_con_cloud", net, cloud);
+        var app_con_net = new ConnectionRule("app_con_net");
+        app.addOutgoingAppConnections(app_con_net);
+        net.addIngoingNetConnections(app_con_net);
+        var net_con_cloud = new ConnectionRule("net_con_cloud");
+        net.addOutgoingNetConnections(net_con_cloud);
+        cloud.addIngoingAppConnections(net_con_cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
         firmwareBlob.authenticated.defaultValue = false; // no signature nor verification
 
         var sensitiveData = new Data("sensitiveData");
-        containerAdd(firmwareBlob, sensitiveData);
+        firmwareBlob.addContainedData(sensitiveData);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var tcp = new Data("tcp");
-        containerAdd(tcp, firmwareBlob);
+        tcp.addContainedData(firmwareBlob);
 
-        transferData(app, tcp);
-        transferData(net, tcp); // mitm point
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(net); // mitm point
+        tcp.addTransitApp(cloud);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
 
-        compromised(1, firmwareBlob.read); // can read
-        compromised(1, sensitiveData.read);
+        assertReached(firmwareBlob.read); // can read
+        assertReached(sensitiveData.read);
 
-        compromised(1, firmwareBlob.write);
-        compromised(1, sensitiveData.write);
+        assertReached(firmwareBlob.write);
+        assertReached(sensitiveData.write);
 
-        compromised(1, app.fullAccess);
+        assertReached(app.fullAccess);
     }
 
     @Test
@@ -908,35 +1018,42 @@ public class TestFirmware extends Base {
         var net = new Network("lan");
         var cloud = new Application("cloud");
 
-        var app_con_net = autocon("app_con_net", app, net);
-        var net_con_cloud = autocon("net_con_cloud", net, cloud);
+        var app_con_net = new ConnectionRule("app_con_net");
+        app.addOutgoingAppConnections(app_con_net);
+        net.addIngoingNetConnections(app_con_net);
+        var net_con_cloud = new ConnectionRule("net_con_cloud");
+        net.addOutgoingNetConnections(net_con_cloud);
+        cloud.addIngoingAppConnections(net_con_cloud);
 
         var firmwareBlob = new Data("firmwareBlob");
         firmwareBlob.authenticated.defaultValue = true; // signature and verification
 
         var sensitiveData = new Data("sensitiveData");
-        containerAdd(firmwareBlob, sensitiveData);
+        firmwareBlob.addContainedData(sensitiveData);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
         var tcp = new Data("tcp");
-        containerAdd(tcp, firmwareBlob);
+        tcp.addContainedData(firmwareBlob);
 
-        transferData(app, tcp);
-        transferData(net, tcp); // mitm point
-        transferData(cloud, tcp);
+        tcp.addTransitApp(app);
+        tcp.addTransitNetwork(net); // mitm point
+        tcp.addTransitApp(cloud);
 
-        attack(net.access);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.attack();
 
 
-        compromised(1, firmwareBlob.read); // can read
-        compromised(1, sensitiveData.read);
+        assertReached(firmwareBlob.read); // can read
+        assertReached(sensitiveData.read);
 
-        compromised(0, firmwareBlob.write); // but can't write
-        compromised(0, sensitiveData.write);
+        assertNotReached(firmwareBlob.write); // but can't write
+        assertNotReached(sensitiveData.write);
 
-        compromised(0, app.fullAccess);
+        assertNotReached(app.fullAccess);
     }
 
     @Test
@@ -949,35 +1066,32 @@ public class TestFirmware extends Base {
         var app = new Application("app");
         var net = new Network("net");
 
-        var net_con_app = autocon("net_con_app", net, app);
+        var net_con_app = new ConnectionRule("net_con_app");
+        net.addOutgoingNetConnections(net_con_app);
+        app.addIngoingAppConnections(net_con_app);
 
         var firmwareStorage = new Data("firmwareStorage");
         var firmwareBlob = new Data("firmwareBlob");
 
         var anyone = new Identity("anyone");
-        mkWriteApi(app, anyone, firmwareStorage); // alternatively we could use a vulnerability here.
+        anyone.addLowPrivApps(app);
+        app.addContainedData(firmwareStorage);
+        anyone.addWritePrivData(firmwareStorage); // alternatively we could use a vulnerability here.
 
-        containerAdd(app, firmwareStorage);
-        containerAdd(firmwareStorage, firmwareBlob);
+        app.addContainedData(firmwareStorage);
+        firmwareStorage.addContainedData(firmwareBlob);
 
         var firmwareProduct = new SoftwareProduct("firmwareProduct");
-        execData(firmwareBlob, firmwareProduct, app);
+        firmwareProduct.addOriginData(firmwareBlob);
+        firmwareProduct.addSoftApplications(app);
 
-        attack(net.access, anyone.assume);
+        var attacker = new Attacker();
+        attacker.addAttackPoint(net.access);
+        attacker.addAttackPoint(anyone.assume);
+        attacker.attack();
 
-        compromised(1, firmwareStorage.write);
-        compromised(1, firmwareBlob.write);
-        compromised(1, app.fullAccess);
+        assertReached(firmwareStorage.write);
+        assertReached(firmwareBlob.write);
+        assertReached(app.fullAccess);
     }
-
-//    @Test
-//    public void test_t040() {
-//        // T040 (firmware) Update mechanism - Lack of anti-rollback mechanism
-//        // "An attacker could revert firmware back (firmware downgrade) to a vulnerable version if the device lacks of anti-rollback mechanism."
-//        //
-//        // TODO CoreLang does not really model multiple versions of the same application.
-//        // A workaround is to create two models: one model showing the
-//        // scenario leading up to the rollback and another model showing the
-//        // situation after the rollback.
-//    }
 }
