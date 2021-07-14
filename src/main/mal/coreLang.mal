@@ -101,7 +101,25 @@ category ComputeResources {
         user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
         developer info: "But it does not protect against denial of service attacks."
         ->  attemptConnect,
-            attemptUsePhysicalVulnerability
+            attemptUsePhysicalVulnerability,
+            unsafeUserActivityWithHighPrivileges,
+            unsafeUserActivityWithLowPrivileges
+
+      | attemptUnsafeUserActivityWithHighPrivileges @hidden
+        user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
+        ->  unsafeUserActivityWithHighPrivileges
+
+      & unsafeUserActivityWithHighPrivileges
+        user info: "A user with high privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        ->  sysExecutedApps.attemptUnsafeUserActivityWithHighPrivileges
+
+      | attemptUnsafeUserActivityWithLowPrivileges @hidden
+        user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
+        ->  unsafeUserActivityWithLowPrivileges
+
+      & unsafeUserActivityWithLowPrivileges
+        user info: "A user with low privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        ->  sysExecutedApps.attemptUnsafeUserActivityWithLowPrivileges
 
       | deny {A}
         user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
@@ -719,7 +737,8 @@ category User {
         # securityAwareness
           user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
-              unforcedUnsafeUserActivity
+              unforcedUnsafeUserActivity,
+              deliverMaliciousRemovableMedia
 
         | oneCredentialCompromised @hidden
           developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
@@ -729,7 +748,7 @@ category User {
           user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
           ->  userIds.credentials.use
 
-        | attemptSocialEngineering
+        | attemptSocialEngineering @hidden
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
           ->  socialEngineering
 
@@ -757,6 +776,17 @@ category User {
           developer info: "This attack is harder to happen because it requires more bad effort from the victim."
           modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
+
+        | attemptDeliverMaliciousRemovableMedia @hidden
+          user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
+          ->  deliverMaliciousRemovableMedia
+
+        & deliverMaliciousRemovableMedia [Exponential(0.01)]
+          user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
+          developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
+          ->  userIds.highPrivManagedSystems.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.lowPrivManagedSystems.attemptUnsafeUserActivityWithLowPrivileges
+
 
         & forcedUnsafeUserActivity [Exponential(0.05)]
           developer info: "This attack models the unsafe user actions induced by an attacker pursuing social engineering."
