@@ -204,7 +204,7 @@ category ComputeResources {
             clientApplicationConnections().attemptConnectToApplications,
             clientApplicationConnections().attemptTransmit,
             serverApplicationConnections().attemptTransmitResponse, // Since we are on the Application we want to use the serverAppConnection to initiate trasmitResponse.
-            allApplicationConnections().attemptAccessNetworks
+            clientApplicationConnections().attemptAccessNetworks
 
       | networkRequestConnect
         user info: "The attacker has successfully sent a request to the (server) application. This can be used to exploit a vulnerability."
