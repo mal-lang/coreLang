@@ -208,12 +208,16 @@ category ComputeResources {
         ->  networkConnectFromReverseTakeover
 
       | networkConnect
-        user info: "An attacker can connect to any network exposed application."
-        ->  networkAccess,
-            specificAccessFromNetworkConnection,
+        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        ->  networkConnectWithoutTriggeringVulnerabilities,
             attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().networkAccessAchieved,
             softwareProductVulnerabilityNetworkAccessAchieved
+
+      | networkConnectWithoutTriggeringVulnerabilities @hidden
+        developer info: "This attack step is used if the network connection occurs via a filtered ConnectionRule, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
+        ->  networkAccess,
+            specificAccessFromNetworkConnection
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
@@ -1081,10 +1085,11 @@ category Networking {
       let clientApplications = (applications \/ outApplications)
       let serverApplications = (applications \/ inApplications)
 
-      # disabled [Disabled]
-        user info: "It should be used to model the probability that the connection rule is actually not existing."
+      # restricted [Disabled]
+        user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
         ->  accessNetworks,
             connectToApplications,
+            connectToApplicationsWithoutTriggeringVulnerabilities,
             transmit,
             transmitResponse,
             denialOfService,
@@ -1093,10 +1098,9 @@ category Networking {
             allowWriteDataInTransit,
             allowDenyDataInTransit
 
-      # filtered [Disabled]
+      # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication (i.e. network-level vulnerabilities cannot be exploited)."
-        ->  transmit,
-            transmitResponse
+        ->  connectToApplications
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptAccessNetworks @hidden
@@ -1109,11 +1113,16 @@ category Networking {
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
-        ->  connectToApplications
+        ->  connectToApplications,
+            connectToApplicationsWithoutTriggeringVulnerabilities
 
       & connectToApplications @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule."
         ->  serverApplications().networkConnect
+
+      & connectToApplicationsWithoutTriggeringVulnerabilities @hidden
+        developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but without triggering vulnerabilities on them. This attack step is used to allow legitimate traffic even when filtering is enabled on the connection."
+        ->  serverApplications().networkConnectWithoutTriggeringVulnerabilities
 
       | attemptTransmitResponse @hidden
         developer info: "Intermediate attack step."
