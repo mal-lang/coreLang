@@ -816,7 +816,7 @@ category User {
           modeler info: "The probability and its value are just estimations and are subject to change."
           ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
 
-        | attemptDeliverMaliciousRemovableMedia @hidden
+        | attemptDeliverMaliciousRemovableMedia
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
           ->  deliverMaliciousRemovableMedia
 
