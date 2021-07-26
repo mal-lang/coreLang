@@ -787,7 +787,7 @@ category User {
           user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
           ->  userIds.credentials.use
 
-        | attemptSocialEngineering @hidden
+        | attemptSocialEngineering
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
           ->  socialEngineering
 
