@@ -997,7 +997,7 @@ category Networking {
             transmitResponse,
             denialOfService,
             eavedropOnDataInTransit,
-            mainInTheMiddleOnDataInTransit,
+            manInTheMiddleOnDataInTransit,
             allowWriteDataInTransit,
             allowDenyDataInTransit
 
@@ -1058,9 +1058,9 @@ category Networking {
 
       | attemptManInTheMiddleOnDataInTransit @hidden
         developer info: "Intermediate attack step."
-        ->  mainInTheMiddleOnDataInTransit
+        ->  manInTheMiddleOnDataInTransit
 
-      & mainInTheMiddleOnDataInTransit @hidden
+      & manInTheMiddleOnDataInTransit @hidden
         user info: "Via a ConnectionRule a MitM attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
         ->  clientApplications().transitData.attemptManInTheMiddle
 
