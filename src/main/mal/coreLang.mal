@@ -952,7 +952,7 @@ category Networking {
         ->  transitData.attemptEavesdrop
 
       & manInTheMiddle {C, I}
-        user info: "An attacker that performs a MitM attack on a network tries to modifiy all the transfered data over that network."
+        user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transfered data over that network."
         ->  successfulManInTheMiddle
 
       | bypassMitMProtection {C, I} [HardAndUncertain]
