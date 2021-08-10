@@ -161,7 +161,7 @@ category ComputeResources {
       let serverApplicationConnections = (appConnections \/ ingoingAppConnections)
 
       # disabled [Disabled]
-        user info: "If application is disabled it should behave as non exisitng, thus all attack vectors are removed."
+        user info: "If application is disabled it should behave as non existing, thus all attack vectors are removed."
         developer info: "This would even allow us to have a much more dynamic and probabilistic aspect on our model and simulations."
         ->  specificAccessFromLocalConnection,
             specificAccessFromNetworkConnection,
