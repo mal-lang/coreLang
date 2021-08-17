@@ -205,7 +205,8 @@ category ComputeResources {
 
       # airGapped
         developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
-        ->  networkConnectFromReverseTakeover
+        ->  networkConnectFromReverseTakeover,
+            reverseReach
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
@@ -213,6 +214,18 @@ category ComputeResources {
             attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().networkAccessAchieved,
             softwareProductVulnerabilityNetworkAccessAchieved
+
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  networks.attemptReverseReach,
+            clientAccessNetworks.attemptReverseReach,
+            serverApplicationConnections().attemptReverseReach,
+            appExecutedApps.attemptReverseReach,
+            unsafeUserActivityConnect
 
       | networkConnectWithoutTriggeringVulnerabilities @hidden
         developer info: "This attack step is used if the network connection occurs via a filtered ConnectionRule, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
@@ -259,7 +272,8 @@ category ComputeResources {
             clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
             clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
             attemptApplicationRespondConnectThroughData,
-            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
+            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
+            attemptReverseReach
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
@@ -305,7 +319,8 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
+            attemptReverseReach
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -313,10 +328,18 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
+      | attemptUnsafeUserActivityConnect @hidden
+        developer info: "Intermediate attack step."
+        ->  unsafeUserActivityConnect
+
+      & unsafeUserActivityConnect @hidden
+        developer info: "This attack step represents the user creating a connection to the attacker through their unsafe actions. It can only occur if the user can reach the attacker via networking assets and/or Applications"
+        ->  localConnect,
+            networkConnect
+
       | attemptUnsafeUserActivityWithLowPrivileges
         developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  localConnect,
-            networkConnect,
+        ->  attemptUnsafeUserActivityConnect,
             allVulnerabilities().lowPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityLowPrivilegesAchieved,
@@ -324,8 +347,7 @@ category ComputeResources {
 
       | attemptUnsafeUserActivityWithHighPrivileges
         developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  localConnect,
-            networkConnect,
+        ->  attemptUnsafeUserActivityConnect,
             allVulnerabilities().highPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityHighPrivilegesAchieved,
@@ -1005,7 +1027,18 @@ category Networking {
             clientApplications.networkRespondConnect,
             accessNetworkData,
             networkForwarding,
-            denialOfService
+            denialOfService,
+            attemptReverseReach
+
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections).attemptReverseReach,
+            clientApplications.attemptReverseReach,
+            applications.attemptReverseReach
 
       | networkForwarding
         developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
@@ -1096,13 +1129,24 @@ category Networking {
             eavedropOnDataInTransit,
             manInTheMiddleOnDataInTransit,
             allowWriteDataInTransit,
-            allowDenyDataInTransit
+            allowDenyDataInTransit,
+            reverseReach
 
       # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication (i.e. network-level vulnerabilities cannot be exploited)."
-        ->  connectToApplications
+        ->  connectToApplications,
+            reverseReach
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  clientApplications().attemptReverseReach,
+            (networks \/ outNetworks).attemptReverseReach
+
       | attemptAccessNetworks @hidden
         developer info: "Intermediate attack step."
         ->  accessNetworks
