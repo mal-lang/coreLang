@@ -467,6 +467,48 @@ category DataResources {
     {
       | attemptAccess
         user info: "The attacker is attempting to access the information."
+
+      | attemptRead @hidden
+        developer info: "Intermediate attack step."
+        ->  read
+
+      & read
+        user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
+        ->  dataBackups.read
+
+      | attemptWrite @hidden
+        developer info: "Intermediate attack step."
+        ->  write
+
+      & write
+        user info: "Data can be written only if replication has been broken."
+        -> dataBackups.write
+
+      | attemptDelete @hidden
+        developer info: "Intermediate attack step."
+        ->  delete
+
+      & delete
+        user info: "Data can be delete only if replication has been broken."
+        -> dataBackups.delete
+
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step."
+        ->  deny
+
+      & deny
+        user info: "Data can be denied only if replication has been broken."
+        -> dataBackups.deny
+
+      & attemptBreakReplication @hidden
+        developer info: "Replication fails only if all of the backups have been compromised."
+        -> breakReplication
+
+      | breakReplication @hidden
+        developer info: "If all the replicas have been compromised it is possible to write, delete, or deny the data."
+        -> write,
+           delete,
+           deny
     }
 
     asset Data
@@ -496,10 +538,18 @@ category DataResources {
           <-  encryptCreds
           ->  accessUnencryptedData
 
+        !E dataReplicated @hidden
+          user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
+          developer info: "Data will be considered as replicated if they have a Backup association with an Information asset."
+          <-  replicatedInformation
+          ->  unreplicatedWrite,
+              unreplicatedDelete,
+              unreplicatedDeny
+
         # authenticated
           user info: "If the data are authenticated, then modifying them is not possible to achieve."
           ->  containedData*.applicationRespondConnect,
-              containedData*.write,
+              containedData*.successfulWrite,
               containedData*.manInTheMiddle
 
         & accessUnencryptedData @hidden
@@ -513,9 +563,9 @@ category DataResources {
               applicationRespondConnect,
               eavesdrop,
               manInTheMiddle,
-              read,
-              write,
-              delete
+              successfulRead,
+              successfulWrite,
+              successfulDelete
 
         # dataNotPresent [Disabled]
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
@@ -537,7 +587,7 @@ category DataResources {
 
         | attemptRead @hidden
           user info: "Attempt to read the data."
-          ->  read
+          ->  successfulRead
 
         | identityAttemptRead @hidden
           user info: "Attempt to read the data through a compormised identity."
@@ -549,7 +599,7 @@ category DataResources {
 
         | attemptWrite @hidden
           user info: "Attempt to write on the data."
-          ->  write
+          ->  successfulWrite
 
         | identityAttemptWrite @hidden
           user info: "Attempt to write the data through a compormised identity."
@@ -561,7 +611,7 @@ category DataResources {
 
         | attemptDelete @hidden
            user info: "Attempt to delete the data."
-          -> delete
+          -> successfulDelete
 
         | identityAttemptDelete @hidden
           user info: "Attempt to delete the data through a compormised identity."
@@ -571,26 +621,65 @@ category DataResources {
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
           ->  attemptDelete
 
-        & read {C}
+        & successfulRead @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  read
+
+        | read {C}
           user info: "The attacker can read the data."
           ->  containedData.attemptRead,
-              readContainedInformation
+              readContainedInformation,
+              replicatedInformation.attemptRead
 
-        & write {I}
+        | breakReplication @hidden
+          developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
+          ->  replicatedInformation.attemptBreakReplication
+
+        & successfulWrite @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptWrite,
+              breakReplication,
+              unreplicatedWrite
+
+        & unreplicatedWrite @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
+          ->  write
+
+        | write {I}
           user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
           ->  containedData.attemptWrite,
               attemptDelete,
               compromiseAppOrigin
 
-        & delete {I,A}
+        & successfulDelete @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptDelete,
+              breakReplication,
+              unreplicatedDelete
+
+        & unreplicatedDelete @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
+          ->  delete
+
+        | delete {I,A}
           user info: "The attacker can delete the data."
           ->  containedData.attemptDelete
 
         | attemptDeny @hidden
           developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
+          ->  successfulDeny
+
+        & successfulDeny @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptDeny,
+              breakReplication,
+              unreplicatedDeny
+
+        & unreplicatedDeny @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
           ->  deny
 
-        & deny {A}
+        | deny {A}
           user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
           ->  containedData.deny
 
@@ -1134,7 +1223,9 @@ associations {
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
-      user info: "Data can contain information, as for example credentials." 
+      user info: "Data can contain information, as for example credentials."
+  Data             [dataBackups]          * <-- Backup                --> *   [replicatedInformation]  Information
+      user info: "Information can be replicated across multiple data assets that offer redundancy."
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
   Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
