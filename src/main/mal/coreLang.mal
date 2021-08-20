@@ -840,8 +840,11 @@ category User {
         | unsafeUserActivity
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
           ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
+              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges,
+              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
 
         | phishUser
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
