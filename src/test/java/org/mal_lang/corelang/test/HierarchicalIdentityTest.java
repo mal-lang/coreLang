@@ -10,11 +10,11 @@ public class HierarchicalIdentityTest extends CoreLangTest {
         public Identity childIdentityB;
         public Identity childIdentityC;
 
-        public HierarchicalIdentityTestModel(boolean twoFA) {
-            identity = new Identity("parentIdentity", twoFA, false);
-            childIdentityA = new Identity("childIdA", twoFA, false);
-            childIdentityB = new Identity("childIdB", twoFA, false);
-            childIdentityC = new Identity("childIdC", twoFA, false);
+        public HierarchicalIdentityTestModel() {
+            identity = new Identity("parentIdentity", false);
+            childIdentityA = new Identity("childIdA", false);
+            childIdentityB = new Identity("childIdB", false);
+            childIdentityC = new Identity("childIdC", false);
             identity.addChildId(childIdentityA);
             childIdentityA.addChildId(childIdentityB);
             childIdentityB.addChildId(childIdentityC);
@@ -26,25 +26,9 @@ public class HierarchicalIdentityTest extends CoreLangTest {
   }
 
     @Test
-    public void testNestedIdentitiesWith2FA() {
+    public void testNestedIdentities() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new HierarchicalIdentityTestModel(true);
-
-        var attacker = new Attacker();
-        model.addAttacker(attacker);
-        attacker.attack();
-
-        model.childIdentityC.assume.assertUncompromised();
-        model.childIdentityB.successfulAssume.assertUncompromised();
-        model.childIdentityB.assume.assertUncompromised();
-        model.childIdentityA.assume.assertUncompromised();
-        model.identity.assume.assertUncompromised();
-    }
-
-    @Test
-    public void testNestedIdentitiesWithout2FA() {
-        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new HierarchicalIdentityTestModel(false);
+        var model = new HierarchicalIdentityTestModel();
 
         var attacker = new Attacker();
         model.addAttacker(attacker);

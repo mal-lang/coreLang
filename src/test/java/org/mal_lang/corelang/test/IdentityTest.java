@@ -7,32 +7,33 @@ public class IdentityTest extends CoreLangTest {
     private static class IdentityTestModel {
         public Identity identity;
 
-        public IdentityTestModel(boolean twoFA, boolean disabled) {
-            identity = new Identity("identity", twoFA, disabled);
+        public IdentityTestModel(boolean disabled) {
+            identity = new Identity("identity", disabled);
         }
 
         public void addAttacker(Attacker attacker) {
           attacker.addAttackPoint(identity.attemptAssume);
         }
-  }
+    }
 
-    @Test
-    public void testIdentityWith2FA() {
-        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new IdentityTestModel(true, false);
+    private static class IdentityTestMultipleCredentialsModel{
+        public Identity identity;
+        public Credentials creds1;
+        public Credentials creds2;
 
-        var attacker = new Attacker();
-        model.addAttacker(attacker);
-        attacker.attack();
-
-        model.identity.successfulAssume.assertUncompromised();
-        model.identity.assume.assertUncompromised();
+        public IdentityTestMultipleCredentialsModel() {
+            identity = new Identity("identity", false);
+            creds1 = new Credentials("creds1");
+            creds2 = new Credentials("creds1");
+            identity.addCredentials(creds1);
+            identity.addCredentials(creds2);
+        }
     }
 
     @Test
-    public void testIdentityWithout2FA() {
+    public void testIdentity() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new IdentityTestModel(false, false);
+        var model = new IdentityTestModel(false);
 
         var attacker = new Attacker();
         model.addAttacker(attacker);
@@ -45,7 +46,7 @@ public class IdentityTest extends CoreLangTest {
     @Test
     public void testDisabledIdentity() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new IdentityTestModel(false, true);
+        var model = new IdentityTestModel(true);
 
         var attacker = new Attacker();
         model.addAttacker(attacker);
@@ -55,4 +56,30 @@ public class IdentityTest extends CoreLangTest {
         model.identity.assume.assertUncompromised();
     }
 
+    @Test
+    public void testIdentityMultipleCredentialsSingleCompromised() {
+        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
+        var model = new IdentityTestMultipleCredentialsModel();
+
+        var attacker = new Attacker();
+        attacker.addAttackPoint(model.creds1.attemptAccess);
+        attacker.attack();
+
+        model.identity.successfulAssume.assertUncompromised();
+        model.identity.assume.assertUncompromised();
+    }
+
+    @Test
+    public void testIdentityMultipleCredentialsBothCompromised() {
+        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
+        var model = new IdentityTestMultipleCredentialsModel();
+
+        var attacker = new Attacker();
+        attacker.addAttackPoint(model.creds1.attemptAccess);
+        attacker.addAttackPoint(model.creds2.attemptAccess);
+        attacker.attack();
+
+        model.identity.successfulAssume.assertCompromisedInstantaneously();
+        model.identity.assume.assertCompromisedInstantaneously();
+    }
 }
