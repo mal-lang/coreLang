@@ -474,7 +474,7 @@ category DataResources {
 
       & read
         user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
-        ->  dataBackups.read
+        ->  dataReplicas.read
 
       | attemptWrite @hidden
         developer info: "Intermediate attack step."
@@ -482,7 +482,7 @@ category DataResources {
 
       & write
         user info: "Data can be written only if replication has been broken."
-        -> dataBackups.write
+        -> dataReplicas.write
 
       | attemptDelete @hidden
         developer info: "Intermediate attack step."
@@ -490,7 +490,7 @@ category DataResources {
 
       & delete
         user info: "Data can be delete only if replication has been broken."
-        -> dataBackups.delete
+        -> dataReplicas.delete
 
       | attemptDeny @hidden
         developer info: "Intermediate attack step."
@@ -498,10 +498,10 @@ category DataResources {
 
       & deny
         user info: "Data can be denied only if replication has been broken."
-        -> dataBackups.deny
+        -> dataReplicas.deny
 
       & attemptBreakReplication @hidden
-        developer info: "Replication fails only if all of the backups have been compromised."
+        developer info: "Replication fails only if all of the replicas have been compromised."
         -> breakReplication
 
       | breakReplication @hidden
@@ -540,7 +540,7 @@ category DataResources {
 
         !E dataReplicated @hidden
           user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
-          developer info: "Data will be considered as replicated if they have a Backup association with an Information asset."
+          developer info: "Data will be considered as replicated if they have a Replica association with an Information asset."
           <-  replicatedInformation
           ->  unreplicatedWrite,
               unreplicatedDelete,
@@ -571,7 +571,7 @@ category DataResources {
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
           developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
           ->  accessUnencryptedData,
-              deny
+              successfulDeny
 
         & readContainedInformation
           user info: "From the data, attempt to access also the contained information, if exists."
@@ -1224,7 +1224,7 @@ associations {
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials."
-  Data             [dataBackups]          * <-- Backup                --> *   [replicatedInformation]  Information
+  Data             [dataReplicas]          * <-- Replica                --> *   [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
