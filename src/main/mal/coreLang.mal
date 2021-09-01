@@ -1014,7 +1014,7 @@ category Networking {
         developer info: "Intermediate attack step."
         ->  accessNetworks
 
-      & accessNetworks @hidden
+      & accessNetworks
         developer info: "Access all networks that are associated with this ConnectionRule."
         ->  (networks  \/ inNetworks  \/ diodeInNetworks).access
 
