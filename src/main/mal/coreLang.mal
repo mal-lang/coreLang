@@ -566,6 +566,7 @@ category DataResources {
         !E dataEncrypted @hidden
           user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
           developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+          mitre info: "Used for M1041: Encrypt Sensitive Information"
           <-  encryptCreds
           ->  accessUnencryptedData
 
@@ -630,6 +631,7 @@ category DataResources {
 
         & identityRead @hidden
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+          mitre info: "Used for M1022: Restrict File and Directory Permissions"
           ->  attemptRead
 
         | attemptWrite @hidden
@@ -642,6 +644,7 @@ category DataResources {
 
         & identityWrite @hidden
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+          mitre info: "Used for M1022: Restrict File and Directory Permissions"
           ->  attemptWrite
 
         | attemptDelete @hidden
@@ -654,6 +657,7 @@ category DataResources {
 
         & identityDelete @hidden
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+          mitre info: "Used for M1022: Restrict File and Directory Permissions"
           ->  attemptDelete
 
         & successfulRead @hidden
@@ -729,10 +733,12 @@ category DataResources {
 
         & eavesdrop {C}
           user info: "Evasdrop on Data could lead to read access on unencrypted Data."
+          mitre info: "Used for T1040: Network Sniffing"
           ->  attemptRead
 
         & manInTheMiddle {C, I}
           user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
+          mitre info: "Used for T1557: Man-in-the-Middle"
           ->  attemptRead,
               attemptWrite,
               attemptApplicationRespondConnect
@@ -873,6 +879,7 @@ category IAM {
 
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
+        mitre info: "Used for T1110.003,.004: Brute Force: Password Spraying and Credential Stuffing"
         ->  attemptUse
 
       | attemptCredentialsReuse @hidden
@@ -953,6 +960,7 @@ category User {
 
         & passwordReuseCompromise
           user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
+          mitre info: "Used for T1110: Brute Force(when the guessed/leaked password is used for multiple accounts)"
           ->  userIds.credentials.attemptCredentialsReuse
 
         | weakCredentials @hidden
@@ -1111,10 +1119,12 @@ category Networking {
 
       # manInTheMiddleDefense
         user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        mitre info: "Used for M1042: Disable or Remove Feature or Program(removing legacy protocols)"
         ->  manInTheMiddle
 
       & eavesdrop {C}
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
+        mitre info: "Used for T1040: Network Sniffing"
         ->  successfulEavesdrop
 
       | bypassEavesdropProtection {C} [HardAndUncertain]
@@ -1127,6 +1137,7 @@ category Networking {
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transfered data over that network."
+        mitre info: "Used for T1557: Man-in-the-Middle"
         ->  successfulManInTheMiddle
 
       | bypassMitMProtection {C, I} [HardAndUncertain]
