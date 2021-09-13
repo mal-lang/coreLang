@@ -781,7 +781,7 @@ category IAM {
         user info: "It should be used to model the probability that the identity is actually not existing."
           ->  successfulAssume
 
-        & attemptAssume
+        | attemptAssume
           user info: "Attempt to assume the identity. In the case of multi-factor authentication all of the credentials associated with the identity must be compromised to successfully assume it."
           ->  successfulAssume
 
@@ -791,7 +791,7 @@ category IAM {
 
         | assume {C,I,A}
           user info: "After authentication or compromise of an account/identity, assume its privileges."
-          developer info: "This is both legitimate and illegitimate access! Also asume all the privilegs of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
+          developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
           ->  parentId.assume,
               memberOf.compromiseGroup,
               identityPrivileges.attemptAssume,
@@ -831,7 +831,7 @@ category IAM {
     {
       | compromiseGroup {C}
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
-        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inhertited plus additional privileges."
+        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
         ->  parentGroup.compromiseGroup,
             lowPrivManagedSystems.individualPrivilegeAuthenticate,
             highPrivManagedSystems.allPrivilegeAuthenticate,
@@ -847,26 +847,77 @@ category IAM {
       user info: "A credential is used to get access as an Identity but it can also be used as an encryption key for Data."
     {
       # notDisclosed [Enabled]
-          user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
-          ->  useLeakedCredentials
+        user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
+        ->  useLeakedCredentials
+
+      # notGuessable [Enabled]
+        user info: "Describes if the credentials can be guessed by the attacker(e. g. they represent a password or passphrase)."
+        ->  guessCredentials
+
+      # unique [Enabled]
+        user info: "Describes if the credentials are known to be unique and therefore cannot be used in a credentials reuse attack."
+        ->  credentialsReuse,
+            propagateOneCredentialCompromised
+
+      # notPhishable [Disabled]
+        user info: "Describes if the credentials cannot be phished(they are biometric, e. g. fingerprints or iris scans, or physical, e. g. access cards or keys, elements)."
+        ->  credentialTheft
 
       | useLeakedCredentials [EasyAndCertain]
-        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."   
+        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
+        ->  attemptUse
+
+      | attemptCredentialsReuse @hidden
+        developer info: "Intermediate step used to trigger the reuse attack step on other credentials belonging to the same user."
+        ->  credentialsReuse,
+            requiredFactors.attemptCredentialsReuse
+
+      & credentialsReuse
+        developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
+        ->  attemptUse
+
+      | attemptUse
+        user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  use
 
-      | use {C}
+      & use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
-            identities.users.oneCredentialCompromised
+            attemptPropagateOneCredentialCompromised,
+            credentials.use
+
+      | attemptPropagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  propagateOneCredentialCompromised
+
+      & propagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  credentials*.identities.users.oneCredentialCompromised
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
-        -> use
+        ->  attemptUse
 
-      | credentialTheft
+      | attemptCredentialTheft
+        developer info: "Intermediate step used to trigger the credential theft attack step."
+        ->  credentialTheft,
+            requiredFactors.attemptCredentialTheft
+
+      & credentialTheft
         user info: "The attacker is able to steal the credentials."
-        -> use
+        ->  attemptUse
+
+      | weakCredentials @hidden
+        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset."
+        ->  guessCredentials,
+            requiredFactors.weakCredentials
+
+      & guessCredentials [HardAndUncertain]
+        user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
+        developer info: "We should research the probability we want to use for this attack step more."
+        ->  attemptUse
+
     }
 }
 
@@ -883,6 +934,7 @@ category User {
           user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
               unforcedUnsafeUserActivity,
+              weakCredentials,
               deliverMaliciousRemovableMedia
 
         | oneCredentialCompromised @hidden
@@ -891,7 +943,11 @@ category User {
 
         & passwordReuseCompromise
           user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
-          ->  userIds.credentials.use
+          ->  userIds.credentials.attemptCredentialsReuse
+
+        | weakCredentials @hidden
+          user info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defence."
+          ->  userIds.credentials.weakCredentials
 
         | attemptSocialEngineering
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
@@ -910,7 +966,7 @@ category User {
         | credentialTheft [HardAndUncertain]
           developer info: "This attack is hard to happen but not harder than reverseTakeover."
           modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
-          ->  userIds.credentials.credentialTheft
+          ->  userIds.credentials.attemptCredentialTheft
 
         | attemptReverseTakeover
           user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed through its identity."
@@ -944,7 +1000,8 @@ category User {
 
         | unsafeUserActivity
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-          ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+          ->  userIds.attemptAssume,
+              userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
@@ -1257,13 +1314,15 @@ associations {
       user info: "Information can be replicated across multiple data assets that offer redundancy."
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
+  Credentials      [credentials]        * <-- ConditionalAuthentication --> * [requiredFactors]        Credentials
+      user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
   Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
       user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   Identity         [parentId]             * <-- CanAssume             --> *   [childId]                Identity
-      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance." 
+      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance."
   Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
   Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
   // First on system level

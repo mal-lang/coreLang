@@ -65,20 +65,6 @@ public class IdentityTest extends CoreLangTest {
         attacker.addAttackPoint(model.creds1.attemptAccess);
         attacker.attack();
 
-        model.identity.successfulAssume.assertUncompromised();
-        model.identity.assume.assertUncompromised();
-    }
-
-    @Test
-    public void testIdentityMultipleCredentialsBothCompromised() {
-        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new IdentityTestMultipleCredentialsModel();
-
-        var attacker = new Attacker();
-        attacker.addAttackPoint(model.creds1.attemptAccess);
-        attacker.addAttackPoint(model.creds2.attemptAccess);
-        attacker.attack();
-
         model.identity.successfulAssume.assertCompromisedInstantaneously();
         model.identity.assume.assertCompromisedInstantaneously();
     }
