@@ -29,7 +29,8 @@ public class UserTest extends CoreLangTest {
 
         public final User user = new User("user");
 
-        public final Application application = new Application("application");
+        public final Application application = new Application("application",
+                false, true, false);
         public Identity identity;
 
         public UserTestModelNoCreds() {
@@ -58,9 +59,12 @@ public class UserTest extends CoreLangTest {
         assertReached(model.user.reverseTakeover);
 
         assertReached(model.credentials.credentialTheft);
-        assertReached(model.application.networkConnect);
 
+        assertReached(model.application.networkConnect);
         assertReached(model.identity.assume);
+
+        assertReached(model.application.fullAccess);
+
     }
 
     @Test
@@ -77,7 +81,10 @@ public class UserTest extends CoreLangTest {
         assertReached(model.user.credentialTheft);
         assertReached(model.user.reverseTakeover);
 
-        model.identity.assume.assertUncompromised();
+        model.application.networkConnect.assertUncompromised();
+        assertReached(model.identity.assume);
+
+        model.application.fullAccess.assertUncompromised();
     }
 
 }
