@@ -205,15 +205,32 @@ category ComputeResources {
 
       # airGapped
         developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
-        ->  networkConnectFromReverseTakeover
+        ->  networkConnectFromReverseTakeover,
+            reverseReach
 
       | networkConnect
-        user info: "An attacker can connect to any network exposed application."
-        ->  networkAccess,
-            specificAccessFromNetworkConnection,
+        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        ->  networkConnectWithoutTriggeringVulnerabilities,
             attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().networkAccessAchieved,
             softwareProductVulnerabilityNetworkAccessAchieved
+
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  networks.attemptReverseReach,
+            clientAccessNetworks.attemptReverseReach,
+            serverApplicationConnections().attemptReverseReach,
+            appExecutedApps.attemptReverseReach,
+            unsafeUserActivityConnect
+
+      | networkConnectWithoutTriggeringVulnerabilities @hidden
+        developer info: "This attack step is used if the network connection occurs via a filtered ConnectionRule, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
+        ->  networkAccess,
+            specificAccessFromNetworkConnection
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
@@ -255,7 +272,8 @@ category ComputeResources {
             clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
             clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
             attemptApplicationRespondConnectThroughData,
-            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
+            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
+            attemptReverseReach
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
@@ -301,7 +319,8 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
+            attemptReverseReach
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -309,10 +328,18 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
+      | attemptUnsafeUserActivityConnect @hidden
+        developer info: "Intermediate attack step."
+        ->  unsafeUserActivityConnect
+
+      & unsafeUserActivityConnect @hidden
+        developer info: "This attack step represents the user creating a connection to the attacker through their unsafe actions. It can only occur if the user can reach the attacker via networking assets and/or Applications"
+        ->  localConnect,
+            networkConnect
+
       | attemptUnsafeUserActivityWithLowPrivileges
         developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  localConnect,
-            networkConnect,
+        ->  attemptUnsafeUserActivityConnect,
             allVulnerabilities().lowPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityLowPrivilegesAchieved,
@@ -320,8 +347,7 @@ category ComputeResources {
 
       | attemptUnsafeUserActivityWithHighPrivileges
         developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  localConnect,
-            networkConnect,
+        ->  attemptUnsafeUserActivityConnect,
             allVulnerabilities().highPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityHighPrivilegesAchieved,
@@ -467,6 +493,48 @@ category DataResources {
     {
       | attemptAccess
         user info: "The attacker is attempting to access the information."
+
+      | attemptRead @hidden
+        developer info: "Intermediate attack step."
+        ->  read
+
+      & read
+        user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
+        ->  dataReplicas.read
+
+      | attemptWrite @hidden
+        developer info: "Intermediate attack step."
+        ->  write
+
+      & write
+        user info: "Data can be written only if replication has been broken."
+        -> dataReplicas.write
+
+      | attemptDelete @hidden
+        developer info: "Intermediate attack step."
+        ->  delete
+
+      & delete
+        user info: "Data can be delete only if replication has been broken."
+        -> dataReplicas.delete
+
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step."
+        ->  deny
+
+      & deny
+        user info: "Data can be denied only if replication has been broken."
+        -> dataReplicas.deny
+
+      & attemptBreakReplication @hidden
+        developer info: "Replication fails only if all of the replicas have been compromised."
+        -> breakReplication
+
+      | breakReplication @hidden
+        developer info: "If all the replicas have been compromised it is possible to write, delete, or deny the data."
+        -> write,
+           delete,
+           deny
     }
 
     asset Data
@@ -496,10 +564,18 @@ category DataResources {
           <-  encryptCreds
           ->  accessUnencryptedData
 
+        !E dataReplicated @hidden
+          user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
+          developer info: "Data will be considered as replicated if they have a Replica association with an Information asset."
+          <-  replicatedInformation
+          ->  unreplicatedWrite,
+              unreplicatedDelete,
+              unreplicatedDeny
+
         # authenticated
           user info: "If the data are authenticated, then modifying them is not possible to achieve."
           ->  containedData*.applicationRespondConnect,
-              containedData*.write,
+              containedData*.successfulWrite,
               containedData*.manInTheMiddle
 
         & accessUnencryptedData @hidden
@@ -513,19 +589,23 @@ category DataResources {
               applicationRespondConnect,
               eavesdrop,
               manInTheMiddle,
-              read,
-              write,
-              delete
+              successfulRead,
+              successfulWrite,
+              successfulDelete
 
         # dataNotPresent [Disabled]
           user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
           developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
           ->  accessUnencryptedData,
-              deny
+              successfulDeny
 
         & readContainedInformation
           user info: "From the data, attempt to access also the contained information, if exists."
           ->  information.attemptAccess
+
+        | overrideCredentials @hidden
+          developer info: "If the attacker is able to write data containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
+          ->  information[Credentials].attemptAccess
 
         | attemptApplicationRespondConnect @hidden
           developer info: "Intermediate attack step to handle defenses."
@@ -537,7 +617,7 @@ category DataResources {
 
         | attemptRead @hidden
           user info: "Attempt to read the data."
-          ->  read
+          ->  successfulRead
 
         | identityAttemptRead @hidden
           user info: "Attempt to read the data through a compormised identity."
@@ -549,7 +629,7 @@ category DataResources {
 
         | attemptWrite @hidden
           user info: "Attempt to write on the data."
-          ->  write
+          ->  successfulWrite
 
         | identityAttemptWrite @hidden
           user info: "Attempt to write the data through a compormised identity."
@@ -561,7 +641,7 @@ category DataResources {
 
         | attemptDelete @hidden
            user info: "Attempt to delete the data."
-          -> delete
+          -> successfulDelete
 
         | identityAttemptDelete @hidden
           user info: "Attempt to delete the data through a compormised identity."
@@ -571,26 +651,66 @@ category DataResources {
           developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
           ->  attemptDelete
 
-        & read {C}
+        & successfulRead @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  read
+
+        | read {C}
           user info: "The attacker can read the data."
           ->  containedData.attemptRead,
-              readContainedInformation
+              readContainedInformation,
+              replicatedInformation.attemptRead
 
-        & write {I}
+        | breakReplication @hidden
+          developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
+          ->  replicatedInformation.attemptBreakReplication
+
+        & successfulWrite @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptWrite,
+              breakReplication,
+              unreplicatedWrite
+
+        & unreplicatedWrite @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
+          ->  write
+
+        | write {I}
           user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
           ->  containedData.attemptWrite,
               attemptDelete,
-              compromiseAppOrigin
+              compromiseAppOrigin,
+              overrideCredentials
 
-        & delete {I,A}
+        & successfulDelete @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptDelete,
+              breakReplication,
+              unreplicatedDelete
+
+        & unreplicatedDelete @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
+          ->  delete
+
+        | delete {I,A}
           user info: "The attacker can delete the data."
           ->  containedData.attemptDelete
 
         | attemptDeny @hidden
           developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
+          ->  successfulDeny
+
+        & successfulDeny @hidden
+          developer info: "Intermediate attack step to model the requirements."
+          ->  replicatedInformation.attemptDeny,
+              breakReplication,
+              unreplicatedDeny
+
+        & unreplicatedDeny @hidden
+          developer info: "Intermediate attack step to be used if the data are not replicated."
           ->  deny
 
-        & deny {A}
+        | deny {A}
           user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
           ->  containedData.deny
 
@@ -657,34 +777,21 @@ category IAM {
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
-        # twoFactorAuthentication
-          user info: "Two Factor Authentication (2FA). This defense, if enabled, should block all atempts to assume identity illegitimately."
-          ->  successfulAssume
-
         # disabled [Disabled]
         user info: "It should be used to model the probability that the identity is actually not existing."
-          ->  successfulAssume,
-              successfulAssumeAfter2FA
+          ->  successfulAssume
 
         | attemptAssume
-          user info: "Attempt to assume the identity. If 2FA is enabled this will be not possible without first acquiring the 2FA token."
+          user info: "Attempt to assume the identity. In the case of multi-factor authentication all of the credentials associated with the identity must be compromised to successfully assume it."
           ->  successfulAssume
 
         & successfulAssume @hidden
           developer info: "Intermediate attack step to model the requirements for identity assume."
           ->  assume
 
-        | attemptAssumeAfter2FA
-          user info:"After 2FA is used, or stolen, assume of the identity can be achieved."
-          ->  successfulAssumeAfter2FA
-
-        & successfulAssumeAfter2FA @hidden
-          developer info: "Intermediate attack step to model the requirements for identity assume."
-          ->  assume
-
         | assume {C,I,A}
           user info: "After authentication or compromise of an account/identity, assume its privileges."
-          developer info: "This is both legitimate and illegitimate access! Also asume all the privilegs of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
+          developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
           ->  parentId.assume,
               memberOf.compromiseGroup,
               identityPrivileges.attemptAssume,
@@ -724,7 +831,7 @@ category IAM {
     {
       | compromiseGroup {C}
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
-        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inhertited plus additional privileges."
+        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
         ->  parentGroup.compromiseGroup,
             lowPrivManagedSystems.individualPrivilegeAuthenticate,
             highPrivManagedSystems.allPrivilegeAuthenticate,
@@ -740,27 +847,77 @@ category IAM {
       user info: "A credential is used to get access as an Identity but it can also be used as an encryption key for Data."
     {
       # notDisclosed [Enabled]
-          user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
-          ->  useLeakedCredentials
+        user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
+        ->  useLeakedCredentials
+
+      # notGuessable [Enabled]
+        user info: "Describes if the credentials can be guessed by the attacker(e. g. they represent a password or passphrase)."
+        ->  guessCredentials
+
+      # unique [Enabled]
+        user info: "Describes if the credentials are known to be unique and therefore cannot be used in a credentials reuse attack."
+        ->  credentialsReuse,
+            propagateOneCredentialCompromised
+
+      # notPhishable [Disabled]
+        user info: "Describes if the credentials cannot be phished(they are biometric, e. g. fingerprints or iris scans, or physical, e. g. access cards or keys, elements)."
+        ->  credentialTheft
 
       | useLeakedCredentials [EasyAndCertain]
-        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."   
+        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
+        ->  attemptUse
+
+      | attemptCredentialsReuse @hidden
+        developer info: "Intermediate step used to trigger the reuse attack step on other credentials belonging to the same user."
+        ->  credentialsReuse,
+            requiredFactors.attemptCredentialsReuse
+
+      & credentialsReuse
+        developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
+        ->  attemptUse
+
+      | attemptUse
+        user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  use
 
-      | use {C}
+      & use {C}
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
-            identities.users.attemptSteal2FAtoken,
-            identities.users.oneCredentialCompromised
+            attemptPropagateOneCredentialCompromised,
+            credentials.use
+
+      | attemptPropagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  propagateOneCredentialCompromised
+
+      & propagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  credentials*.identities.users.oneCredentialCompromised
 
       | attemptAccess
         user info: "The attacker is attempting to access the credentials."
-        -> use
+        ->  attemptUse
 
-      | credentialTheft
+      | attemptCredentialTheft @hidden
+        developer info: "Intermediate step used to trigger the credential theft attack step."
+        ->  credentialTheft,
+            requiredFactors.attemptCredentialTheft
+
+      & credentialTheft
         user info: "The attacker is able to steal the credentials."
-        -> use
+        ->  attemptUse
+
+      | weakCredentials @hidden
+        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset."
+        ->  guessCredentials,
+            requiredFactors.weakCredentials
+
+      & guessCredentials [HardAndUncertain]
+        user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
+        developer info: "We should research the probability we want to use for this attack step more."
+        ->  attemptUse
+
     }
 }
 
@@ -777,6 +934,7 @@ category User {
           user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
               unforcedUnsafeUserActivity,
+              weakCredentials,
               deliverMaliciousRemovableMedia
 
         | oneCredentialCompromised @hidden
@@ -785,7 +943,11 @@ category User {
 
         & passwordReuseCompromise
           user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
-          ->  userIds.credentials.use
+          ->  userIds.credentials.attemptCredentialsReuse
+
+        | weakCredentials @hidden
+          user info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defence."
+          ->  userIds.credentials.weakCredentials
 
         | attemptSocialEngineering
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
@@ -795,7 +957,6 @@ category User {
           user info: "An attacker can try to perform social engineering techniques such as phishing."
           developer info: "In the future, other social engineering techniques should be connected to this attack step."
           ->  phishUser,
-              steal2FAtoken,
               forcedUnsafeUserActivity
 
         | attemptCredentialTheft
@@ -805,7 +966,7 @@ category User {
         | credentialTheft [HardAndUncertain]
           developer info: "This attack is hard to happen but not harder than reverseTakeover."
           modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
-          ->  userIds.credentials.credentialTheft
+          ->  userIds.credentials.attemptCredentialTheft
 
         | attemptReverseTakeover
           user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed through its identity."
@@ -839,7 +1000,8 @@ category User {
 
         | unsafeUserActivity
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-          ->  userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
+          ->  userIds.attemptAssume,
+              userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
@@ -850,20 +1012,6 @@ category User {
           user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
           ->  attemptCredentialTheft,
               attemptReverseTakeover
-
-        | attemptSteal2FAtoken @hidden
-          developer info: "This intermediate attack step is needed in order to block steal 2FA attacks when no credential is on the model. It is hidden because otherwise it will be shown even though no 2FA token exists."
-          ->  steal2FAtoken
-
-        & steal2FAtoken [VeryHardAndUncertain]
-          user info: "Trick the user to provide the 2FA token. This practically 'bypasses' the 2FA protection."
-          developer info: "This attack is generally hard to happen but not harder than reverseTakeover."
-          modeler info: "The probability and its value are just estimations and are subject to change."
-          ->  userIds.attemptAssumeAfter2FA
-
-        | compromise {C}
-          user info: "Compromising the user leads to possible assumption of its identity(ies)."
-          ->  userIds.attemptAssume
     }
 }
 
@@ -912,7 +1060,18 @@ category Networking {
             clientApplications.networkRespondConnect,
             accessNetworkData,
             networkForwarding,
-            denialOfService
+            denialOfService,
+            attemptReverseReach
+
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections).attemptReverseReach,
+            clientApplications.attemptReverseReach,
+            applications.attemptReverseReach
 
       | networkForwarding
         developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
@@ -992,24 +1151,35 @@ category Networking {
       let clientApplications = (applications \/ outApplications)
       let serverApplications = (applications \/ inApplications)
 
-      # disabled [Disabled]
-        user info: "It should be used to model the probability that the connection rule is actually not existing."
+      # restricted [Disabled]
+        user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
         ->  accessNetworks,
             connectToApplications,
+            connectToApplicationsWithoutTriggeringVulnerabilities,
             transmit,
             transmitResponse,
             denialOfService,
             eavedropOnDataInTransit,
             manInTheMiddleOnDataInTransit,
             allowWriteDataInTransit,
-            allowDenyDataInTransit
+            allowDenyDataInTransit,
+            reverseReach
 
-      # filtered [Disabled]
+      # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication (i.e. network-level vulnerabilities cannot be exploited)."
-        ->  transmit,
-            transmitResponse
+        ->  connectToApplications,
+            reverseReach
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  clientApplications().attemptReverseReach,
+            (networks \/ outNetworks).attemptReverseReach
+
       | attemptAccessNetworks @hidden
         developer info: "Intermediate attack step."
         ->  accessNetworks
@@ -1020,11 +1190,16 @@ category Networking {
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
-        ->  connectToApplications
+        ->  connectToApplications,
+            connectToApplicationsWithoutTriggeringVulnerabilities
 
       & connectToApplications @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule."
         ->  serverApplications().networkConnect
+
+      & connectToApplicationsWithoutTriggeringVulnerabilities @hidden
+        developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but without triggering vulnerabilities on them. This attack step is used to allow legitimate traffic even when filtering is enabled on the connection."
+        ->  serverApplications().networkConnectWithoutTriggeringVulnerabilities
 
       | attemptTransmitResponse @hidden
         developer info: "Intermediate attack step."
@@ -1134,16 +1309,20 @@ associations {
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
-      user info: "Data can contain information, as for example credentials." 
+      user info: "Data can contain information, as for example credentials."
+  Data             [dataReplicas]          * <-- Replica                --> *   [replicatedInformation]  Information
+      user info: "Information can be replicated across multiple data assets that offer redundancy."
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
+  Credentials      [credentials]        * <-- ConditionalAuthentication --> * [requiredFactors]        Credentials
+      user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
   Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
       user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained." 
   // ### Access Control happens below
   Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
   Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
   Identity         [parentId]             * <-- CanAssume             --> *   [childId]                Identity
-      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance." 
+      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance."
   Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
   Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
   // First on system level
