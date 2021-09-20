@@ -604,7 +604,7 @@ category DataResources {
           ->  information.attemptAccess
 
         | overrideCredentials @hidden
-          developer info: "If the attacker is able to write data containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
+          developer info: "If the attacker is able to write the data containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
           ->  information[Credentials].attemptAccess
 
         | attemptApplicationRespondConnect @hidden
@@ -862,6 +862,10 @@ category IAM {
       # notPhishable [Disabled]
         user info: "Describes if the credentials cannot be phished(they are biometric, e. g. fingerprints or iris scans, or physical, e. g. access cards or keys, elements)."
         ->  credentialTheft
+
+      & write @Override
+        developer info: "If the attacker is able to write the information containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
+        +> attemptUse
 
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
