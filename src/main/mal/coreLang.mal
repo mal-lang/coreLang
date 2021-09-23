@@ -782,7 +782,7 @@ category IAM {
           ->  successfulAssume
 
         | attemptAssume
-          user info: "Attempt to assume the identity. In the case of multi-factor authentication all of the credentials associated with the identity must be compromised to successfully assume it."
+          user info: "Attempt to assume the identity."
           ->  successfulAssume
 
         & successfulAssume @hidden
@@ -1000,6 +1000,7 @@ category User {
 
         | unsafeUserActivity
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
+          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario."
           ->  userIds.attemptAssume,
               userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
               userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
