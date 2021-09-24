@@ -194,19 +194,9 @@ category ComputeResources {
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
-      | attemptNetworkConnectFromReverseTakeover
-        developer info: "Intermediate attack step to model an attempted reverse takeover."
-        ->  networkConnectFromReverseTakeover
-
-      & networkConnectFromReverseTakeover
-        developer info: "An attacker may attempt a reverse takeover by having the user initiate an unsafe connection to a system controlled by the attacker."
-        ->  networkConnect,
-            localConnect
-
       # airGapped
         developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
-        ->  networkConnectFromReverseTakeover,
-            reverseReach
+        ->  reverseReach
 
       | networkConnect
         user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
@@ -968,18 +958,9 @@ category User {
           ->  credentialTheft
 
         | credentialTheft [HardAndUncertain]
-          developer info: "This attack is hard to happen but not harder than reverseTakeover."
+          developer info: "This attack is hard to happen."
           modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
           ->  userIds.credentials.attemptCredentialTheft
-
-        | attemptReverseTakeover
-          user info: "After a successful social enginnering attack on a user, a reverse connection can be established on the applications executed through its identity."
-          ->  reverseTakeover
-
-        | reverseTakeover [Exponential(0.1)]
-          developer info: "This attack is harder to happen because it requires more bad effort from the victim."
-          modeler info: "The probability and its value are just estimations and are subject to change."
-          ->  userIds.execPrivApps.attemptNetworkConnectFromReverseTakeover
 
         | attemptDeliverMaliciousRemovableMedia
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
@@ -1014,9 +995,8 @@ category User {
               userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
 
         | phishUser
-          user info: "The attacker can phish the user to gain access to his/her credentials or to make him run a malicous payload that will lead to reverse connection/takeover."
-          ->  attemptCredentialTheft,
-              attemptReverseTakeover
+          user info: "The attacker can phish the user to gain access to their credentials."
+          ->  attemptCredentialTheft
     }
 }
 
