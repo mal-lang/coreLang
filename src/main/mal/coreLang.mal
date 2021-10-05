@@ -171,15 +171,8 @@ category ComputeResources {
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability,
-            useVulnerability
-
-      | localConnect
-        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
-        ->  localAccess,
-            specificAccessFromLocalConnection,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
-            allVulnerabilities().localAccessAchieved,
-            softwareProductVulnerabilityLocalAccessAchieved
+            useVulnerability,
+            reverseReach
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
@@ -194,18 +187,7 @@ category ComputeResources {
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
-      # airGapped
-        developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
-        ->  reverseReach
-
-      | networkConnect
-        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
-        ->  networkConnectWithoutTriggeringVulnerabilities,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
-            allVulnerabilities().networkAccessAchieved,
-            softwareProductVulnerabilityNetworkAccessAchieved
-
-      | attemptReverseReach @hidden
+      | attemptReverseReach
         developer info: "Intermediate attack step."
         ->  reverseReach
 
@@ -215,7 +197,23 @@ category ComputeResources {
             clientAccessNetworks.attemptReverseReach,
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
-            unsafeUserActivityConnect
+            unsafeUserActivityWithLowPrivilegesWithAttackerInteraction,
+            unsafeUserActivityWithHighPrivilegesWithAttackerInteraction
+
+      | localConnect
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
+        ->  localAccess,
+            specificAccessFromLocalConnection,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().localAccessAchieved,
+            softwareProductVulnerabilityLocalAccessAchieved
+
+      | networkConnect
+        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        ->  networkConnectWithoutTriggeringVulnerabilities,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().networkAccessAchieved,
+            softwareProductVulnerabilityNetworkAccessAchieved
 
       | networkConnectWithoutTriggeringVulnerabilities @hidden
         developer info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
@@ -262,8 +260,7 @@ category ComputeResources {
             clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
             clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
             attemptApplicationRespondConnectThroughData,
-            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
-            attemptReverseReach
+            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
@@ -309,8 +306,7 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
-            attemptReverseReach
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -318,34 +314,53 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-      | attemptUnsafeUserActivityConnect @hidden
-        developer info: "Intermediate attack step."
-        ->  unsafeUserActivityConnect
+      | attemptUnsafeUserActivtyWithLowPrivilegesImpact @hidden
+        ->  unsafeUserActivtyWithLowPrivilegesImpact
 
-      & unsafeUserActivityConnect @hidden
-        developer info: "This attack step represents the user creating a connection to the attacker through their unsafe actions. It can only occur if the user can reach the attacker via networking assets and/or Applications"
+      & unsafeUserActivtyWithLowPrivilegesImpact
         ->  localConnect,
-            networkConnect
-
-      | attemptUnsafeUserActivityWithLowPrivileges
-        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  attemptUnsafeUserActivityConnect,
+            networkConnect,
             allVulnerabilities().lowPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityLowPrivilegesAchieved,
             softwareProductVulnerabilityUserInteractionAchieved
 
-      | attemptUnsafeUserActivityWithHighPrivileges
-        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  attemptUnsafeUserActivityConnect,
+      | attemptUnsafeUserActivtyWithHighPrivilegesImpact @hidden
+        ->  unsafeUserActivtyWithHighPrivilegesImpact
+
+      & unsafeUserActivtyWithHighPrivilegesImpact
+        ->  localConnect,
+            networkConnect,
             allVulnerabilities().highPrivilegesAchieved,
             allVulnerabilities().userInteractionAchieved,
             softwareProductVulnerabilityHighPrivilegesAchieved,
             softwareProductVulnerabilityUserInteractionAchieved
 
+      & unsafeUserActivityWithLowPrivilegesWithAttackerInteraction @hidden
+        ->  attemptUnsafeUserActivtyWithLowPrivilegesImpact
+
+      & unsafeUserActivityWithHighPrivilegesWithAttackerInteraction @hidden
+        ->  attemptUnsafeUserActivtyWithHighPrivilegesImpact
+
+      | unsafeUserActivityWithLowPrivilegesWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
+        ->  attemptUnsafeUserActivtyWithLowPrivilegesImpact
+
+      | unsafeUserActivityWithHighPrivilegesWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
+        ->  attemptUnsafeUserActivtyWithHighPrivilegesImpact
+
+      | attemptUnsafeUserActivityWithLowPrivileges @hidden
+        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  unsafeUserActivityWithLowPrivilegesWithAttackerInteraction,
+            unsafeUserActivityWithLowPrivilegesWithoutAttackerInteraction
+
+      | attemptUnsafeUserActivityWithHighPrivileges @hidden
+        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  unsafeUserActivityWithHighPrivilegesWithAttackerInteraction,
+            unsafeUserActivityWithHighPrivilegesWithoutAttackerInteraction
+
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
-        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigationin icsLang as designed by Sotirios."
+        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
@@ -477,7 +492,10 @@ category ComputeResources {
 
       | protectionBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
-        ->  protectedApps.useVulnerability
+        ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
+            protectedApps.unsafeUserActivtyWithLowPrivilegesImpact,
+            protectedApps.unsafeUserActivtyWithHighPrivilegesImpact
+
 
       | fullAccess {C,I,A}
         +>  protectionBypassed // The application is no longer able to protect the apps assigned to it

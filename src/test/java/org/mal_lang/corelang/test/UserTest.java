@@ -11,13 +11,14 @@ public class UserTest extends CoreLangTest {
         public final Credentials credentials = new Credentials("credentials");
         public final Application application;
         public Identity identity;
+        public boolean reverseReachable;
 
         public UserTestModel(boolean hasCredentials,
                 boolean reverseReachable)
         {
-          application = new Application("application", false,
-                  !reverseReachable, false);
+          application = new Application("application", false, false);
           identity = new Identity("identity", false);
+          this.reverseReachable = reverseReachable;
           user.addUserIds(identity);
           if (hasCredentials)
           {
@@ -28,7 +29,10 @@ public class UserTest extends CoreLangTest {
 
         public void addAttacker(Attacker attacker) {
           attacker.addAttackPoint(user.attemptSocialEngineering);
-          attacker.addAttackPoint(application.attemptReverseReach);
+          if (reverseReachable)
+          {
+              attacker.addAttackPoint(application.attemptReverseReach);
+          }
         }
 
     }
@@ -50,8 +54,7 @@ public class UserTest extends CoreLangTest {
 
         assertReached(model.identity.assume);
 
-        model.application.networkConnect.assertUncompromised();
-        model.application.fullAccess.assertUncompromised();
+        model.application.fullAccess.assertCompromisedWithEffort();
     }
 
     @Test
@@ -70,8 +73,7 @@ public class UserTest extends CoreLangTest {
 
         assertReached(model.identity.assume);
 
-        model.application.networkConnect.assertUncompromised();
-        model.application.fullAccess.assertUncompromised();
+        model.application.fullAccess.assertCompromisedWithEffort();
     }
 
     @Test
@@ -91,7 +93,6 @@ public class UserTest extends CoreLangTest {
 
         assertReached(model.identity.assume);
 
-        assertReached(model.application.networkConnect);
         assertReached(model.application.fullAccess);
 
     }
@@ -112,7 +113,6 @@ public class UserTest extends CoreLangTest {
 
         assertReached(model.identity.assume);
 
-        assertReached(model.application.networkConnect);
         assertReached(model.application.fullAccess);
     }
 
