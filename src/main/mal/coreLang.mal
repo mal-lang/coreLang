@@ -879,7 +879,9 @@ category IAM {
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
             attemptPropagateOneCredentialCompromised,
-            credentials.use
+            credentials.use,
+            hashes.attemptUse,
+            origCreds.guessCredentialsFromHash
 
       | attemptPropagateOneCredentialCompromised @hidden
         developer info: "Intermediate step used to propagate the credentials reuse attack step."
@@ -906,6 +908,15 @@ category IAM {
         developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset."
         ->  guessCredentials,
             requiredFactors.weakCredentials
+
+      !E credsHashed @hidden
+          developer info: "If there are no associated hashes the assumption is that the credentials are guessable without any additional requirements."
+          <-  hashes
+          ->  guessCredentialsFromHash
+
+      | guessCredentialsFromHash @hidden
+          developer info: "If hashes are associated with this Credentials asset the assumption is that one of those hashes is required by the attacker to be able to perform a guessing attack."
+        ->  guessCredentials
 
       & guessCredentials [HardAndUncertain]
         user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
@@ -1295,11 +1306,13 @@ associations {
       user info: "A system can host data."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials."
-  Data             [dataReplicas]          * <-- Replica                --> *   [replicatedInformation]  Information
+  Data             [dataReplicas]          * <-- Replica                --> * [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
-  Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
+  Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1 [encryptCreds]          Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
-  Credentials      [credentials]        * <-- ConditionalAuthentication --> * [requiredFactors]        Credentials
+  Credentials      [hashes]               * <-- HashedCredentials     --> 0..1 [origCreds]             Credentials
+      user info: "Credentials can be associated with their hashed counterparts. Multiple hashes can be generated for the same Credentials, but a hash is unique to one set of Credentials."
+  Credentials      [credentials]          * <-- ConditionalAuthentication --> *[requiredFactors]        Credentials
       user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
   Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
       user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained." 
