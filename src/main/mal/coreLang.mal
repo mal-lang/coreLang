@@ -200,7 +200,9 @@ category ComputeResources {
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
             unsafeUserActivityWithLowPrivilegesWithAttackerInteraction,
-            unsafeUserActivityWithHighPrivilegesWithAttackerInteraction
+            unsafeUserActivityWithHighPrivilegesWithAttackerInteraction,
+            containedData.attemptReverseReach,
+            transitData.attemptReverseReach
 
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
@@ -686,7 +688,8 @@ category DataResources {
           user info: "The attacker can read the data."
           ->  containedData.attemptRead,
               readContainedInformation,
-              replicatedInformation.attemptRead
+              replicatedInformation.attemptRead,
+              extract
 
         | breakReplication @hidden
           developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
@@ -791,6 +794,17 @@ category DataResources {
         & denyDataInTransit @hidden {C, I}
           developer info: "For Data in transit to be denied via an Application they have to be reachable from an outgoing ConnectionRule as well."
           ->  attemptDeny
+
+        | attemptReverseReach @hidden
+          developer info: "Intermediate attack step."
+          ->  reverseReach
+
+        & reverseReach @hidden
+          ->  extract,
+              containedData.attemptReverseReach
+
+        & extract
+          ->  information.attemptRead
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
