@@ -111,7 +111,8 @@ category ComputeResources {
 
       & unsafeUserActivityWithHighPrivileges
         user info: "A user with high privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithHighPrivileges
+        ->  sysExecutedApps.attemptUnsafeUserActivityWithHighPrivileges,
+            sysExecutedApps.physicalAccessAchieved
 
       | attemptUnsafeUserActivityWithLowPrivileges @hidden
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
@@ -119,7 +120,8 @@ category ComputeResources {
 
       & unsafeUserActivityWithLowPrivileges
         user info: "A user with low privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithLowPrivileges
+        ->  sysExecutedApps.attemptUnsafeUserActivityWithLowPrivileges,
+            sysExecutedApps.physicalAccessAchieved
 
       | deny {A}
         user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
