@@ -1195,8 +1195,6 @@ category Networking {
             transmit,
             transmitResponse,
             denialOfService,
-            eavedropOnDataInTransit,
-            manInTheMiddleOnDataInTransit,
             allowWriteDataInTransit,
             allowDenyDataInTransit,
             reverseReach
@@ -1261,22 +1259,6 @@ category Networking {
 
       & denialOfService {A}
         ->  allApplications().denyFromNetworkingAsset
-
-      | attemptEavesdropOnDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  eavedropOnDataInTransit
-
-      & eavedropOnDataInTransit @hidden
-        user info: "Via a ConnectionRule an eavesdrop attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
-        ->  allApplications().transitData.attemptEavesdrop
-
-      | attemptManInTheMiddleOnDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  manInTheMiddleOnDataInTransit
-
-      & manInTheMiddleOnDataInTransit @hidden
-        user info: "Via a ConnectionRule a MitM attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
-        ->  clientApplications().transitData.attemptManInTheMiddle
 
       | attemptAllowWriteDataInTransit @hidden
         developer info: "Intermediate attack step."
