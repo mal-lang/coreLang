@@ -554,6 +554,13 @@ category DataResources {
           <-  encryptCreds
           ->  accessUnencryptedData
 
+        !E dataSigned @hidden
+          user info: "If the data are authenticated, then modifying them is not possible to achieve."
+          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+          <-  signingCreds
+          ->  accessUnsignedData
+
+
         !E dataReplicated @hidden
           user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
           developer info: "Data will be considered as replicated if they have a Replica association with an Information asset."
@@ -562,15 +569,19 @@ category DataResources {
               unreplicatedDelete,
               unreplicatedDeny
 
-        # authenticated
-          user info: "If the data are authenticated, then modifying them is not possible to achieve."
+        & accessUnencryptedData @hidden
+          user info: "If data are unencrypted then access them."
+          ->  accessDecryptedData
+
+        & accessUnsignedData @hidden
+          user info: "If data are unsigned then alter them."
+          ->  accessSpoofedData
+
+        | accessSpoofedData @hidden
+          user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
           ->  containedData*.applicationRespondConnect,
               containedData*.successfulWrite,
               containedData*.manInTheMiddle
-
-        & accessUnencryptedData @hidden
-          user info: "If data is unencrypted then access them."
-          ->  accessDecryptedData
 
         | accessDecryptedData @hidden
           user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
@@ -878,6 +889,7 @@ category IAM {
         user info: "Someone is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
+            signedData.accessSpoofedData,
             attemptPropagateOneCredentialCompromised,
             credentials.use
 
@@ -1299,6 +1311,8 @@ associations {
       user info: "Information can be replicated across multiple data assets that offer redundancy."
   Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1[encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
+  Data             [signedData]           * <-- SigningCredentials    --> 0..1[signingCreds]           Credentials
+      user info: "Signed data can be associated with the relevant signing credentials."
   Credentials      [credentials]        * <-- ConditionalAuthentication --> * [requiredFactors]        Credentials
       user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
   Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct

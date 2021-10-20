@@ -12,8 +12,8 @@ public class DataPrivilegesTest extends CoreLangTest {
         public final Identity anyone = new Identity("anyone");
         public final Identity noone; // optional
 
-        public final Data outerData = new Data("outerData", false, false);
-        public final Data innerData = new Data("innerData", false, false);
+        public final Data outerData = new Data("outerData", false);
+        public final Data innerData = new Data("innerData", false);
 
         public ApplicationToDataModel(boolean readAccess, boolean writeAccess, boolean deleteAccess, boolean complementIdentity) {
             anyone.addLowPrivApps(app);
@@ -184,10 +184,16 @@ public class DataPrivilegesTest extends CoreLangTest {
 
         public final Data outerData;
         public final Data innerData;
+        public final Credentials signingCreds;
 
         public NetworkToDataModel(boolean isAuthenticated) {
-            this.outerData = new Data("outerData", isAuthenticated, false);
-            this.innerData = new Data("innerData", false, false); // NOTE: never authenticated.
+            this.outerData = new Data("outerData", false);
+            this.innerData = new Data("innerData", false); // NOTE: never authenticated.
+            this.signingCreds = new Credentials("signingCreds");
+
+            if (isAuthenticated) {
+                outerData.addSigningCreds(signingCreds);
+            }
 
             network.addTransitData(outerData);
 
@@ -240,14 +246,19 @@ public class DataPrivilegesTest extends CoreLangTest {
     private static class DataToDataModel {
 
         public final Data top;
-
         public final Data mid;
         public final Data bot;
+        public final Credentials signingCreds;
 
         public DataToDataModel(boolean isMidAuthenticated) {
-            this.top = new Data("top", false, false);
-            this.mid = new Data("mid", isMidAuthenticated, false); // NOTE: never authenticated.
-            this.bot = new Data("bot", false, false); // NOTE: never authenticated.
+            this.top = new Data("top", false); // NOTE: never authenticated.
+            this.mid = new Data("mid", false);
+            this.bot = new Data("bot", false); // NOTE: never authenticated.
+            this.signingCreds = new Credentials("signingCreds");
+
+            if (isMidAuthenticated) {
+                mid.addSigningCreds(signingCreds);
+            }
 
             top.addContainedData(mid);
             mid.addContainedData(bot);
