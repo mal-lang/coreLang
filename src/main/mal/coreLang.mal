@@ -102,25 +102,15 @@ category ComputeResources {
         developer info: "But it does not protect against denial of service attacks."
         ->  attemptConnect,
             attemptUsePhysicalVulnerability,
-            unsafeUserActivityWithHighPrivileges,
-            unsafeUserActivityWithLowPrivileges
+            unsafeUserActivity
 
-      | attemptUnsafeUserActivityWithHighPrivileges @hidden
+      | attemptUnsafeUserActivity
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
-        ->  unsafeUserActivityWithHighPrivileges
+        ->  unsafeUserActivity
 
-      & unsafeUserActivityWithHighPrivileges
-        user info: "A user with high privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithHighPrivileges,
-            sysExecutedApps.physicalAccessAchieved
-
-      | attemptUnsafeUserActivityWithLowPrivileges @hidden
-        user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
-        ->  unsafeUserActivityWithLowPrivileges
-
-      & unsafeUserActivityWithLowPrivileges
-        user info: "A user with low privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithLowPrivileges,
+      & unsafeUserActivity
+        user info: "A user is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        ->  sysExecutedApps.attemptUnsafeUserActivity,
             sysExecutedApps.physicalAccessAchieved
 
       | deny {A}
@@ -190,7 +180,8 @@ category ComputeResources {
             denyAfterSoftProdVulnerability
 
       | attemptReverseReach
-        developer info: "Intermediate attack step."
+        developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
+        modeller info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeller if the attacker is assumed to have reverse reachability on it."
         ->  reverseReach
 
       & reverseReach @hidden
@@ -199,8 +190,7 @@ category ComputeResources {
             clientAccessNetworks.attemptReverseReach,
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
-            unsafeUserActivityWithLowPrivilegesWithAttackerInteraction,
-            unsafeUserActivityWithHighPrivilegesWithAttackerInteraction,
+            unsafeUserActivityWithAttackerInteraction,
             containedData.attemptReverseReach,
             sentData.attemptReverseReach,
             receivedData.attemptReverseReach,
@@ -319,49 +309,28 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-      | attemptUnsafeUserActivtyWithLowPrivilegesImpact @hidden
-        ->  unsafeUserActivtyWithLowPrivilegesImpact
+      | attemptUnsafeActivityByUser @hidden
+        developer info: "Intermediate attack step."
+        ->  unsafeActivityByUser
 
-      & unsafeUserActivtyWithLowPrivilegesImpact
+      & unsafeActivityByUser
+        user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
             networkConnect,
-            allVulnerabilities().lowPrivilegesAchieved,
-            allVulnerabilities().userInteractionAchieved,
-            softwareProductVulnerabilityLowPrivilegesAchieved,
-            softwareProductVulnerabilityUserInteractionAchieved
+            allVulnerabilities().userInteractionAchieved
 
-      | attemptUnsafeUserActivtyWithHighPrivilegesImpact @hidden
-        ->  unsafeUserActivtyWithHighPrivilegesImpact
+      & unsafeUserActivityWithAttackerInteraction @hidden
+        developer info: "The attacker can be reached from this application and can therefore more easily exploit the unsafe user actions."
+        ->  attemptUnsafeActivityByUser
 
-      & unsafeUserActivtyWithHighPrivilegesImpact
-        ->  localConnect,
-            networkConnect,
-            allVulnerabilities().highPrivilegesAchieved,
-            allVulnerabilities().userInteractionAchieved,
-            softwareProductVulnerabilityHighPrivilegesAchieved,
-            softwareProductVulnerabilityUserInteractionAchieved
+      | unsafeUserActivityWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
+        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done before and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements its counterpart is missing."
+        ->  attemptUnsafeActivityByUser
 
-      & unsafeUserActivityWithLowPrivilegesWithAttackerInteraction @hidden
-        ->  attemptUnsafeUserActivtyWithLowPrivilegesImpact
-
-      & unsafeUserActivityWithHighPrivilegesWithAttackerInteraction @hidden
-        ->  attemptUnsafeUserActivtyWithHighPrivilegesImpact
-
-      | unsafeUserActivityWithLowPrivilegesWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
-        ->  attemptUnsafeUserActivtyWithLowPrivilegesImpact
-
-      | unsafeUserActivityWithHighPrivilegesWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
-        ->  attemptUnsafeUserActivtyWithHighPrivilegesImpact
-
-      | attemptUnsafeUserActivityWithLowPrivileges @hidden
-        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  unsafeUserActivityWithLowPrivilegesWithAttackerInteraction,
-            unsafeUserActivityWithLowPrivilegesWithoutAttackerInteraction
-
-      | attemptUnsafeUserActivityWithHighPrivileges @hidden
-        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  unsafeUserActivityWithHighPrivilegesWithAttackerInteraction,
-            unsafeUserActivityWithHighPrivilegesWithoutAttackerInteraction
+      | attemptUnsafeUserActivity @hidden
+        developer info: "This attack step represents a user with privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  unsafeUserActivityWithAttackerInteraction,
+            unsafeUserActivityWithoutAttackerInteraction
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
@@ -497,8 +466,7 @@ category ComputeResources {
       | protectionBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
         ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
-            protectedApps.unsafeUserActivtyWithLowPrivilegesImpact,
-            protectedApps.unsafeUserActivtyWithHighPrivilegesImpact
+            protectedApps.unsafeActivityByUser
 
 
       | fullAccess {C,I,A}
@@ -1020,8 +988,9 @@ category User {
         & deliverMaliciousRemovableMedia [Exponential(0.01)]
           user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
           developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
-          ->  userIds.highPrivManagedSystems.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.lowPrivManagedSystems.attemptUnsafeUserActivityWithLowPrivileges
+          ->  userIds.attemptAssume,
+              userIds.highPrivManagedSystems.attemptUnsafeUserActivity,
+              userIds.lowPrivManagedSystems.attemptUnsafeUserActivity
 
 
         & forcedUnsafeUserActivity [Exponential(0.05)]
@@ -1038,12 +1007,12 @@ category User {
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
           modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario."
           ->  userIds.attemptAssume,
-              userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges,
-              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
+              userIds.execPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
+              userIds.highPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivity,
+              userIds.lowPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
 
         | phishUser
           user info: "The attacker can phish the user to gain access to their credentials."
