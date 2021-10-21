@@ -946,7 +946,7 @@ category User {
         # securityAwareness
           user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
-              unforcedUnsafeUserActivity,
+              unsafeUserActivity,
               weakCredentials,
               deliverMaliciousRemovableMedia
 
@@ -966,20 +966,11 @@ category User {
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
           ->  socialEngineering
 
-        & socialEngineering
+        & socialEngineering @hidden
           user info: "An attacker can try to perform social engineering techniques such as phishing."
           developer info: "In the future, other social engineering techniques should be connected to this attack step."
           ->  phishUser,
-              forcedUnsafeUserActivity
-
-        | attemptCredentialTheft
-          user info: "Trick the user to provide his/her credentials."
-          ->  credentialTheft
-
-        | credentialTheft [HardAndUncertain]
-          developer info: "This attack is hard to happen."
-          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
-          ->  userIds.credentials.attemptCredentialTheft
+              unsafeUserActivity
 
         | attemptDeliverMaliciousRemovableMedia
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
@@ -992,20 +983,22 @@ category User {
               userIds.highPrivManagedSystems.attemptUnsafeUserActivity,
               userIds.lowPrivManagedSystems.attemptUnsafeUserActivity
 
+        | phishUser
+          user info: "The attacker can phish the user to gain access to their credentials."
+          ->  attemptCredentialTheft
 
-        & forcedUnsafeUserActivity [Exponential(0.05)]
-          developer info: "This attack models the unsafe user actions induced by an attacker pursuing social engineering."
-          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
-          ->  unsafeUserActivity
+        | attemptCredentialTheft @hidden
+          user info: "Trick the user to provide his/her credentials."
+          ->  credentialTheft
 
-        & unforcedUnsafeUserActivity [Exponential(0.03)]
-          developer info: "This attack models the unsafe user actions that are not directly caused by the attacker's actions, but rather but a lack of security awareness and training of the user."
-          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
-          ->  unsafeUserActivity
+        | credentialTheft [HardAndUncertain]
+          developer info: "This attack is hard to happen."
+          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
+          ->  userIds.credentials.attemptCredentialTheft
 
-        | unsafeUserActivity
+        & unsafeUserActivity [Exponential(0.03)]
           developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario."
+          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
           ->  userIds.attemptAssume,
               userIds.execPrivApps.attemptUnsafeUserActivity,
               userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
@@ -1014,9 +1007,6 @@ category User {
               userIds.lowPrivApps.attemptUnsafeUserActivity,
               userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
 
-        | phishUser
-          user info: "The attacker can phish the user to gain access to their credentials."
-          ->  attemptCredentialTheft
     }
 }
 
