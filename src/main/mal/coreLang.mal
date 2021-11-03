@@ -653,7 +653,7 @@ category DataResources {
           ->  read
 
         | read {C}
-          user info: "The attacker can read the data."
+          user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
           ->  containedData.attemptRead,
               readContainedInformation,
               replicatedInformation.attemptRead,
@@ -768,10 +768,12 @@ category DataResources {
           ->  reverseReach
 
         & reverseReach @hidden
+          developer info: "Reverse reach for Data is used to determine whether or not the data can be transferred to attacker."
           ->  extract,
               containedData.attemptReverseReach
 
         & extract
+          user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
           ->  information.attemptRead
 
         | compromiseAppOrigin
