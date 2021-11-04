@@ -35,8 +35,8 @@ public class DataInTransitTest extends CoreLangTest {
         public DataInTransitTestModel() {
             app.addIngoingAppConnections(connIn);
             app.addOutgoingAppConnections(connOut);
-            app.addTransitData(dataIn);
-            app.addTransitData(dataOut);
+            app.addReceivedData(dataIn);
+            app.addSentData(dataOut);
             connIn.addNetworks(netA);
             connOut.addNetworks(netB);
             netA.addTransitData(dataIn);

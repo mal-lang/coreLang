@@ -102,24 +102,16 @@ category ComputeResources {
         developer info: "But it does not protect against denial of service attacks."
         ->  attemptConnect,
             attemptUsePhysicalVulnerability,
-            unsafeUserActivityWithHighPrivileges,
-            unsafeUserActivityWithLowPrivileges
+            unsafeUserActivity
 
-      | attemptUnsafeUserActivityWithHighPrivileges @hidden
+      | attemptUnsafeUserActivity
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
-        ->  unsafeUserActivityWithHighPrivileges
+        ->  unsafeUserActivity
 
-      & unsafeUserActivityWithHighPrivileges
-        user info: "A user with high privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithHighPrivileges
-
-      | attemptUnsafeUserActivityWithLowPrivileges @hidden
-        user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
-        ->  unsafeUserActivityWithLowPrivileges
-
-      & unsafeUserActivityWithLowPrivileges
-        user info: "A user with low privileges on the system is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
-        ->  sysExecutedApps.attemptUnsafeUserActivityWithLowPrivileges
+      & unsafeUserActivity
+        user info: "A user is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        ->  sysExecutedApps.attemptUnsafeUserActivity,
+            sysExecutedApps.physicalAccessAchieved
 
       | deny {A}
         user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
@@ -171,15 +163,8 @@ category ComputeResources {
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability,
-            useVulnerability
-
-      | localConnect
-        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
-        ->  localAccess,
-            specificAccessFromLocalConnection,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
-            allVulnerabilities().localAccessAchieved,
-            softwareProductVulnerabilityLocalAccessAchieved
+            useVulnerability,
+            reverseReach
 
       | attemptUseVulnerability
         user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
@@ -194,19 +179,9 @@ category ComputeResources {
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability
 
-      # airGapped
-        developer info: "An Application that is within an airgapped network cannot initiate any connections outside the local network"
-        ->  reverseReach
-
-      | networkConnect
-        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
-        ->  networkConnectWithoutTriggeringVulnerabilities,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
-            allVulnerabilities().networkAccessAchieved,
-            softwareProductVulnerabilityNetworkAccessAchieved
-
-      | attemptReverseReach @hidden
-        developer info: "Intermediate attack step."
+      | attemptReverseReach
+        developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
+        modeller info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeller if the attacker is assumed to have reverse reachability on it."
         ->  reverseReach
 
       & reverseReach @hidden
@@ -215,7 +190,26 @@ category ComputeResources {
             clientAccessNetworks.attemptReverseReach,
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
-            unsafeUserActivityConnect
+            unsafeUserActivityWithAttackerInteraction,
+            containedData.attemptReverseReach,
+            sentData.attemptReverseReach,
+            receivedData.attemptReverseReach,
+            networkConnectViaResponse
+
+      | localConnect
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
+        ->  localAccess,
+            specificAccessFromLocalConnection,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().localAccessAchieved,
+            softwareProductVulnerabilityLocalAccessAchieved
+
+      | networkConnect
+        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        ->  networkConnectWithoutTriggeringVulnerabilities,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().networkAccessAchieved,
+            softwareProductVulnerabilityNetworkAccessAchieved
 
       | networkConnectWithoutTriggeringVulnerabilities @hidden
         developer info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
@@ -227,16 +221,13 @@ category ComputeResources {
         ->  networks.access,
             clientAccessNetworks.access,
             clientApplicationConnections().attemptConnectToApplications,
-            clientApplicationConnections().attemptTransmit,
-            serverApplicationConnections().attemptTransmitResponse, // Since we are on the Application we want to use the serverAppConnection to initiate trasmitResponse.
             clientApplicationConnections().attemptAccessNetworks
 
-      | networkRequestConnect
-        user info: "The attacker has successfully sent a request to the (server) application. This can be used to exploit a vulnerability."
-        developer info: "Adopted from awsLang."
+      | attemptNetworkConnectViaResponse
+        developer info: "Intermediate attack step to handle defences."
+        ->  networkConnectViaResponse
 
-
-      | networkRespondConnect [VeryHardAndUncertain]
+      & networkConnectViaResponse [VeryHardAndUncertain]
         user info: "An attacker may be able to respond to requests submitted by a client application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
@@ -257,13 +248,13 @@ category ComputeResources {
             attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
-            transitData.identityAttemptRead, // Any data in transit can be read whether this Application is the sender or the recipient
-            transitData.attemptIdentityWriteDataInTransitFromApplication,
+            sentData.identityAttemptRead, // Both Data sent and received can be read
+            receivedData.identityAttemptRead,
+            sentData.attemptIdentityWriteDataInTransitFromApplication,
             clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
             clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
             attemptApplicationRespondConnectThroughData,
-            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
-            attemptReverseReach
+            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
@@ -301,16 +292,16 @@ category ComputeResources {
             executionPrivIds.assume,  // Assume also the execution privilege identities of this application
             executionPrivGroups.compromiseGroup,
             containedData.attemptAccess,  // and access on all the contained data
-            transitData.attemptRead, // Any data in transit can be read whether this Application is the sender or the recipient
-            transitData.attemptWriteDataInTransitFromApplication,
+            sentData.attemptRead, // Both Data sent and received can be read
+            receivedData.attemptRead,
+            sentData.attemptWriteDataInTransitFromApplication,
             clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
             clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
-            attemptReverseReach
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -318,34 +309,32 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-      | attemptUnsafeUserActivityConnect @hidden
+      | attemptUnsafeActivityByUser @hidden
         developer info: "Intermediate attack step."
-        ->  unsafeUserActivityConnect
+        ->  unsafeActivityByUser
 
-      & unsafeUserActivityConnect @hidden
-        developer info: "This attack step represents the user creating a connection to the attacker through their unsafe actions. It can only occur if the user can reach the attacker via networking assets and/or Applications"
+      & unsafeActivityByUser
+        user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
-            networkConnect
+            networkConnect,
+            allVulnerabilities().userInteractionAchieved
 
-      | attemptUnsafeUserActivityWithLowPrivileges
-        developer info: "This attack step represents a user with low privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  attemptUnsafeUserActivityConnect,
-            allVulnerabilities().lowPrivilegesAchieved,
-            allVulnerabilities().userInteractionAchieved,
-            softwareProductVulnerabilityLowPrivilegesAchieved,
-            softwareProductVulnerabilityUserInteractionAchieved
+      & unsafeUserActivityWithAttackerInteraction @hidden
+        developer info: "The attacker can be reached from this application and can therefore more easily exploit the unsafe user actions."
+        ->  attemptUnsafeActivityByUser
 
-      | attemptUnsafeUserActivityWithHighPrivileges
-        developer info: "This attack step represents a user with high privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  attemptUnsafeUserActivityConnect,
-            allVulnerabilities().highPrivilegesAchieved,
-            allVulnerabilities().userInteractionAchieved,
-            softwareProductVulnerabilityHighPrivilegesAchieved,
-            softwareProductVulnerabilityUserInteractionAchieved
+      | unsafeUserActivityWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
+        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done before and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements its counterpart is missing."
+        ->  attemptUnsafeActivityByUser
+
+      | attemptUnsafeUserActivity @hidden
+        developer info: "This attack step represents a user with privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
+        ->  unsafeUserActivityWithAttackerInteraction,
+            unsafeUserActivityWithoutAttackerInteraction
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
-        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigationin icsLang as designed by Sotirios."
+        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
@@ -442,8 +431,7 @@ category ComputeResources {
       | attemptApplicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
         modeler info: "This is an intermediate attack step that groups connections to attack steps."
-        ->  transitData.attemptApplicationRespondConnect,
-            containedData.attemptApplicationRespondConnect
+        ->  receivedData.attemptApplicationRespondConnect
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
@@ -458,7 +446,7 @@ category ComputeResources {
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
-            transitData.attemptDenyDataInTransitFromApplication,
+            sentData.attemptDenyDataInTransitFromApplication,
             appExecutedApps.deny
 
       & denyFromNetworkingAsset @hidden
@@ -477,7 +465,9 @@ category ComputeResources {
 
       | protectionBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
-        ->  protectedApps.useVulnerability
+        ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
+            protectedApps.unsafeActivityByUser
+
 
       | fullAccess {C,I,A}
         +>  protectionBypassed // The application is no longer able to protect the apps assigned to it
@@ -631,7 +621,7 @@ category DataResources {
 
         & applicationRespondConnect
           user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
-          ->  transitApp.networkRespondConnect
+          ->  senderApp.attemptNetworkConnectViaResponse
 
         | attemptRead @hidden
           user info: "Attempt to read the data."
@@ -674,10 +664,11 @@ category DataResources {
           ->  read
 
         | read {C}
-          user info: "The attacker can read the data."
+          user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
           ->  containedData.attemptRead,
               readContainedInformation,
-              replicatedInformation.attemptRead
+              replicatedInformation.attemptRead,
+              extract
 
         | breakReplication @hidden
           developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
@@ -782,6 +773,19 @@ category DataResources {
         & denyDataInTransit @hidden {C, I}
           developer info: "For Data in transit to be denied via an Application they have to be reachable from an outgoing ConnectionRule as well."
           ->  attemptDeny
+
+        | attemptReverseReach @hidden
+          developer info: "Intermediate attack step."
+          ->  reverseReach
+
+        & reverseReach @hidden
+          developer info: "Reverse reach for Data is used to determine whether or not the data can be transferred to attacker."
+          ->  extract,
+              containedData.attemptReverseReach
+
+        & extract
+          user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
+          ->  information.attemptRead
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
@@ -967,7 +971,7 @@ category User {
         # securityAwareness
           user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
           ->  socialEngineering,
-              unforcedUnsafeUserActivity,
+              unsafeUserActivity,
               weakCredentials,
               deliverMaliciousRemovableMedia
 
@@ -987,20 +991,11 @@ category User {
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
           ->  socialEngineering
 
-        & socialEngineering
+        & socialEngineering @hidden
           user info: "An attacker can try to perform social engineering techniques such as phishing."
           developer info: "In the future, other social engineering techniques should be connected to this attack step."
           ->  phishUser,
-              forcedUnsafeUserActivity
-
-        | attemptCredentialTheft
-          user info: "Trick the user to provide his/her credentials."
-          ->  credentialTheft
-
-        | credentialTheft [HardAndUncertain]
-          developer info: "This attack is hard to happen."
-          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
-          ->  userIds.credentials.attemptCredentialTheft
+              unsafeUserActivity
 
         | attemptDeliverMaliciousRemovableMedia
           user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
@@ -1009,34 +1004,34 @@ category User {
         & deliverMaliciousRemovableMedia [Exponential(0.01)]
           user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
           developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
-          ->  userIds.highPrivManagedSystems.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.lowPrivManagedSystems.attemptUnsafeUserActivityWithLowPrivileges
-
-
-        & forcedUnsafeUserActivity [Exponential(0.05)]
-          developer info: "This attack models the unsafe user actions induced by an attacker pursuing social engineering."
-          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
-          ->  unsafeUserActivity
-
-        & unforcedUnsafeUserActivity [Exponential(0.03)]
-          developer info: "This attack models the unsafe user actions that are not directly caused by the attacker's actions, but rather but a lack of security awareness and training of the user."
-          modeler info: "The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
-          ->  unsafeUserActivity
-
-        | unsafeUserActivity
-          developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario."
           ->  userIds.attemptAssume,
-              userIds.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivityWithHighPrivileges,
-              userIds.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges,
-              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivityWithLowPrivileges
+              userIds.highPrivManagedSystems.attemptUnsafeUserActivity,
+              userIds.lowPrivManagedSystems.attemptUnsafeUserActivity
 
         | phishUser
           user info: "The attacker can phish the user to gain access to their credentials."
           ->  attemptCredentialTheft
+
+        | attemptCredentialTheft @hidden
+          user info: "Trick the user to provide his/her credentials."
+          ->  credentialTheft
+
+        | credentialTheft [HardAndUncertain]
+          developer info: "This attack is hard to happen."
+          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
+          ->  userIds.credentials.attemptCredentialTheft
+
+        & unsafeUserActivity [Exponential(0.03)]
+          developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
+          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
+          ->  userIds.attemptAssume,
+              userIds.execPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
+              userIds.highPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivity,
+              userIds.lowPrivApps.attemptUnsafeUserActivity,
+              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
+
     }
 }
 
@@ -1079,10 +1074,8 @@ category Networking {
       | successfulAccess @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnections().attemptConnectToApplications,
-            allowedApplicationConnections().attemptTransmit,
             applications.networkConnect,
-            applications.networkRequestConnect,
-            clientApplications.networkRespondConnect,
+            clientApplications.attemptNetworkConnectViaResponse,
             accessNetworkData,
             networkForwarding,
             denialOfService,
@@ -1099,10 +1092,9 @@ category Networking {
             applications.attemptReverseReach
 
       | networkForwarding
-        developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen. Additionally, client-side attacks (like attemptTransmitResponse) can also be initiated from here."
+        developer info: "By using the allowed connections (connection rules), forwarding from one network to another network or applications can happen."
           ->  allowedNetworkConnections().attemptAccessNetworks,
-              allowedNetworkConnections().attemptConnectToApplications,
-              allowedNetworkConnections().attemptTransmitResponse
+              allowedNetworkConnections().attemptConnectToApplications
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicating over the network as well as the connected application."
@@ -1181,11 +1173,7 @@ category Networking {
         ->  accessNetworks,
             connectToApplications,
             connectToApplicationsWithoutTriggeringVulnerabilities,
-            transmit,
-            transmitResponse,
             denialOfService,
-            eavedropOnDataInTransit,
-            manInTheMiddleOnDataInTransit,
             allowWriteDataInTransit,
             allowDenyDataInTransit,
             reverseReach
@@ -1226,46 +1214,12 @@ category Networking {
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but without triggering vulnerabilities on them. This attack step is used to allow legitimate traffic even when payload inspection is enabled on the connection."
         ->  serverApplications().networkConnectWithoutTriggeringVulnerabilities
 
-      | attemptTransmitResponse @hidden
-        developer info: "Intermediate attack step."
-        ->  transmitResponse
-
-      & transmitResponse {I}
-        user info: "By transmitting a response towards a network application/client a connection to the application can be achieved. This is practically a client-side attack, thus hard to achive."
-        developer info: "Adopted from awsLang."
-        ->  clientApplications().networkRespondConnect
-
-      | attemptTransmit @hidden
-        developer info: "Intermediate attack step."
-        ->  transmit
-
-      & transmit {I}
-        user info: "By transmitting over a connection towards a network application/server a connection to the application can be achieved."
-        developer info: "Adopted from awsLang."
-        ->  clientApplications().networkRequestConnect
-
       | attemptDenialOfService @hidden
         developer info: "Intermediate attack step."
         ->  denialOfService
 
       & denialOfService {A}
         ->  allApplications().denyFromNetworkingAsset
-
-      | attemptEavesdropOnDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  eavedropOnDataInTransit
-
-      & eavedropOnDataInTransit @hidden
-        user info: "Via a ConnectionRule an eavesdrop attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
-        ->  allApplications().transitData.attemptEavesdrop
-
-      | attemptManInTheMiddleOnDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  manInTheMiddleOnDataInTransit
-
-      & manInTheMiddleOnDataInTransit @hidden
-        user info: "Via a ConnectionRule a MitM attack can be done on the transitData of the associated Applications. This attack will be launched from the Network asset."
-        ->  clientApplications().transitData.attemptManInTheMiddle
 
       | attemptAllowWriteDataInTransit @hidden
         developer info: "Intermediate attack step."
@@ -1329,8 +1283,10 @@ associations {
       user info: "Data can be contained inside other data."
   Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
       user info: "An application should be able to contain some data."
-  Data             [transitData]          * <-- DataInTransit         --> *   [transitApp]             Application
-      user info: "An application can also contain some data that are supposed to be transfered over a connection. This expresses an active connection."
+  Data             [sentData]             * <-- SendData              --> *   [senderApp]              Application
+      user info: "An application can also send some data that are supposed to be transfered over a connection. This expresses an active connection."
+  Data             [receivedData]         * <-- ReceiveData           --> *   [receiverApp]            Application
+      user info: "An application can also receive some data that are supposed to be transfered over a connection. This expresses an active connection."
   Data             [transitData]          * <-- DataInTransit         --> *   [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
   System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
