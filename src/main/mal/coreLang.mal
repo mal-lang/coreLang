@@ -218,7 +218,7 @@ category ComputeResources {
             unsafeUserActivityConnect
 
       | networkConnectWithoutTriggeringVulnerabilities @hidden
-        developer info: "This attack step is used if the network connection occurs via a filtered ConnectionRule, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
+        developer info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
         ->  networkAccess,
             specificAccessFromNetworkConnection
 
@@ -464,6 +464,23 @@ category ComputeResources {
       & denyFromNetworkingAsset @hidden
         user info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
         -> deny
+
+    }
+
+    asset IDPS extends Application
+      user info: "An IDPS is tasked with protecting other applications from malicious activity."
+    {
+      # effectiveness [Enabled]
+        user info: "The effectiveness defence reprents how capable the IDPS is to prevent disruptions from occuring on the associated applications."
+        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
+        ->  protectionBypassed
+
+      | protectionBypassed @hidden
+        developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
+        ->  protectedApps.useVulnerability
+
+      | fullAccess {C,I,A}
+        +>  protectionBypassed // The application is no longer able to protect the apps assigned to it
 
     }
 
@@ -1174,7 +1191,7 @@ category Networking {
             reverseReach
 
       # payloadInspection [Disabled]
-        user info: "If enabled, then the traffic is considered to be filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication (i.e. network-level vulnerabilities cannot be exploited)."
+        user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i. e. network-level vulnerabilities cannot be exploited)."
         ->  connectToApplications,
             reverseReach
 
@@ -1206,7 +1223,7 @@ category Networking {
         ->  serverApplications().networkConnect
 
       & connectToApplicationsWithoutTriggeringVulnerabilities @hidden
-        developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but without triggering vulnerabilities on them. This attack step is used to allow legitimate traffic even when filtering is enabled on the connection."
+        developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but without triggering vulnerabilities on them. This attack step is used to allow legitimate traffic even when payload inspection is enabled on the connection."
         ->  serverApplications().networkConnectWithoutTriggeringVulnerabilities
 
       | attemptTransmitResponse @hidden
@@ -1275,6 +1292,8 @@ associations {
       developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
+  IDPS             [protectorIDPSs]       * <-- AppProtection         --> *   [protectedApps]          Application
+      developer info: "IDPSs can provide protection to other applications."
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
       user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
   // ### Networking associations
