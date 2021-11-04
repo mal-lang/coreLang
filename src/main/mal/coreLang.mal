@@ -461,8 +461,8 @@ category ComputeResources {
             transitData.attemptDenyDataInTransitFromApplication,
             appExecutedApps.deny
 
-      & denyFromConnectionRule @hidden
-        user info: "This is an intermediate attack step to only allow deny on application when all the connection rules are denied, because an app can be serving on many different ports."
+      & denyFromNetworkingAsset @hidden
+        user info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
         -> deny
 
     }
@@ -1009,8 +1009,8 @@ category Networking {
       let allNetApplications = (clientApplications \/ applications)
       let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
       let allowedApplicationConnections = (netConnections \/ outgoingNetConnections)
-      let allowedApplicationConnectionsApplications = (netConnections.applications \/ outgoingNetConnections.applications \/ applications)
       let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
+      let allowedApplicationConnectionsApplications = allNetApplications() \/ allNetConnections().applications
 
       | physicalAccess {C, A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
@@ -1065,9 +1065,9 @@ category Networking {
               allowedNetworkConnections().attemptTransmitResponse
 
       | denialOfService {A}
-        user info: "If a DoS is performed it affects, the applications communicatiing over the network as well as the connected application."
+        user info: "If a DoS is performed it affects, the applications communicating over the network as well as the connected application."
         ->  allNetConnections().attemptDenialOfService,
-            allowedApplicationConnectionsApplications().denyFromConnectionRule
+            allowedApplicationConnectionsApplications().denyFromNetworkingAsset
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
@@ -1209,7 +1209,7 @@ category Networking {
         ->  denialOfService
 
       & denialOfService {A}
-        ->  allApplications().denyFromConnectionRule
+        ->  allApplications().denyFromNetworkingAsset
 
       | attemptEavesdropOnDataInTransit @hidden
         developer info: "Intermediate attack step."
