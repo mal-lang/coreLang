@@ -463,6 +463,10 @@ category ComputeResources {
         modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
         ->  protectionBypassed
 
+      # disabled @Override @hidden [Disabled]
+        modeller info: "As per the comment for the effectiveness defence, the disabled defence does not function as desired for the IDPS asset and should not be used. The effectiveness defence should be adjusted to reflect the likelihood that the IDPS is present instead."
+        developer info: "It would be ideal to hide this defence when using modelling tools to avoid confusion."
+
       | protectionBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
         ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
