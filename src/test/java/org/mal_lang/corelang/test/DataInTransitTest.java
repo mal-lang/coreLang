@@ -29,14 +29,14 @@ public class DataInTransitTest extends CoreLangTest {
         public final ConnectionRule connIn = new ConnectionRule("ConnectionIn");
         public final ConnectionRule connOut = new ConnectionRule("ConnectionOut");
         public final Application app = new Application("Application");
-        public final Data dataIn = new Data("data_in", false, false);
-        public final Data dataOut = new Data("data_out", false, false);
+        public final Data dataIn = new Data("data_in", false);
+        public final Data dataOut = new Data("data_out", false);
 
         public DataInTransitTestModel() {
             app.addIngoingAppConnections(connIn);
             app.addOutgoingAppConnections(connOut);
-            app.addTransitData(dataIn);
-            app.addTransitData(dataOut);
+            app.addReceivedData(dataIn);
+            app.addSentData(dataOut);
             connIn.addNetworks(netA);
             connOut.addNetworks(netB);
             netA.addTransitData(dataIn);
