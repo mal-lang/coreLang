@@ -122,7 +122,7 @@ category ComputeResources {
         ->  fullAccess
     }
 
-    asset SoftwareProduct
+    asset SoftwareProduct extends Information
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
@@ -141,6 +141,10 @@ category ComputeResources {
       | denyApplication
         user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
+
+      & write @Override
+        developer info: "If the attacker is able to write the software product they are able to compromise the applications using it."
+        +> compromiseApplication
     }
 
     asset Application extends Object
