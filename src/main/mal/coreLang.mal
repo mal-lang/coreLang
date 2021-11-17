@@ -837,6 +837,10 @@ category IAM {
         developer info: "If the attacker is able to write the information containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
         +> attemptUse
 
+      | read @Override
+        developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
+        +> attemptUse
+
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
         ->  attemptUse
