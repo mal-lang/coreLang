@@ -19,70 +19,29 @@ include "SoftwareVulnerability.mal"
 
 category ComputeResources {
 
-    abstract asset Object
-      developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
-    {
-      | attemptUseVulnerability
-        user info: "Attempt to use the associated vulnerabilities."
-
-      | deny {A}
-        user info: "The attacker can deny some or all functionality of an object."
-
-      | bypassAccessControl @hidden {C, I}
-        user info: "The attacker can bypass the access control and gain full access after a vulnerability is abused."
-    }
-
-    asset System extends Object
-      user info: "A system specifies the hardware on which applications can run."
+    asset Hardware
+      user info: "Specifies the hardware on which applications can run."
       developer info: "The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
     {
-      | connect
-        user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
-        ->  attemptGainFullAccess,
-            specificAccess,
-            attemptUseVulnerability
-
-      & attemptConnect [HardAndUncertain]
-        user info: "If an attacker has physical access on the premises of a System, he could (not always) try to connect to that System."
-        modeler info: "The probability and its value are just estimations and are subject to change."
-        ->  connect
-
-      & attemptUsePhysicalVulnerability
-        user info: "Attempt to use the associated physical vulnerabilities."
-
-      | allPrivilegeAuthenticate @hidden
-        developer info: "Entry point attack step from identity."
-        ->  attemptGainFullAccess
-
-      | individualPrivilegeAuthenticate @hidden
-        developer info: "Entry point attack step from identity."
-        ->  specificAccess
+      | attemptUseVulnerability
 
       & attemptGainFullAccess @hidden
         developer info: "This is an intermediate step to ensure connection is possible before gaining full access."
         ->  fullAccess
 
       | fullAccess {C,I,A}
-        user info: "Full access on a system allows the compromise or legitimate access on everything/all the privillges of the system: identities, applications, data, etc."
+        user info: "Full access on a system allows the compromise or legitimate access on everything/all the privileges of the system: identities, applications, data, etc."
         ->  sysExecutedApps.fullAccess,
-            highPrivSysIds.assume,
-            lowPrivSysIds.assume,
-            highPrivSysGroups.compromiseGroup,
-            lowPrivSysGroups.compromiseGroup,
-            sysData.attemptAccess
-
-      & specificAccess
-        user info: "Specific access only allows the local connection (through localhost) to the hosted applications."
-        ->  sysExecutedApps.localConnect
+            hostedData.attemptAccess
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
         ->  supplyChainAttack
 
       & supplyChainAttack [VeryHardAndUncertain]
-        user info: "Adversaries may perform supply chain compromise to gain control systems environment access by means of infected hardware of firmware."
+        user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
-        modeler info: "The probability fucntion and its value is just an estimation! The System supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not altierations made to the hardware/firmware once it is operating."
+        modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
         ->  bypassAccessControl
 
       # supplyChainAuditing
@@ -91,17 +50,29 @@ category ComputeResources {
         ->  supplyChainAttack
 
       | physicalAccess
-        user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
+        user info: "Attacker has physical access to the location where the hardware is physically deployed. They could then deny the hardware, locally connect to the hosted applications, and exploit physical vulnerabilities."
         ->  deny,
-            attemptConnect,
-            attemptUsePhysicalVulnerability,
+            sysExecutedApps.localConnect,
+            attemptHardwareModifications
+
+      | attemptHardwareModifications @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulHardwareModifications
+
+      & successfulHardwareModifications @hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  hardwareModifications
+
+      | hardwareModifications
+        user info: "Attacker is able to modify the hardware setup. They could then exploit physical vulnerabilities or software vulnerabilities that require physical access."
+        ->  attemptUseVulnerability,
             sysExecutedApps.physicalAccessAchieved
 
       # hardwareModificationsProtection
-        user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
-        developer info: "But it does not protect against denial of service attacks."
-        ->  attemptConnect,
-            attemptUsePhysicalVulnerability,
+        user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
+        developer info: "But it does not protect against denial of service attacks or local connect."
+        ->  attemptUseVulnerability,
+            successfulHardwareModifications,
             unsafeUserActivity
 
       | attemptUnsafeUserActivity
@@ -143,7 +114,7 @@ category ComputeResources {
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
     }
 
-    asset Application extends Object
+    asset Application
       user info: "An application models pretty much everything that is executed or can execute other applications."
     {
       let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
@@ -479,11 +450,11 @@ category ComputeResources {
     }
 
     asset PhysicalZone
-      user info: "A physical zone is the location where systems are physically deployed."
+      user info: "A physical zone is the location where hardware systems are physically deployed."
     {
       | gainPhysicalAccess
-        user info: "By gaining access on a physical zone, physical access on the housed systems is also gained."
-        ->  systems.physicalAccess
+        user info: "By gaining access on a physical zone, physical access on the housed hardware is also gained."
+        ->  hardwareSystems.physicalAccess
     }
 }
 
@@ -606,7 +577,7 @@ category DataResources {
               successfulDelete
 
         # dataNotPresent [Disabled]
-          user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
+          user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
           developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
           ->  accessUnencryptedData,
               successfulDeny
@@ -821,8 +792,6 @@ category IAM {
           ->  parentId.assume,
               memberOf.compromiseGroup,
               identityPrivileges.attemptAssume,
-              lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              highPrivManagedSystems.allPrivilegeAuthenticate,
               execPrivApps.authenticate,
               highPrivApps.authenticate,
               lowPrivApps.specificAccessAuthenticate,
@@ -859,8 +828,6 @@ category IAM {
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
         ->  parentGroup.compromiseGroup,
-            lowPrivManagedSystems.individualPrivilegeAuthenticate,
-            highPrivManagedSystems.allPrivilegeAuthenticate,
             execPrivApps.authenticate,
             highPrivApps.authenticate,
             lowPrivApps.specificAccessAuthenticate,
@@ -1008,9 +975,7 @@ category User {
         & deliverMaliciousRemovableMedia [Exponential(0.01)]
           user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
           developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
-          ->  userIds.attemptAssume,
-              userIds.highPrivManagedSystems.attemptUnsafeUserActivity,
-              userIds.lowPrivManagedSystems.attemptUnsafeUserActivity
+          ->  userIds.attemptAssume
 
         | phishUser
           user info: "The attacker can phish the user to gain access to their credentials."
@@ -1246,8 +1211,8 @@ category Networking {
 }
 
 associations {
-  System           [hostSystem]        0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
-      developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
+  Hardware           [hostHardware]        0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
+      developer info: "Hardware on which Applications are running. The host hardware is not mandatory to be specified but if it is, it adds on the model!"
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
   IDPS             [protectorIDPSs]       * <-- AppProtection         --> *   [protectedApps]          Application
@@ -1255,8 +1220,8 @@ associations {
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
       user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
   // ### Networking associations
-  PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [systems]                System
-      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
+  PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [hardwareSystems]                Hardware
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Hardware, but access on Hardware does not always provide access to the physical zone (e.g. iLOs)."
   RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1[managerApp]             Application
@@ -1293,8 +1258,8 @@ associations {
       user info: "An application can also receive some data that are supposed to be transfered over a connection. This expresses an active connection."
   Data             [transitData]          * <-- DataInTransit         --> *   [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
-  System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
-      user info: "A system can host data."
+  Hardware         [hardware]          0..1 <-- DataHosting           --> *   [hostedData]             Data
+      user info: "Data can be hosted on hardware."
   Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
       user info: "Data can contain information, as for example credentials."
   Data             [dataReplicas]          * <-- Replica                --> * [replicatedInformation]  Information
@@ -1316,17 +1281,7 @@ associations {
       user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance."
   Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
   Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
-  // First on system level
-  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
-      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
-      user info: "Low privilege access on a System provides individual identity access on the system."
-  // And the same for Groups
-  Group            [highPrivSysGroups]    * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
-      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Group            [lowPrivSysGroups]     * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
-      user info: "Low privilege access on a System provides individual identity access on the system."
-  // Then, Access Control on application level
+  // Access Control on application level
   Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
   Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
