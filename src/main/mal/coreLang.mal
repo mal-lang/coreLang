@@ -16,6 +16,7 @@
 
 include "coreVulnerability.mal"
 include "SoftwareVulnerability.mal"
+include "HardwareVulnerability.mal"
 
 category ComputeResources {
 
@@ -24,6 +25,7 @@ category ComputeResources {
       developer info: "The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
     {
       | attemptUseVulnerability
+        -> vulnerabilities.attemptAbuse
 
       & attemptGainFullAccess @hidden
         developer info: "This is an intermediate step to ensure connection is possible before gaining full access."
@@ -85,8 +87,20 @@ category ComputeResources {
             sysExecutedApps.physicalAccessAchieved
 
       | deny {A}
-        user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
-        ->  sysExecutedApps.deny
+        user info: "Denial of service (DoS) attack on hardware leads to DoS on all the applications running on it and hosted data."
+        ->  sysExecutedApps.deny,
+            hostedData.attemptDeny
+
+      | read {C}
+        user info: "Read on hardware leads to a read on all the applications running on it and hosted data."
+        ->  sysExecutedApps.read,
+            hostedData.attemptRead
+
+      | modify {I}
+        user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
+        ->  fullAccess,
+            sysExecutedApps.modify,
+            hostedData.attemptWrite
 
       | bypassAccessControl @hidden {C, I}
         user info: "The attacker can bypass the access control and gain full access after being able to connect to the system and a vulnerability is abused."
@@ -272,7 +286,8 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
+            hostHardware.attemptUseVulnerability
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -1211,7 +1226,7 @@ category Networking {
 }
 
 associations {
-  Hardware           [hostHardware]        0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
+  Hardware         [hostHardware]      0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
       developer info: "Hardware on which Applications are running. The host hardware is not mandatory to be specified but if it is, it adds on the model!"
   Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
       developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
