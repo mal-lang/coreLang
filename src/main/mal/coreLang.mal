@@ -22,17 +22,21 @@ category ComputeResources {
 
     asset Hardware
       user info: "Specifies the hardware on which applications can run."
-      developer info: "The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
     {
-      | attemptUseVulnerability
+      | attemptUseVulnerability @hidden
+        developer info: "Intermediate attack step to allow for defences."
+        -> useVulnerability
+
+      & useVulnerability
+        user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
         -> vulnerabilities.attemptAbuse
 
-      & attemptGainFullAccess @hidden
-        developer info: "This is an intermediate step to ensure connection is possible before gaining full access."
+      | attemptGainFullAccess @hidden
+        developer info: "Intermediate attack step to allow for defences."
         ->  fullAccess
 
-      | fullAccess {C,I,A}
-        user info: "Full access on a system allows the compromise or legitimate access on everything/all the privileges of the system: identities, applications, data, etc."
+      & fullAccess {C,I,A}
+        user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
             hostedData.attemptAccess
 
@@ -44,11 +48,11 @@ category ComputeResources {
         user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
         modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
-        ->  bypassAccessControl
+        ->  bypassHardwareModificationsProtection
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
-        developer info: "Mitigation based on the supply chain attack mitigation in icsLang as designed by Sotirios."
+        developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
         ->  supplyChainAttack
 
       | physicalAccess
@@ -73,7 +77,7 @@ category ComputeResources {
       # hardwareModificationsProtection
         user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
         developer info: "But it does not protect against denial of service attacks or local connect."
-        ->  attemptUseVulnerability,
+        ->  useVulnerability,
             successfulHardwareModifications,
             unsafeUserActivity
 
@@ -82,7 +86,9 @@ category ComputeResources {
         ->  unsafeUserActivity
 
       & unsafeUserActivity
-        user info: "A user is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        user info: "A user is performing unsafe actions on the hardware."
+        developer info: "This exposes the Applications running on top of the hardware and fulfils the physical access requirement of SoftwareVulnerabilities associated with them."
+        modeler info: "Currently only represents connecting a malicious removable media drive."
         ->  sysExecutedApps.attemptUnsafeUserActivity,
             sysExecutedApps.physicalAccessAchieved
 
@@ -98,18 +104,18 @@ category ComputeResources {
 
       | modify {I}
         user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
-        ->  fullAccess,
+        ->  attemptGainFullAccess,
             sysExecutedApps.modify,
             hostedData.attemptWrite
 
-      | bypassAccessControl @hidden {C, I}
-        user info: "The attacker can bypass the access control and gain full access after being able to connect to the system and a vulnerability is abused."
-        ->  fullAccess
+      | bypassHardwareModificationsProtection @hidden {C, I}
+        user info: "The attacker can bypass the hardware modifications protection and gain full access after performing a supply chain attack."
+        ->  attemptGainFullAccess
     }
 
     asset SoftwareProduct
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
-      developer info: "This asset is only introduces in order to imrpove the usability of the language."
+      developer info: "This asset is only introduces in order to improve the usability of the language."
     {
       | compromiseApplication
         user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
@@ -469,7 +475,8 @@ category ComputeResources {
     {
       | gainPhysicalAccess
         user info: "By gaining access on a physical zone, physical access on the housed hardware is also gained."
-        ->  hardwareSystems.physicalAccess
+        ->  hardwareSystems.physicalAccess,
+            networks.physicalAccess
     }
 }
 
@@ -990,7 +997,9 @@ category User {
         & deliverMaliciousRemovableMedia [Exponential(0.01)]
           user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
           developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
-          ->  userIds.attemptAssume
+          ->  userIds.attemptAssume,
+              physicalZones.hardwareSystems.attemptUnsafeUserActivity,
+              hardwareSystems.attemptUnsafeUserActivity
 
         | phishUser
           user info: "The attacker can phish the user to gain access to their credentials."
@@ -1234,9 +1243,15 @@ associations {
       developer info: "IDPSs can provide protection to other applications."
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
       user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *   [hardwareSystems]        Hardware
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Hardware, but access to the hardware does not provide access to the physical zone (e.g. iLOs)."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *   [networks]               Network
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed networks, but access to the network does not provide access to the physical zone."
+  PhysicalZone     [physicalZones]        * <-- ZoneAccess            --> *   [users]                  User
+      developer info: "A user may have access to different physical zones."
+  Hardware         [hardwareSystems]      * <-- HardwareAccess        --> *   [users]                  User
+      developer info: "A user may have access to different hardware systems, rigs, or components."
   // ### Networking associations
-  PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [hardwareSystems]                Hardware
-      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Hardware, but access on Hardware does not always provide access to the physical zone (e.g. iLOs)."
   RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1[managerApp]             Application
