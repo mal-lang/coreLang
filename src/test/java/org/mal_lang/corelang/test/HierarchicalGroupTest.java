@@ -18,7 +18,7 @@ public class HierarchicalGroupTest extends CoreLangTest {
         }
 
         public void addAttacker(Attacker attacker) {
-          attacker.addAttackPoint(subGroupA.compromiseGroup);
+          attacker.addAttackPoint(subGroupA.assume);
         }
   }
 
@@ -31,9 +31,9 @@ public class HierarchicalGroupTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.subsubGroupB.compromiseGroup.assertUncompromised();
-        model.subGroupA.compromiseGroup.assertCompromisedInstantaneously();
-        model.superGroup.compromiseGroup.assertCompromisedInstantaneously();
+        model.subsubGroupB.assume.assertUncompromised();
+        model.subGroupA.assume.assertCompromisedInstantaneously();
+        model.superGroup.assume.assertCompromisedInstantaneously();
     }
 
 }
