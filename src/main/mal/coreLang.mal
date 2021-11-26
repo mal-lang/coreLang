@@ -820,7 +820,8 @@ category IAM {
               writePrivData.identityAttemptWrite,
               deletePrivData.identityAttemptDelete,
               lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              highPrivManagedSystems.allPrivilegeAuthenticate
+              highPrivManagedSystems.allPrivilegeAuthenticate,
+              managedIAMs.attemptAssume
     }
 
     asset Identity extends IAMObject
@@ -1323,4 +1324,7 @@ associations {
   // Associations for the Privileges asset
   Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *   [identityPrivileges]     Privileges
   Group            [privilegeGroups]      * <-- HasPrivileges         --> *   [groupPrivileges]        Privileges
+      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
+  IAMObject        [managers]             * <-- AccountManagement      --> *  [managedIAMs]            IAMObject
+
 }
