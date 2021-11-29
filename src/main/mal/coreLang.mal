@@ -16,6 +16,7 @@
 
 include "coreVulnerability.mal"
 include "SoftwareVulnerability.mal"
+include "Directory.mal"
 
 category ComputeResources {
 
@@ -821,7 +822,8 @@ category IAM {
               deletePrivData.identityAttemptDelete,
               lowPrivManagedSystems.individualPrivilegeAuthenticate,
               highPrivManagedSystems.allPrivilegeAuthenticate,
-              managedIAMs.attemptAssume
+              managedIAMs.attemptAssume,
+              managedIAMs[Directory].attemptManipulation
     }
 
     asset Identity extends IAMObject
