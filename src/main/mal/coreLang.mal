@@ -436,7 +436,8 @@ category ComputeResources {
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
-        ->  containedData.attemptRead
+        ->  containedData.attemptRead,
+            appExecutedApps.read
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data and/or source code."
