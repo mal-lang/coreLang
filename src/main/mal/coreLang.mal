@@ -616,10 +616,6 @@ category DataResources {
           user info: "From the data, attempt to access also the contained information, if exists."
           ->  information.attemptAccess
 
-        | overrideCredentials @hidden
-          developer info: "If the attacker is able to write the data containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
-          ->  information[Credentials].attemptAccess
-
         | attemptApplicationRespondConnect @hidden
           developer info: "Intermediate attack step to handle defenses."
           ->  applicationRespondConnect
@@ -693,8 +689,7 @@ category DataResources {
           user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
           ->  containedData.attemptWrite,
               attemptDelete,
-              compromiseAppOrigin,
-              overrideCredentials
+              compromiseAppOrigin
 
         & successfulDelete @hidden
           developer info: "Intermediate attack step to model the requirements."
