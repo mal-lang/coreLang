@@ -858,8 +858,8 @@ category IAM {
     }
 
     asset Credentials extends Information
-      user info: "Credential can be used to get access to an Identity, but they can also be used as an encryption/signing key for Data."
-      modelere info: "Credentials represent a variety of access control mechanism(e.g. username and password pair, keycards, biometric data)."
+      user info: "Credentials can be used to get access to an Identity, but they can also be used as an encryption/signing key for Data."
+      modeler info: "Credentials represent a variety of access control mechanism(e.g. username and password pair, keycards, biometric data)."
     {
       # notDisclosed [Enabled]
         user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
