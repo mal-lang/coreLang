@@ -122,7 +122,7 @@ category ComputeResources {
         ->  fullAccess
     }
 
-    asset SoftwareProduct
+    asset SoftwareProduct extends Information
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
       developer info: "This asset is only introduces in order to imrpove the usability of the language."
     {
@@ -141,6 +141,10 @@ category ComputeResources {
       | denyApplication
         user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
+
+      & write @Override
+        developer info: "If the attacker is able to write the software product they are able to compromise the applications using it."
+        +> compromiseApplication
     }
 
     asset Application extends Object
@@ -496,47 +500,18 @@ category DataResources {
       | attemptAccess
         user info: "The attacker is attempting to access the information."
 
-      | attemptRead @hidden
-        developer info: "Intermediate attack step."
-        ->  read
-
-      & read
+      | read
         user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
         ->  dataReplicas.read
 
-      | attemptWrite @hidden
-        developer info: "Intermediate attack step."
-        ->  write
-
       & write
-        user info: "Data can be written only if replication has been broken."
-        -> dataReplicas.write
-
-      | attemptDelete @hidden
-        developer info: "Intermediate attack step."
-        ->  delete
+        user info: "Information can be overwritten only if all replicas have been overwritten."
 
       & delete
-        user info: "Data can be delete only if replication has been broken."
-        -> dataReplicas.delete
-
-      | attemptDeny @hidden
-        developer info: "Intermediate attack step."
-        ->  deny
+        user info: "Information can be deleted only if all replicas have been deleted."
 
       & deny
-        user info: "Data can be denied only if replication has been broken."
-        -> dataReplicas.deny
-
-      & attemptBreakReplication @hidden
-        developer info: "Replication fails only if all of the replicas have been compromised."
-        -> breakReplication
-
-      | breakReplication @hidden
-        developer info: "If all the replicas have been compromised it is possible to write, delete, or deny the data."
-        -> write,
-           delete,
-           deny
+        user info: "Information can be denied only if all replicas have been denied."
     }
 
     asset Data
@@ -571,15 +546,6 @@ category DataResources {
           developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
           <-  signingCreds
           ->  accessUnsignedData
-
-
-        !E dataReplicated @hidden
-          user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
-          developer info: "Data will be considered as replicated if they have a Replica association with an Information asset."
-          <-  replicatedInformation
-          ->  unreplicatedWrite,
-              unreplicatedDelete,
-              unreplicatedDeny
 
         & accessUnencryptedData @hidden
           user info: "If data are unencrypted then access them."
@@ -668,22 +634,13 @@ category DataResources {
           user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
           ->  containedData.attemptRead,
               readContainedInformation,
-              replicatedInformation.attemptRead,
+              replicatedInformation.read,
               extract
-
-        | breakReplication @hidden
-          developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
-          ->  replicatedInformation.attemptBreakReplication
 
         & successfulWrite @hidden
           developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptWrite,
-              breakReplication,
-              unreplicatedWrite
-
-        & unreplicatedWrite @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  write
+          ->  replicatedInformation.write,
+              write
 
         | write {I}
           user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
@@ -693,17 +650,13 @@ category DataResources {
 
         & successfulDelete @hidden
           developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptDelete,
-              breakReplication,
-              unreplicatedDelete
-
-        & unreplicatedDelete @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  delete
+          ->  replicatedInformation.delete,
+              delete
 
         | delete {I,A}
           user info: "The attacker can delete the data."
-          ->  containedData.attemptDelete
+          ->  containedData.attemptDelete,
+              attemptDeny
 
         | attemptDeny @hidden
           developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
@@ -711,17 +664,12 @@ category DataResources {
 
         & successfulDeny @hidden
           developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptDeny,
-              breakReplication,
-              unreplicatedDeny
-
-        & unreplicatedDeny @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  deny
+          ->  replicatedInformation.deny,
+              deny
 
         | deny {A}
           user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
-          ->  containedData.deny
+          ->  containedData.attemptDeny
 
         | attemptEavesdrop @hidden
           developer info: "Intermediate attack step to only allow eavesdrop on data after all defenses are disabled."
@@ -785,7 +733,7 @@ category DataResources {
 
         & extract
           user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
-          ->  information.attemptRead
+          ->  information.read
 
         | compromiseAppOrigin
           user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
@@ -887,6 +835,10 @@ category IAM {
 
       & write @Override
         developer info: "If the attacker is able to write the information containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
+        +> attemptUse
+
+      | read @Override
+        developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
         +> attemptUse
 
       | useLeakedCredentials [EasyAndCertain]
