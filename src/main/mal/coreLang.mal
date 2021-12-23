@@ -65,10 +65,8 @@ category ComputeResources {
       | fullAccess {C,I,A}
         user info: "Full access on a system allows the compromise or legitimate access on everything/all the privillges of the system: identities, applications, data, etc."
         ->  sysExecutedApps.fullAccess,
-            highPrivSysIds.assume,
-            lowPrivSysIds.assume,
-            highPrivSysGroups.compromiseGroup,
-            lowPrivSysGroups.compromiseGroup,
+            highPrivSysIAMs.attemptAssume,
+            lowPrivSysIAMs.attemptAssume,
             sysData.attemptAccess
 
       & specificAccess
@@ -293,8 +291,7 @@ category ComputeResources {
             modify,
             deny,
             appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
-            executionPrivIds.assume,  // Assume also the execution privilege identities of this application
-            executionPrivGroups.compromiseGroup,
+            executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application
             containedData.attemptAccess,  // and access on all the contained data
             sentData.attemptRead, // Both Data sent and received can be read
             receivedData.attemptRead,
@@ -743,78 +740,70 @@ category DataResources {
 
 category IAM {
 
-    asset Identity
-      user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
-      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
+    abstract asset IAMObject
+      user info: "An IAM object represents the base logic shared by all assets used for Identity and Access Management roles(Identity, Group, Privileges)."
     {
         # disabled [Disabled]
-        user info: "It should be used to model the probability that the identity is actually not existing."
+          user info: "It should be used to model the probability that the IAM object does not actually exist."
           ->  successfulAssume
 
         | attemptAssume
-          user info: "Attempt to assume the identity."
+          user info: "Attempt to assume the privileges associated with the IAM object. If disabled this will not be possible."
           ->  successfulAssume
 
         & successfulAssume @hidden
-          developer info: "Intermediate attack step to model the requirements for identity assume."
+          developer info: "Intermediate attack step to model the requirements for the assume attack step."
           ->  assume
 
-        | assume {C,I,A}
-          user info: "After authentication or compromise of an account/identity, assume its privileges."
-          developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
-          ->  parentId.assume,
-              memberOf.compromiseGroup,
-              identityPrivileges.attemptAssume,
-              lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              highPrivManagedSystems.allPrivilegeAuthenticate,
-              execPrivApps.authenticate,
-              highPrivApps.authenticate,
-              lowPrivApps.specificAccessAuthenticate,
-              readPrivData.identityAttemptRead,
-              writePrivData.identityAttemptWrite,
-              deletePrivData.identityAttemptDelete
-    }
-
-    asset Privileges
-      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
-    {
-        # disabled [Disabled]
-        user info: "It should be used to model the probability that the set of privileges is actually not existing."
-          ->  assume
-
-        | attemptAssume
-          user info: "Attempt to assume the privileges. If disabled this will not be possible."
-          ->  assume
-
-        & assume
+        | assume
+          user info: "When an attacker is able to assume an IAM asset the privileges associated with it can always be exploited, other behaviour is asset specific."
           ->  execPrivApps.authenticate,
               highPrivApps.authenticate,
               lowPrivApps.specificAccessAuthenticate,
               readPrivData.identityAttemptRead,
               writePrivData.identityAttemptWrite,
-              deletePrivData.identityAttemptDelete
+              deletePrivData.identityAttemptDelete,
+              lowPrivManagedSystems.individualPrivilegeAuthenticate,
+              highPrivManagedSystems.allPrivilegeAuthenticate,
+              managedIAMs.attemptAssume
     }
 
-    asset Group
+    asset Identity extends IAMObject
+      user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
+      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
+    {
+        | assume @Override {C,I,A}
+          user info: "After authentication or compromise of an account/identity, assume its privileges."
+          developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
+          +>  parentId.attemptAssume,
+              memberOf.attemptAssume,
+              identityPrivileges.attemptAssume
+    }
+
+    asset Privileges extends IAMObject
+      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+    {
+        | assume @Override {C,I,A}
+          user info: "After authentication or compromise of an account/identity, assume its privileges."
+          developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
+        +>  privilegeIdentities.attemptAssume,
+            privilegeGroups.attemptAssume
+    }
+
+    asset Group extends IAMObject
       user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
-      | compromiseGroup {C}
+      | assume @Override {C,I,A}
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
-        ->  parentGroup.compromiseGroup,
-            lowPrivManagedSystems.individualPrivilegeAuthenticate,
-            highPrivManagedSystems.allPrivilegeAuthenticate,
-            execPrivApps.authenticate,
-            highPrivApps.authenticate,
-            lowPrivApps.specificAccessAuthenticate,
-            readPrivData.identityAttemptRead,
-            writePrivData.identityAttemptWrite,
-            deletePrivData.identityAttemptDelete
+        +>  parentGroup.attemptAssume,
+            groupPrivileges.attemptAssume
     }
 
     asset Credentials extends Information
-      user info: "A credential is used to get access as an Identity but it can also be used as an encryption key for Data."
+      user info: "Credentials can be used to get access to an Identity, but they can also be used as an encryption/signing key for Data."
+      modeler info: "Credentials represent a variety of access control mechanism(e.g. username and password pair, keycards, biometric data)."
     {
       # notDisclosed [Enabled]
         user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
@@ -1265,44 +1254,25 @@ associations {
   Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
   Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
   // First on system level
-  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
+  IAMObject         [highPrivSysIAMs]     * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
       user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
-      user info: "Low privilege access on a System provides individual identity access on the system."
-  // And the same for Groups
-  Group            [highPrivSysGroups]    * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
-      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Group            [lowPrivSysGroups]     * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
+  IAMObject         [lowPrivSysIAMs]      * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
       user info: "Low privilege access on a System provides individual identity access on the system."
   // Then, Access Control on application level
-  Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
+  IAMObject        [executionPrivIAMs]    * <-- ExecutionPrivilegeAccess       --> * [execPrivApps]    Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
-  Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+  IAMObject        [highPrivAppIAMs]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
       user info: "High privilege application access on an Application results in the (full) access/compromise of the application and all the child applications."
-  Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+  IAMObject        [lowPrivAppIAMs]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
       user info: "Low privilege application access on an Application allows only the local interaction with the application and all the specified privileges."
-  // And the same for Groups
-  Group           [executionPrivGroups]   * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
-      user info: "An application can execute on a system with privileges of a specified group. If the application is compromised then the group privileges should be compromised."
-  Group           [highPrivAppGroups]     * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
-      user info: "High privilege application access on an Application results in the compromise of all the child applications."
-  Group           [lowPrivAppGroups]      * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
-      user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
-  Identity         [readingIds]           * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Identity         [writingIds]           * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Identity         [deletingIds]          * <-- DeletePrivileges      --> *   [deletePrivData]         Data
-  // And again for Groups
-  Group            [readingGroups]        * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Group            [writingGroups]        * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Group            [deletingGroups]       * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  IAMObject        [readingIAMs]          * <-- ReadPrivileges        --> *   [readPrivData]           Data
+  IAMObject        [writingIAMs]          * <-- WritePrivileges       --> *   [writePrivData]          Data
+  IAMObject        [deletingIAMs]         * <-- DeletePrivileges      --> *   [deletePrivData]         Data
   // Associations for the Privileges asset
   Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *   [identityPrivileges]     Privileges
-      user info: "Any Identity can be associated with a Privileges asset that groups privileges for Applications and Data." 
-  Privileges       [executionPrivAppPriv] * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
-  Privileges       [highPrivAppPriv]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
-  Privileges       [lowPrivAppPriv]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
-  Privileges       [readingPriv]          * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Privileges       [writingPriv]          * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Privileges       [deletingPriv]         * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  Group            [privilegeGroups]      * <-- HasPrivileges         --> *   [groupPrivileges]        Privileges
+      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
+  IAMObject        [managers]             * <-- AccountManagement      --> *  [managedIAMs]            IAMObject
+
 }
