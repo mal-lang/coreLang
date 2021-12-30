@@ -94,18 +94,18 @@ category ComputeResources {
 
       | deny {A}
         user info: "Denial of service (DoS) attack on hardware leads to DoS on all the applications running on it and hosted data."
-        ->  sysExecutedApps.deny,
+        ->  sysExecutedApps.attemptDeny,
             hostedData.attemptDeny
 
       | read {C}
         user info: "Read on hardware leads to a read on all the applications running on it and hosted data."
-        ->  sysExecutedApps.read,
+        ->  sysExecutedApps.attemptRead,
             hostedData.attemptRead
 
       | modify {I}
         user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
         ->  attemptGainFullAccess,
-            sysExecutedApps.modify,
+            sysExecutedApps.attemptModify,
             hostedData.attemptWrite
 
       | bypassHardwareModificationsProtection @hidden {C, I}
@@ -158,15 +158,23 @@ category ComputeResources {
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability,
-            useVulnerability,
-            reverseReach
+            successfulReverseReach,
+            successfulUseVulnerability,
+            successfulApplicationRespondConnectThroughData,
+            successfulRead,
+            successfulModify,
+            successfulDeny
 
-      | attemptUseVulnerability
-        user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+      | attemptUseVulnerability @hidden
+        developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        ->  successfulUseVulnerability
+
+      & successfulUseVulnerability @hidden
+        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
         ->  useVulnerability
 
-      & useVulnerability @hidden
-        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
+      | useVulnerability
+        user info: "Attempt to exploit the the connected vulnerabilities."
         ->  allVulnerabilities().attemptAbuse,
             attemptSoftwareProductAbuse,
             fullAccessAfterSoftProdVulnerability,
@@ -177,9 +185,13 @@ category ComputeResources {
       | attemptReverseReach
         developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
         modeller info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeller if the attacker is assumed to have reverse reachability on it."
+        ->  successfulReverseReach
+
+      & successfulReverseReach @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  reverseReach
 
-      & reverseReach @hidden
+      | reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
         ->  networks.attemptReverseReach,
             clientAccessNetworks.attemptReverseReach,
@@ -280,10 +292,10 @@ category ComputeResources {
 
       | fullAccess {C,I,A}
         user info: "Legitimate (or not i.e. 0wned) full access on the Application, as root/administrator."
-        ->  read,
-            modify,
-            deny,
-            appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
+        ->  attemptRead,
+            attemptModify,
+            attemptDeny,
+            appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
             executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application
             containedData.attemptAccess,  // and access on all the contained data
             sentData.attemptRead, // Both Data sent and received can be read
@@ -294,7 +306,7 @@ category ComputeResources {
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
-            managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
             specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
             hostHardware.attemptUseVulnerability
 
@@ -412,41 +424,73 @@ category ComputeResources {
 
       & readAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  read
+        ->  attemptRead
 
       & modifyAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  modify
+        ->  attemptModify
 
       & denyAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  deny
+        ->  attemptDeny
 
       | attemptApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulApplicationRespondConnectThroughData
+
+      & successfulApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  applicationRespondConnectThroughData
+
+      | applicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
         modeler info: "This is an intermediate attack step that groups connections to attack steps."
         ->  receivedData.attemptApplicationRespondConnect
+
+      | attemptRead @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulRead
+
+      & successfulRead @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  read
 
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
         ->  containedData.attemptRead,
-            appExecutedApps.read
+            appExecutedApps.attemptRead
+
+      | attemptModify @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulModify
+
+      & successfulModify @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  modify
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data and/or source code."
         ->  containedData.attemptAccess,
             fullAccess
 
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulDeny
+
+      & successfulDeny @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  deny
+
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
             sentData.attemptDenyDataInTransitFromApplication,
-            appExecutedApps.deny
+            appExecutedApps.attemptDeny
 
       & denyFromNetworkingAsset @hidden
         user info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
-        ->  deny
+        ->  attemptDeny
     }
 
     asset IDPS extends Application
@@ -563,8 +607,13 @@ category DataResources {
       # dataNotPresent [Disabled]
         user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
         developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
-        ->  accessUnencryptedData,
-            successfulDeny
+        ->  access,
+            readContainedInformation,
+            applicationRespondConnect,
+            successfulRead,
+            successfulWrite,
+            successfulDeny,
+            successfulDelete
 
       & readContainedInformation
         user info: "From the data, attempt to access also the contained information, if exists."
