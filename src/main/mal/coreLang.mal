@@ -590,16 +590,13 @@ category DataResources {
       | accessSpoofedData @hidden
         user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
         ->  containedData*.applicationRespondConnect,
-            containedData*.successfulWrite,
-            containedData*.manInTheMiddle
+            containedData*.successfulWrite
 
       | accessDecryptedData @hidden
         user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
         ->  access,
             readContainedInformation,
             applicationRespondConnect,
-            eavesdrop,
-            manInTheMiddle,
             successfulRead,
             successfulWrite,
             successfulDelete
@@ -707,24 +704,6 @@ category DataResources {
       | deny {A}
         user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
         ->  containedData.attemptDeny
-
-      | attemptEavesdrop @hidden
-        developer info: "Intermediate attack step to only allow eavesdrop on data after all defenses are disabled."
-        ->  eavesdrop
-
-      | attemptManInTheMiddle @hidden
-        developer info: "Intermediate attack step to only allow MitM on data after all defenses are disabled."
-        ->  manInTheMiddle
-
-      & eavesdrop {C}
-        user info: "Evasdrop on Data could lead to read access on unencrypted Data."
-        ->  attemptRead
-
-      & manInTheMiddle {C, I}
-        user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
-        ->  attemptRead,
-            attemptWrite,
-            attemptApplicationRespondConnect
 
       | attemptWriteDataInTransitFromApplication @hidden
         developer info: "Intermediate attack step to allow data in transit to be written from the Application side."
@@ -1101,7 +1080,7 @@ category Networking {
 
       | successfulEavesdrop @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptEavesdrop
+        ->  transitData.attemptRead
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transfered data over that network."
@@ -1113,7 +1092,9 @@ category Networking {
 
       | successfulManInTheMiddle @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptManInTheMiddle
+        ->  transitData.attemptRead,
+            transitData.attemptWrite,
+            transitData.attemptApplicationRespondConnect
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
