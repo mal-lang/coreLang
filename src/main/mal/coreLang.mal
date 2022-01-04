@@ -89,7 +89,7 @@ category ComputeResources {
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation based on the supply chain attack mitigation in icsLang as designed by Sotirios."
-        mitre info: "Used for M1034: Limit Hardware Installation"
+        mitre info: "Used for M1047: Audit"
         ->  supplyChainAttack
 
       | physicalAccess
