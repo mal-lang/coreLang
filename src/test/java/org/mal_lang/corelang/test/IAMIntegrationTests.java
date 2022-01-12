@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 public class IAMIntegrationTests extends CoreLangTest {
     public class IAMIntegrationTestModel {
-        public final System server = new System("Server");
+        public final Hardware server = new Hardware("Server");
         public final Application rhel = new Application("RHEL");
         public final Application oracle = new Application("Oracle");
         public final Application otherapp = new Application("OtherApp");

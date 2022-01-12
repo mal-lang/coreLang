@@ -19,7 +19,7 @@ limitations under the License.
 
   <groupId>org.mal-lang</groupId>
   <artifactId>corelang</artifactId>
-  <version>0.4.1</version>
+  <version>0.5.0</version>
   <packaging>jar</packaging>
 
   <name>coreLang</name>

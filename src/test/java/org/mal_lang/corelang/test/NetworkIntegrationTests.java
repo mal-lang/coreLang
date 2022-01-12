@@ -90,7 +90,7 @@ public class NetworkIntegrationTests extends CoreLangTest {
         public final ConnectionRule conn1 = new ConnectionRule("Connection1");
         public final ConnectionRule conn2 = new ConnectionRule("Connection2");
         public final RoutingFirewall routingfw = new RoutingFirewall("RoutingFirewall");
-        public final UnknownSoftwareVulnerability vuln = new UnknownSoftwareVulnerability("UnknownSoftwareVulnerability");
+        public final SoftwareVulnerability vuln = new SoftwareVulnerability("SoftwareVulnerability");
 
         public firewallAttackTestModel() {
          // Create associations
