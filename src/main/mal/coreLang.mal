@@ -16,95 +16,72 @@
 
 include "coreVulnerability.mal"
 include "SoftwareVulnerability.mal"
+include "HardwareVulnerability.mal"
 
 category ComputeResources {
 
-    abstract asset Object
-      developer info: "An object is the simplest form of an asset that can be compromised by a vulnerability."
+    asset Hardware
+      user info: "Specifies the hardware on which applications can run."
     {
-      | attemptUseVulnerability
-        user info: "Attempt to use the associated vulnerabilities."
+      | attemptUseVulnerability @hidden
+        developer info: "Intermediate attack step to allow for defences."
+        ->  useVulnerability
 
-      | deny {A}
-        user info: "The attacker can deny some or all functionality of an object."
+      & useVulnerability
+        user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
+        ->  vulnerabilities.attemptAbuse
 
-      | bypassAccessControl @hidden {C, I}
-        user info: "The attacker can bypass the access control and gain full access after a vulnerability is abused."
-    }
-
-    asset System extends Object
-      user info: "A system specifies the hardware on which applications can run."
-      developer info: "The attacker can DoS everything that is running on it and access (using physical control) on the OS after effort."
-    {
-      | connect
-        user info: "The attacker can connect to the instance, e.g., through a shell, but has not yet authenticated."
-        ->  attemptGainFullAccess,
-            specificAccess,
-            attemptUseVulnerability
-
-      & attemptConnect [HardAndUncertain]
-        user info: "If an attacker has physical access on the premises of a System, he could (not always) try to connect to that System."
-        modeler info: "The probability and its value are just estimations and are subject to change."
-        ->  connect
-
-      & attemptUsePhysicalVulnerability
-        user info: "Attempt to use the associated physical vulnerabilities."
-
-      | allPrivilegeAuthenticate @hidden
-        developer info: "Entry point attack step from identity."
-        ->  attemptGainFullAccess
-
-      | individualPrivilegeAuthenticate @hidden
-        developer info: "Entry point attack step from identity."
-        ->  specificAccess
-
-      & attemptGainFullAccess @hidden
-        developer info: "This is an intermediate step to ensure connection is possible before gaining full access."
+      | attemptGainFullAccess @hidden
+        developer info: "Intermediate attack step to allow for defences."
         ->  fullAccess
 
-      | fullAccess {C,I,A}
-        user info: "Full access on a system allows the compromise or legitimate access on everything/all the privillges of the system: identities, applications, data, etc."
+      & fullAccess {C,I,A}
+        user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
-            highPrivSysIds.assume,
-            lowPrivSysIds.assume,
-            highPrivSysGroups.compromiseGroup,
-            lowPrivSysGroups.compromiseGroup,
-            sysData.attemptAccess
-
-      & specificAccess
-        user info: "Specific access only allows the local connection (through localhost) to the hosted applications."
-        ->  sysExecutedApps.localConnect
+            hostedData.attemptAccess
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
         ->  supplyChainAttack
 
       & supplyChainAttack [VeryHardAndUncertain]
-        user info: "Adversaries may perform supply chain compromise to gain control systems environment access by means of infected hardware of firmware."
+        user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
-        modeler info: "The probability fucntion and its value is just an estimation! The System supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not altierations made to the hardware/firmware once it is operating."
+        modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
         mitre info: "Used for T1195.003: Compromise Hardware Supply Chain"
-        ->  bypassAccessControl
+        ->  bypassHardwareModificationsProtection
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
-        developer info: "Mitigation based on the supply chain attack mitigation in icsLang as designed by Sotirios."
+        developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
         mitre info: "Used for M1047: Audit"
         ->  supplyChainAttack
 
       | physicalAccess
-        user info: "Attacker has physical access on the location where the system is physically deployed. He could then exploit physical vulnerabilities and attempt to connect to the system."
+        user info: "Attacker has physical access to the location where the hardware is physically deployed. They could then deny the hardware, locally connect to the hosted applications, and exploit physical vulnerabilities."
         ->  deny,
-            attemptConnect,
-            attemptUsePhysicalVulnerability,
+            sysExecutedApps.localConnect,
+            attemptHardwareModifications
+
+      | attemptHardwareModifications @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulHardwareModifications
+
+      & successfulHardwareModifications @hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  hardwareModifications
+
+      | hardwareModifications
+        user info: "Attacker is able to modify the hardware setup. They could then exploit physical vulnerabilities or software vulnerabilities that require physical access."
+        ->  attemptUseVulnerability,
             sysExecutedApps.physicalAccessAchieved
 
       # hardwareModificationsProtection
-        user info: "This defense protects against unauthorized modifications to the hardware of the system that could lead to bypass of access control via e.g. a vulnerability."
-        developer info: "But it does not protect against denial of service attacks."
+        user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
+        developer info: "But it does not protect against denial of service attacks or local connect."
         mitre info: "Used for M1034: Limit Hardware Installation, M1046: Boot Integrity"
-        ->  attemptConnect,
-            attemptUsePhysicalVulnerability,
+        ->  useVulnerability,
+            successfulHardwareModifications,
             unsafeUserActivity
 
       | attemptUnsafeUserActivity
@@ -112,22 +89,36 @@ category ComputeResources {
         ->  unsafeUserActivity
 
       & unsafeUserActivity
-        user info: "A user is performing unsafe actions on the system. This exposes the Applications running on the system. Currently only represents connecting a removable media drive."
+        user info: "A user is performing unsafe actions on the hardware."
+        developer info: "This exposes the Applications running on top of the hardware and fulfils the physical access requirement of SoftwareVulnerabilities associated with them."
+        modeler info: "Currently only represents connecting a malicious removable media drive."
         ->  sysExecutedApps.attemptUnsafeUserActivity,
             sysExecutedApps.physicalAccessAchieved
 
       | deny {A}
-        user info: "Denial of service (DoS) attack on a system leads to DoS on all the executed applications."
-        ->  sysExecutedApps.deny
+        user info: "Denial of service (DoS) attack on hardware leads to DoS on all the applications running on it and hosted data."
+        ->  sysExecutedApps.attemptDeny,
+            hostedData.attemptDeny
 
-      | bypassAccessControl @hidden {C, I}
-        user info: "The attacker can bypass the access control and gain full access after being able to connect to the system and a vulnerability is abused."
-        ->  fullAccess
+      | read {C}
+        user info: "Read on hardware leads to a read on all the applications running on it and hosted data."
+        ->  sysExecutedApps.attemptRead,
+            hostedData.attemptRead
+
+      | modify {I}
+        user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
+        ->  attemptGainFullAccess,
+            sysExecutedApps.attemptModify,
+            hostedData.attemptWrite
+
+      | bypassHardwareModificationsProtection @hidden {C, I}
+        user info: "The attacker can bypass the hardware modifications protection and gain full access after performing a supply chain attack."
+        ->  attemptGainFullAccess
     }
 
-    asset SoftwareProduct
+    asset SoftwareProduct extends Information
       user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
-      developer info: "This asset is only introduces in order to imrpove the usability of the language."
+      developer info: "This asset is only introduced in order to improve the usability of the language."
     {
       | compromiseApplication
         user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
@@ -145,9 +136,13 @@ category ComputeResources {
       | denyApplication
         user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
+
+      & write @Override
+        developer info: "If the attacker is able to write the software product they are able to compromise the applications using it."
+        +>  compromiseApplication
     }
 
-    asset Application extends Object
+    asset Application
       user info: "An application models pretty much everything that is executed or can execute other applications."
     {
       let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
@@ -168,15 +163,23 @@ category ComputeResources {
             readAfterSoftProdVulnerability,
             modifyAfterSoftProdVulnerability,
             denyAfterSoftProdVulnerability,
-            useVulnerability,
-            reverseReach
+            successfulReverseReach,
+            successfulUseVulnerability,
+            successfulApplicationRespondConnectThroughData,
+            successfulRead,
+            successfulModify,
+            successfulDeny
 
-      | attemptUseVulnerability
-        user info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+      | attemptUseVulnerability @hidden
+        developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        ->  successfulUseVulnerability
+
+      & successfulUseVulnerability @hidden
+        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
         ->  useVulnerability
 
-      & useVulnerability @hidden
-        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
+      | useVulnerability
+        user info: "Attempt to exploit the the connected vulnerabilities."
         ->  allVulnerabilities().attemptAbuse,
             attemptSoftwareProductAbuse,
             fullAccessAfterSoftProdVulnerability,
@@ -187,9 +190,13 @@ category ComputeResources {
       | attemptReverseReach
         developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
         modeller info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeller if the attacker is assumed to have reverse reachability on it."
+        ->  successfulReverseReach
+
+      & successfulReverseReach @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  reverseReach
 
-      & reverseReach @hidden
+      | reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
         ->  networks.attemptReverseReach,
             clientAccessNetworks.attemptReverseReach,
@@ -290,12 +297,11 @@ category ComputeResources {
 
       | fullAccess {C,I,A}
         user info: "Legitimate (or not i.e. 0wned) full access on the Application, as root/administrator."
-        ->  read,
-            modify,
-            deny,
-            appExecutedApps.fullAccess, // Gain access on all applications executed by this (host) application
-            executionPrivIds.assume,  // Assume also the execution privilege identities of this application
-            executionPrivGroups.compromiseGroup,
+        ->  attemptRead,
+            attemptModify,
+            attemptDeny,
+            appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
+            executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application
             containedData.attemptAccess,  // and access on all the contained data
             sentData.attemptRead, // Both Data sent and received can be read
             receivedData.attemptRead,
@@ -305,8 +311,9 @@ category ComputeResources {
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
-            managedRoutingFw.fullAccess, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+            managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
+            hostHardware.attemptUseVulnerability
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -369,53 +376,52 @@ category ComputeResources {
 
       E softwareCheck @hidden
         user info: "Existence attack step to only allow the connected attacks steps only if a SoftwareProduct is associated."
-        <- appSoftProduct
-        -> fullAccessAfterSoftProdVulnerability,
-           readAfterSoftProdVulnerability,
-           modifyAfterSoftProdVulnerability,
-           denyAfterSoftProdVulnerability
+        <-  appSoftProduct
+        ->  fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
 
       | softwareProductVulnerabilityLocalAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.localAccessAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.localAccessAchieved,
+            softwareProductAbuse
 
       | softwareProductVulnerabilityNetworkAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
+            softwareProductAbuse
 
       | softwareProductVulnerabilityPhysicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
+            softwareProductAbuse
 
       | softwareProductVulnerabilityLowPrivilegesAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
+            softwareProductAbuse
 
       | softwareProductVulnerabilityHighPrivilegesAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
+            softwareProductAbuse
 
       | softwareProductVulnerabilityUserInteractionAchieved @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> appSoftProduct.softProductVulnerabilities.userInteractionAchieved,
-           softwareProductAbuse
+        ->  appSoftProduct.softProductVulnerabilities.userInteractionAchieved,
+            softwareProductAbuse
 
       | attemptSoftwareProductAbuse @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> softwareProductAbuse
+        ->  softwareProductAbuse
 
       & softwareProductAbuse @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        -> fullAccessAfterSoftProdVulnerability,
-           readAfterSoftProdVulnerability,
-           modifyAfterSoftProdVulnerability,
-           denyAfterSoftProdVulnerability
-
+        ->  fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
 
       & fullAccessAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
@@ -423,48 +429,80 @@ category ComputeResources {
 
       & readAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  read
+        ->  attemptRead
 
       & modifyAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  modify
+        ->  attemptModify
 
       & denyAfterSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle existence."
-        ->  deny
+        ->  attemptDeny
 
       | attemptApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulApplicationRespondConnectThroughData
+
+      & successfulApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  applicationRespondConnectThroughData
+
+      | applicationRespondConnectThroughData @hidden
         user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
         modeler info: "This is an intermediate attack step that groups connections to attack steps."
         ->  receivedData.attemptApplicationRespondConnect
 
+      | attemptRead @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulRead
+
+      & successfulRead @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  read
+
       | read {C}
         user info: "The attacker can read some or all of this service's code and data."
         developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
-        ->  containedData.attemptRead
+        ->  containedData.attemptRead,
+            appExecutedApps.attemptRead
+
+      | attemptModify @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulModify
+
+      & successfulModify @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  modify
 
       | modify {I}
         user info: "The attacker can modify some or all of this service's data and/or source code."
         ->  containedData.attemptAccess,
             fullAccess
 
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulDeny
+
+      & successfulDeny @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  deny
+
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
             sentData.attemptDenyDataInTransitFromApplication,
-            appExecutedApps.deny
+            appExecutedApps.attemptDeny
 
       & denyFromNetworkingAsset @hidden
         user info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
-        -> deny
-
+        ->  attemptDeny
     }
 
     asset IDPS extends Application
       user info: "An IDPS is tasked with protecting other applications from malicious activity."
     {
       # effectiveness [Enabled]
-        user info: "The effectiveness defence reprents how capable the IDPS is to prevent disruptions from occuring on the associated applications."
+        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
         modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
         ->  protectionBypassed
 
@@ -477,18 +515,17 @@ category ComputeResources {
         ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
             protectedApps.unsafeActivityByUser
 
-
       | fullAccess {C,I,A}
         +>  protectionBypassed // The application is no longer able to protect the apps assigned to it
-
     }
 
     asset PhysicalZone
-      user info: "A physical zone is the location where systems are physically deployed."
+      user info: "A physical zone is the location where hardware systems are physically deployed."
     {
       | gainPhysicalAccess
-        user info: "By gaining access on a physical zone, physical access on the housed systems is also gained."
-        ->  systems.physicalAccess
+        user info: "By gaining access on a physical zone, physical access on the housed hardware is also gained."
+        ->  hardwareSystems.physicalAccess,
+            networks.physicalAccess
     }
 }
 
@@ -500,391 +537,302 @@ category DataResources {
       | attemptAccess
         user info: "The attacker is attempting to access the information."
 
-      | attemptRead @hidden
-        developer info: "Intermediate attack step."
-        ->  read
-
-      & read
+      | read
         user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
         ->  dataReplicas.read
 
-      | attemptWrite @hidden
-        developer info: "Intermediate attack step."
-        ->  write
-
       & write
-        user info: "Data can be written only if replication has been broken."
-        -> dataReplicas.write
-
-      | attemptDelete @hidden
-        developer info: "Intermediate attack step."
-        ->  delete
+        user info: "Information can be overwritten only if all replicas have been overwritten."
 
       & delete
-        user info: "Data can be delete only if replication has been broken."
-        -> dataReplicas.delete
-
-      | attemptDeny @hidden
-        developer info: "Intermediate attack step."
-        ->  deny
+        user info: "Information can be deleted only if all replicas have been deleted."
 
       & deny
-        user info: "Data can be denied only if replication has been broken."
-        -> dataReplicas.deny
-
-      & attemptBreakReplication @hidden
-        developer info: "Replication fails only if all of the replicas have been compromised."
-        -> breakReplication
-
-      | breakReplication @hidden
-        developer info: "If all the replicas have been compromised it is possible to write, delete, or deny the data."
-        -> write,
-           delete,
-           deny
+        user info: "Information can be denied only if all replicas have been denied."
     }
 
     asset Data
       user info: "Any form of data that can be stored or transmitted."
       developer info: "Adopted from awsLang but significantly changed."
     {
-        | attemptAccess
-          user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
-          ->  access
+      | attemptAccess
+        user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
+        ->  access
 
-        | attemptAccessFromIdentity
-          user info: "Access the data through a compormised identity."
-          ->  identityRead,
-              identityWrite,
-              identityDelete
+      | attemptAccessFromIdentity
+        user info: "Access the data through a compormised identity."
+        ->  identityRead,
+            identityWrite,
+            identityDelete
 
-        & access
-          user info: "Access the data."
-          ->  attemptRead,
-              attemptWrite,
-              attemptDelete,
-              containedData.attemptAccess
+      & access
+        user info: "Access the data."
+        ->  attemptRead,
+            attemptWrite,
+            attemptDelete,
+            containedData.attemptAccess
 
-        !E dataEncrypted @hidden
-          user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
-          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
-          mitre info: "Used for M1041: Encrypt Sensitive Information"
-          <-  encryptCreds
-          ->  accessUnencryptedData
+      !E dataEncrypted @hidden
+        user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
+        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        mitre info: "Used for M1041: Encrypt Sensitive Information"
+        <-  encryptCreds
+        ->  accessUnencryptedData
 
-        !E dataSigned @hidden
-          user info: "If the data are authenticated, then modifying them is not possible to achieve."
-          developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
-          <-  signingCreds
-          ->  accessUnsignedData
+      !E dataSigned @hidden
+        user info: "If the data are authenticated, then modifying them is not possible to achieve."
+        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        <-  signingCreds
+        ->  accessUnsignedData
 
+      & accessUnencryptedData @hidden
+        user info: "If data are unencrypted then access them."
+        ->  accessDecryptedData
 
-        !E dataReplicated @hidden
-          user info: "If the data are replicated then writing, deleting, or denying them requires disabling the replicas."
-          developer info: "Data will be considered as replicated if they have a Replica association with an Information asset."
-          <-  replicatedInformation
-          ->  unreplicatedWrite,
-              unreplicatedDelete,
-              unreplicatedDeny
+      & accessUnsignedData @hidden
+        user info: "If data are unsigned then alter them."
+        ->  accessSpoofedData
 
-        & accessUnencryptedData @hidden
-          user info: "If data are unencrypted then access them."
-          ->  accessDecryptedData
+      | accessSpoofedData @hidden
+        user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
+        ->  containedData*.applicationRespondConnect,
+            containedData*.successfulWrite
 
-        & accessUnsignedData @hidden
-          user info: "If data are unsigned then alter them."
-          ->  accessSpoofedData
+      | accessDecryptedData @hidden
+        user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
+        ->  access,
+            readContainedInformation,
+            applicationRespondConnect,
+            successfulRead,
+            successfulWrite,
+            successfulDelete
 
-        | accessSpoofedData @hidden
-          user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
-          ->  containedData*.applicationRespondConnect,
-              containedData*.successfulWrite,
-              containedData*.manInTheMiddle
+      # dataNotPresent [Disabled]
+        user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
+        developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+        ->  access,
+            readContainedInformation,
+            applicationRespondConnect,
+            successfulRead,
+            successfulWrite,
+            successfulDeny,
+            successfulDelete
 
-        | accessDecryptedData @hidden
-          user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
-          ->  access,
-              readContainedInformation,
-              applicationRespondConnect,
-              eavesdrop,
-              manInTheMiddle,
-              successfulRead,
-              successfulWrite,
-              successfulDelete
+      & readContainedInformation
+        user info: "From the data, attempt to access also the contained information, if exists."
+        ->  information.attemptAccess
 
-        # dataNotPresent [Disabled]
-          user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. System, Application, Connection, etc.)."
-          developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
-          ->  accessUnencryptedData,
-              successfulDeny
+      | attemptApplicationRespondConnect @hidden
+        developer info: "Intermediate attack step to handle defenses."
+        ->  applicationRespondConnect
 
-        & readContainedInformation
-          user info: "From the data, attempt to access also the contained information, if exists."
-          ->  information.attemptAccess
+      & applicationRespondConnect
+        user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
+        ->  senderApp.attemptNetworkConnectViaResponse
 
-        | overrideCredentials @hidden
-          developer info: "If the attacker is able to write the data containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
-          ->  information[Credentials].attemptAccess
+      | attemptRead @hidden
+        user info: "Attempt to read the data."
+        ->  successfulRead
 
-        | attemptApplicationRespondConnect @hidden
-          developer info: "Intermediate attack step to handle defenses."
-          ->  applicationRespondConnect
+      | identityAttemptRead @hidden
+        user info: "Attempt to read the data through a compormised identity."
+        ->  identityRead
 
-        & applicationRespondConnect
-          user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
-          ->  senderApp.attemptNetworkConnectViaResponse
+      & identityRead @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        mitre info: "Used for M1022: Restrict File and Directory Permissions"
+        ->  attemptRead
 
-        | attemptRead @hidden
-          user info: "Attempt to read the data."
-          ->  successfulRead
+      | attemptWrite @hidden
+        user info: "Attempt to write on the data."
+        ->  successfulWrite
 
-        | identityAttemptRead @hidden
-          user info: "Attempt to read the data through a compormised identity."
-          ->  identityRead
+      | identityAttemptWrite @hidden
+        user info: "Attempt to write the data through a compormised identity."
+        ->  identityWrite
 
-        & identityRead @hidden
-          developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-          mitre info: "Used for M1022: Restrict File and Directory Permissions"
-          ->  attemptRead
+      & identityWrite @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        mitre info: "Used for M1022: Restrict File and Directory Permissions"
+        ->  attemptWrite
 
-        | attemptWrite @hidden
-          user info: "Attempt to write on the data."
-          ->  successfulWrite
+      | attemptDelete @hidden
+         user info: "Attempt to delete the data."
+        -> successfulDelete
 
-        | identityAttemptWrite @hidden
-          user info: "Attempt to write the data through a compormised identity."
-          ->  identityWrite
+      | identityAttemptDelete @hidden
+        user info: "Attempt to delete the data through a compormised identity."
+        ->  identityDelete
 
-        & identityWrite @hidden
-          developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-          mitre info: "Used for M1022: Restrict File and Directory Permissions"
-          ->  attemptWrite
+      & identityDelete @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        mitre info: "Used for M1022: Restrict File and Directory Permissions"
+        ->  attemptDelete
 
-        | attemptDelete @hidden
-           user info: "Attempt to delete the data."
-          -> successfulDelete
+      & successfulRead @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  read
 
-        | identityAttemptDelete @hidden
-          user info: "Attempt to delete the data through a compormised identity."
-          ->  identityDelete
+      | read {C}
+        user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
+        ->  containedData.attemptRead,
+            readContainedInformation,
+            replicatedInformation.read,
+            extract
 
-        & identityDelete @hidden
-          developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-          mitre info: "Used for M1022: Restrict File and Directory Permissions"
-          ->  attemptDelete
+      & successfulWrite @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  replicatedInformation.write,
+            write
 
-        & successfulRead @hidden
-          developer info: "Intermediate attack step to model the requirements."
-          ->  read
+      | write {I}
+        user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
+        ->  containedData.attemptWrite,
+            attemptDelete,
+            compromiseAppOrigin
 
-        | read {C}
-          user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
-          ->  containedData.attemptRead,
-              readContainedInformation,
-              replicatedInformation.attemptRead,
-              extract
+      & successfulDelete @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  replicatedInformation.delete,
+            delete
 
-        | breakReplication @hidden
-          developer info: "Intermediate attack step represent that this data asset no longer provides replication. This occurs if the data are written, deleted, or denied."
-          ->  replicatedInformation.attemptBreakReplication
+      | delete {I,A}
+        user info: "The attacker can delete the data."
+        ->  containedData.attemptDelete,
+            attemptDeny
 
-        & successfulWrite @hidden
-          developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptWrite,
-              breakReplication,
-              unreplicatedWrite
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
+        ->  successfulDeny
 
-        & unreplicatedWrite @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  write
+      & successfulDeny @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  replicatedInformation.deny,
+            deny
 
-        | write {I}
-          user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
-          ->  containedData.attemptWrite,
-              attemptDelete,
-              compromiseAppOrigin,
-              overrideCredentials
+      | deny {A}
+        user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
+        ->  containedData.attemptDeny
 
-        & successfulDelete @hidden
-          developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptDelete,
-              breakReplication,
-              unreplicatedDelete
+      | attemptWriteDataInTransitFromApplication @hidden
+        developer info: "Intermediate attack step to allow data in transit to be written from the Application side."
+        ->  writeDataInTransit
 
-        & unreplicatedDelete @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  delete
+      | attemptIdentityWriteDataInTransitFromApplication @hidden
+        developer info: "Intermediate attack step to allow data in transit to be written if the Identity associated is also compromised from the Application side."
+        ->  identityWriteDataInTransit
 
-        | delete {I,A}
-          user info: "The attacker can delete the data."
-          ->  containedData.attemptDelete
+      | attemptWriteDataInTransitFromConnectionRule @hidden
+        developer info: "Intermediate attack step to allow data in transit to be written from the ConnectionRule side."
+        ->  writeDataInTransit,
+            identityWriteDataInTransit
 
-        | attemptDeny @hidden
-          developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
-          ->  successfulDeny
+      & identityWriteDataInTransit @hidden {C, I}
+        developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
+        ->  identityAttemptWrite
 
-        & successfulDeny @hidden
-          developer info: "Intermediate attack step to model the requirements."
-          ->  replicatedInformation.attemptDeny,
-              breakReplication,
-              unreplicatedDeny
+      & writeDataInTransit @hidden {C, I}
+        developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
+        ->  attemptWrite
 
-        & unreplicatedDeny @hidden
-          developer info: "Intermediate attack step to be used if the data are not replicated."
-          ->  deny
+      | attemptDenyDataInTransitFromApplication @hidden
+        developer info: "Intermediate attack step to allow data in transit to be denied from the Application side."
+        ->  denyDataInTransit
 
-        | deny {A}
-          user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
-          ->  containedData.deny
+      | attemptDenyDataInTransitFromConnectionRule @hidden
+        developer info: "Intermediate attack step to allow data in transit to be denied from the ConnectionRule side."
+        ->  denyDataInTransit
 
-        | attemptEavesdrop @hidden
-          developer info: "Intermediate attack step to only allow eavesdrop on data after all defenses are disabled."
-          ->  eavesdrop
+      & denyDataInTransit @hidden {C, I}
+        developer info: "For Data in transit to be denied via an Application they have to be reachable from an outgoing ConnectionRule as well."
+        ->  attemptDeny
 
-        | attemptManInTheMiddle @hidden
-          developer info: "Intermediate attack step to only allow MitM on data after all defenses are disabled."
-          ->  manInTheMiddle
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
 
-        & eavesdrop {C}
-          user info: "Evasdrop on Data could lead to read access on unencrypted Data."
-          mitre info: "Used for T1040: Network Sniffing"
-          ->  attemptRead
+      & reverseReach @hidden
+        developer info: "Reverse reach for Data is used to determine whether or not the data can be transferred to attacker."
+        ->  extract,
+            containedData.attemptReverseReach
 
-        & manInTheMiddle {C, I}
-          user info: "MitM on Data could lead to read and write access on unencrypted and unauthenticated Data."
-          mitre info: "Used for T1557: Man-in-the-Middle"
-          ->  attemptRead,
-              attemptWrite,
-              attemptApplicationRespondConnect
+      & extract
+        user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
+        ->  information.read
 
-        | attemptWriteDataInTransitFromApplication @hidden
-          developer info: "Intermediate attack step to allow data in transit to be written from the Application side."
-          ->  writeDataInTransit
-
-        | attemptIdentityWriteDataInTransitFromApplication @hidden
-          developer info: "Intermediate attack step to allow data in transit to be written if the Identity associated is also compromised from the Application side."
-          ->  identityWriteDataInTransit
-
-        | attemptWriteDataInTransitFromConnectionRule @hidden
-          developer info: "Intermediate attack step to allow data in transit to be written from the ConnectionRule side."
-          ->  writeDataInTransit,
-              identityWriteDataInTransit
-
-        & identityWriteDataInTransit @hidden {C, I}
-          developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
-          ->  identityAttemptWrite
-
-        & writeDataInTransit @hidden {C, I}
-          developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
-          ->  attemptWrite
-
-        | attemptDenyDataInTransitFromApplication @hidden
-          developer info: "Intermediate attack step to allow data in transit to be denied from the Application side."
-          ->  denyDataInTransit
-
-        | attemptDenyDataInTransitFromConnectionRule @hidden
-          developer info: "Intermediate attack step to allow data in transit to be denied from the ConnectionRule side."
-          ->  denyDataInTransit
-
-        & denyDataInTransit @hidden {C, I}
-          developer info: "For Data in transit to be denied via an Application they have to be reachable from an outgoing ConnectionRule as well."
-          ->  attemptDeny
-
-        | attemptReverseReach @hidden
-          developer info: "Intermediate attack step."
-          ->  reverseReach
-
-        & reverseReach @hidden
-          developer info: "Reverse reach for Data is used to determine whether or not the data can be transferred to attacker."
-          ->  extract,
-              containedData.attemptReverseReach
-
-        & extract
-          user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
-          ->  information.attemptRead
-
-        | compromiseAppOrigin
-          user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-          ->  originSoftwareProduct.compromiseApplication
+      | compromiseAppOrigin
+        user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
+        ->  originSoftwareProduct.compromiseApplication
     }
 }
 
 category IAM {
 
-    asset Identity
-      user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
-      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
-      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
+    abstract asset IAMObject
+      user info: "An IAM object represents the base logic shared by all assets used for Identity and Access Management roles(Identity, Group, Privileges)."
     {
-        # disabled [Disabled]
-        user info: "It should be used to model the probability that the identity is actually not existing."
-          ->  successfulAssume
+      # disabled [Disabled]
+        user info: "It should be used to model the probability that the IAM object does not actually exist."
+        ->  successfulAssume
 
-        | attemptAssume
-          user info: "Attempt to assume the identity."
-          ->  successfulAssume
+      | attemptAssume
+        user info: "Attempt to assume the privileges associated with the IAM object. If disabled this will not be possible."
+        ->  successfulAssume
 
-        & successfulAssume @hidden
-          developer info: "Intermediate attack step to model the requirements for identity assume."
-          ->  assume
+      & successfulAssume @hidden
+        developer info: "Intermediate attack step to model the requirements for the assume attack step."
+        ->  assume
 
-        | assume {C,I,A}
-          user info: "After authentication or compromise of an account/identity, assume its privileges."
-          developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
-          ->  parentId.assume,
-              memberOf.compromiseGroup,
-              identityPrivileges.attemptAssume,
-              lowPrivManagedSystems.individualPrivilegeAuthenticate,
-              highPrivManagedSystems.allPrivilegeAuthenticate,
-              execPrivApps.authenticate,
-              highPrivApps.authenticate,
-              lowPrivApps.specificAccessAuthenticate,
-              readPrivData.identityAttemptRead,
-              writePrivData.identityAttemptWrite,
-              deletePrivData.identityAttemptDelete
-    }
-
-    asset Privileges
-      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
-      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
-    {
-        # disabled [Disabled]
-        user info: "It should be used to model the probability that the set of privileges is actually not existing."
-          ->  assume
-
-        | attemptAssume
-          user info: "Attempt to assume the privileges. If disabled this will not be possible."
-          ->  assume
-
-        & assume
-          ->  execPrivApps.authenticate,
-              highPrivApps.authenticate,
-              lowPrivApps.specificAccessAuthenticate,
-              readPrivData.identityAttemptRead,
-              writePrivData.identityAttemptWrite,
-              deletePrivData.identityAttemptDelete
-    }
-
-    asset Group
-      user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
-      modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
-      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
-    {
-      | compromiseGroup {C}
-        user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
-        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
-        ->  parentGroup.compromiseGroup,
-            lowPrivManagedSystems.individualPrivilegeAuthenticate,
-            highPrivManagedSystems.allPrivilegeAuthenticate,
-            execPrivApps.authenticate,
+      | assume
+        user info: "When an attacker is able to assume an IAM asset the privileges associated with it can always be exploited, other behaviour is asset specific."
+        ->  execPrivApps.authenticate,
             highPrivApps.authenticate,
             lowPrivApps.specificAccessAuthenticate,
             readPrivData.identityAttemptRead,
             writePrivData.identityAttemptWrite,
-            deletePrivData.identityAttemptDelete
+            deletePrivData.identityAttemptDelete,
+            managedIAMs.attemptAssume
+    }
+
+    asset Identity extends IAMObject
+      user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
+      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
+      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
+    {
+      | assume @Override {C,I,A}
+        user info: "After authentication or compromise of an account/identity, assume its privileges."
+        developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
+        +>  parentId.attemptAssume,
+            memberOf.attemptAssume,
+            identityPrivileges.attemptAssume
+    }
+
+    asset Privileges extends IAMObject
+      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
+    {
+      | assume @Override {C,I,A}
+        user info: "After authentication or compromise of an account/identity, assume its privileges."
+        developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
+        +>  privilegeIdentities.attemptAssume,
+            privilegeGroups.attemptAssume
+    }
+
+    asset Group extends IAMObject
+      user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
+      modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
+      mitre info: "Used for M1026: Privileged Account Management, M1052: User Account Control, M1018: User Account Management"
+    {
+      | assume @Override {C,I,A}
+        user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
+        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
+        +>  parentGroup.attemptAssume,
+            groupPrivileges.attemptAssume
     }
 
     asset Credentials extends Information
-      user info: "A credential is used to get access as an Identity but it can also be used as an encryption key for Data."
+      user info: "Credentials can be used to get access to an Identity, but they can also be used as an encryption/signing key for Data."
+      modeler info: "Credentials represent a variety of access control mechanism(e.g. username and password pair, keycards, biometric data)."
     {
       # notDisclosed [Enabled]
         user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
@@ -903,8 +851,8 @@ category IAM {
         user info: "Describes if the credentials cannot be phished(they are biometric, e. g. fingerprints or iris scans, or physical, e. g. access cards or keys, elements)."
         ->  credentialTheft
 
-      & write @Override
-        developer info: "If the attacker is able to write the information containing credentials we assume that they are able to override the authentication mechanisms where those credentials are used."
+      | read @Override
+        developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
         +> attemptUse
 
       | useLeakedCredentials [EasyAndCertain]
@@ -962,19 +910,18 @@ category IAM {
             requiredFactors.weakCredentials
 
       !E credsHashed @hidden
-          developer info: "If there are no associated hashes the assumption is that the credentials are guessable without any additional requirements."
-          <-  hashes
-          ->  guessCredentialsFromHash
+        developer info: "If there are no associated hashes the assumption is that the credentials are guessable without any additional requirements."
+        <-  hashes
+        ->  guessCredentialsFromHash
 
       | guessCredentialsFromHash @hidden
-          developer info: "If hashes are associated with this Credentials asset the assumption is that one of those hashes is required by the attacker to be able to perform a guessing attack."
+        developer info: "If hashes are associated with this Credentials asset the assumption is that one of those hashes is required by the attacker to be able to perform a guessing attack."
         ->  guessCredentials
 
       & guessCredentials [HardAndUncertain]
         user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
         developer info: "We should research the probability we want to use for this attack step more."
         ->  attemptUse
-
     }
 }
 
@@ -983,79 +930,78 @@ category User {
     asset User
       user info: "This asset represents the user himself. It is the suitable attack surface for social engineering attacks!"
     {
-        # noPasswordReuse [Enabled]
-          user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
-          mitre info: "Used for M1027: Password Policies"
-          ->  passwordReuseCompromise
+      # noPasswordReuse [Enabled]
+        user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
+        mitre info: "Used for M1027: Password Policies"
+        ->  passwordReuseCompromise
 
-        # securityAwareness
-          user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
-          mitre info: "Used for M1017: User Training"
-          ->  socialEngineering,
-              unsafeUserActivity,
-              weakCredentials,
-              deliverMaliciousRemovableMedia
+      # securityAwareness
+        user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
+        mitre info: "Used for M1017: User Training"
+        ->  socialEngineering,
+            unsafeUserActivity,
+            weakCredentials,
+            deliverMaliciousRemovableMedia
 
-        | oneCredentialCompromised @hidden
-          developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
-          ->  passwordReuseCompromise
+      | oneCredentialCompromised @hidden
+        developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
+        ->  passwordReuseCompromise
 
-        & passwordReuseCompromise
-          user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
-          mitre info: "Used for T1110: Brute Force(when the guessed/leaked password is used for multiple accounts)"
-          ->  userIds.credentials.attemptCredentialsReuse
+      & passwordReuseCompromise
+        user info: "If one reused credential of that user is compromised then, all other credentials of that user can also be compromised."
+        mitre info: "Used for T1110: Brute Force(when the guessed/leaked password is used for multiple accounts)"
+        ->  userIds.credentials.attemptCredentialsReuse
 
-        | weakCredentials @hidden
-          user info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defence."
-          ->  userIds.credentials.weakCredentials
+      | weakCredentials @hidden
+        user info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defence."
+        ->  userIds.credentials.weakCredentials
 
-        | attemptSocialEngineering
-          user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
-          ->  socialEngineering
+      | attemptSocialEngineering
+        user info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
+        ->  socialEngineering
 
-        & socialEngineering @hidden
-          user info: "An attacker can try to perform social engineering techniques such as phishing."
-          developer info: "In the future, other social engineering techniques should be connected to this attack step."
-          mitre info: "Used for T1566: Phishing"
-          ->  phishUser,
-              unsafeUserActivity
+      & socialEngineering @hidden
+        user info: "An attacker can try to perform social engineering techniques such as phishing."
+        developer info: "In the future, other social engineering techniques should be connected to this attack step."
+        mitre info: "Used for T1566: Phishing"
+        ->  phishUser,
+            unsafeUserActivity
 
-        | attemptDeliverMaliciousRemovableMedia
-          user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
-          ->  deliverMaliciousRemovableMedia
+      | attemptDeliverMaliciousRemovableMedia
+        user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
+        ->  deliverMaliciousRemovableMedia
 
-        & deliverMaliciousRemovableMedia [Exponential(0.01)]
-          user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
-          developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
-          mitre info: "Used for T1091: Replication Through Removable Media"
-          ->  userIds.attemptAssume,
-              userIds.highPrivManagedSystems.attemptUnsafeUserActivity,
-              userIds.lowPrivManagedSystems.attemptUnsafeUserActivity
+      & deliverMaliciousRemovableMedia [Exponential(0.01)]
+        user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
+        developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
+        mitre info: "Used for T1091: Replication Through Removable Media"
+        ->  userIds.attemptAssume,
+            physicalZones.hardwareSystems.attemptUnsafeUserActivity,
+            hardwareSystems.attemptUnsafeUserActivity
 
-        | phishUser
-          user info: "The attacker can phish the user to gain access to their credentials."
-          ->  attemptCredentialTheft
+      | phishUser
+        user info: "The attacker can phish the user to gain access to their credentials."
+        ->  attemptCredentialTheft
 
-        | attemptCredentialTheft @hidden
-          user info: "Trick the user to provide his/her credentials."
-          ->  credentialTheft
+      | attemptCredentialTheft @hidden
+        user info: "Trick the user to provide his/her credentials."
+        ->  credentialTheft
 
-        | credentialTheft [HardAndUncertain]
-          developer info: "This attack is hard to happen."
-          modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
-          ->  userIds.credentials.attemptCredentialTheft
+      | credentialTheft [HardAndUncertain]
+        developer info: "This attack is hard to happen."
+        modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
+        ->  userIds.credentials.attemptCredentialTheft
 
-        & unsafeUserActivity [Exponential(0.03)]
-          developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-          modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
-          ->  userIds.attemptAssume,
-              userIds.execPrivApps.attemptUnsafeUserActivity,
-              userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
-              userIds.highPrivApps.attemptUnsafeUserActivity,
-              userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivity,
-              userIds.lowPrivApps.attemptUnsafeUserActivity,
-              userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
-
+      & unsafeUserActivity [Exponential(0.03)]
+        developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
+        modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
+        ->  userIds.attemptAssume,
+            userIds.execPrivApps.attemptUnsafeUserActivity,
+            userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
+            userIds.highPrivApps.attemptUnsafeUserActivity,
+            userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivity,
+            userIds.lowPrivApps.attemptUnsafeUserActivity,
+            userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
     }
 }
 
@@ -1154,7 +1100,7 @@ category Networking {
 
       | successfulEavesdrop @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptEavesdrop
+        ->  transitData.attemptRead
 
       & manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transfered data over that network."
@@ -1167,7 +1113,9 @@ category Networking {
 
       | successfulManInTheMiddle @hidden
         developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptManInTheMiddle
+        ->  transitData.attemptRead,
+            transitData.attemptWrite,
+            transitData.attemptApplicationRespondConnect
 
       & eavesdropAfterPhysicalAccess @hidden {C}
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
@@ -1265,122 +1213,102 @@ category Networking {
       & allowDenyDataInTransit @hidden
         developer info: "Only trigger deny on Data in transit on client connections."
         ->  (networks  \/ inNetworks  \/ diodeInNetworks).transitData.attemptDenyDataInTransitFromConnectionRule
-
     }
-
 }
 
 associations {
-  System           [hostSystem]        0..1 <-- SysExecution          --> *   [sysExecutedApps]        Application
-      developer info: "System is the hardware on which Applications are running. The host system is not mandatory to be specified but if it is, it adds on the model!"
-  Application      [hostApp]           0..1 <-- AppExecution          --> *   [appExecutedApps]        Application
-      developer info: "Application 1 runs application 2 runs application 3! (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
-  IDPS             [protectorIDPSs]       * <-- AppProtection         --> *   [protectedApps]          Application
+  Hardware         [hostHardware]      0..1 <-- SysExecution          --> *    [sysExecutedApps]        Application
+      developer info: "Hardware on which Applications are running. The host hardware is not mandatory to be specified but if it is, it adds on the model!"
+  Application      [hostApp]           0..1 <-- AppExecution          --> *    [appExecutedApps]        Application
+      developer info: "Application 1 runs application 2 runs application 3. (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
+  IDPS             [protectorIDPSs]       * <-- AppProtection         --> *    [protectedApps]          Application
       developer info: "IDPSs can provide protection to other applications."
-  SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *   [softApplications]       Application
+  SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *    [softApplications]       Application
       user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *    [hardwareSystems]        Hardware
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Hardware, but access to the hardware does not provide access to the physical zone (e.g. iLOs)."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *    [networks]               Network
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed networks, but access to the network does not provide access to the physical zone."
+  PhysicalZone     [physicalZones]        * <-- ZoneAccess            --> *    [users]                  User
+      developer info: "A user may have access to different physical zones."
+  Hardware         [hardwareSystems]      * <-- HardwareAccess        --> *    [users]                  User
+      developer info: "A user may have access to different hardware systems, rigs, or components."
   // ### Networking associations
-  PhysicalZone     [physicalZone]      0..1 <-- ZoneInclusion         --> *   [systems]                System
-      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Systems but access on a System does not always provide access to the physical zone (e.g. iLOs)."
-  RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *   [connectionRules]        ConnectionRule
+  RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *    [connectionRules]        ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
-  RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1[managerApp]             Application
+  RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1 [managerApp]             Application
       user info: "A routing firewall can have an admin/manager interface (application) that is accesible from a network location."
-  Network          [networks]             * <-- NetworkExposure       --> *   [applications]           Application
+  Network          [networks]             * <-- NetworkExposure       --> *    [applications]           Application
       user info: "An application can communicate / be exposed on a network."
       modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
       developer info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
-  Network          [clientAccessNetworks] * <-- ClientAccess          --> *   [clientApplications]     Application
+  Network          [clientAccessNetworks] * <-- ClientAccess          --> *    [clientApplications]     Application
       user info: "A client application can communicate over a network."
-  Application      [applications]         * <-- ApplicationConnection --> *   [appConnections]         ConnectionRule
+  Application      [applications]         * <-- ApplicationConnection --> *    [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
       modeler info: "ConnectionRules associated with Applications are practically expressing a traffic flow."
-  Application      [inApplications]       * <-- InApplicationConnection --> * [ingoingAppConnections]  ConnectionRule
+  Application      [inApplications]       * <-- InApplicationConnection --> *  [ingoingAppConnections]  ConnectionRule
       user info: "Two or more applications can also be inter-connected via a uni-directional connection. In means that this is the server side application, awaiting incoming connections."
-  Application      [outApplications]      * <-- OutApplicationConnection --> *[outgoingAppConnections] ConnectionRule
+  Application      [outApplications]      * <-- OutApplicationConnection --> * [outgoingAppConnections] ConnectionRule
       user info: "Two or more applications can also be inter-connected via a uni-directional connection. Out means that this is the client side application initiating connections."
-  Network          [networks]             * <-- NetworkConnection     --> *   [netConnections]         ConnectionRule
+  Network          [networks]             * <-- NetworkConnection     --> *    [netConnections]         ConnectionRule
       user info: "Two or more networks can also be inter-connected via a bidirectional connection."
-  Network          [inNetworks]           * <-- InNetworkConnection   --> *   [ingoingNetConnections]  ConnectionRule
+  Network          [inNetworks]           * <-- InNetworkConnection   --> *    [ingoingNetConnections]  ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection. In means that ingoing traffic to the network is allowed."
-  Network          [outNetworks]          * <-- OutNetworkConnection  --> *   [outgoingNetConnections] ConnectionRule
+  Network          [outNetworks]          * <-- OutNetworkConnection  --> *    [outgoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection. Out means that outgoing traffic from the network is allowed."
   Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection --> * [diodeIngoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
   // ### Data related associations
-  Data             [containingData]       * <-- DataContainment       --> *   [containedData]          Data
+  Data             [containingData]       * <-- DataContainment       --> *    [containedData]          Data
       user info: "Data can be contained inside other data."
-  Data             [containedData]        * <-- AppContainment        --> *   [containingApp]          Application
+  Data             [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
       user info: "An application should be able to contain some data."
-  Data             [sentData]             * <-- SendData              --> *   [senderApp]              Application
+  Data             [sentData]             * <-- SendData              --> *    [senderApp]              Application
       user info: "An application can also send some data that are supposed to be transfered over a connection. This expresses an active connection."
-  Data             [receivedData]         * <-- ReceiveData           --> *   [receiverApp]            Application
+  Data             [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
       user info: "An application can also receive some data that are supposed to be transfered over a connection. This expresses an active connection."
-  Data             [transitData]          * <-- DataInTransit         --> *   [transitNetwork]         Network
+  Data             [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
-  System           [system]            0..1 <-- DataHosting           --> *   [sysData]                Data
-      user info: "A system can host data."
-  Data             [containerData]        * <-- InfoContainment       --> *   [information]            Information
+  Hardware         [hardware]          0..1 <-- DataHosting           --> *    [hostedData]             Data
+      user info: "Data can be hosted on hardware."
+  Data             [containerData]        * <-- InfoContainment       --> *    [information]            Information
       user info: "Data can contain information, as for example credentials."
-  Data             [dataReplicas]          * <-- Replica                --> * [replicatedInformation]  Information
+  Data             [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
-  Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1 [encryptCreds]          Credentials
+  Data             [encryptedData]        * <-- EncryptionCredentials --> 0..1 [encryptCreds]           Credentials
       user info: "Encrypted data can be associated with the relevant encryption credentials."
-  Data             [signedData]           * <-- SigningCredentials    --> 0..1[signingCreds]           Credentials
+  Data             [signedData]           * <-- SigningCredentials    --> 0..1 [signingCreds]           Credentials
       user info: "Signed data can be associated with the relevant signing credentials."
-  Credentials      [hashes]               * <-- HashedCredentials     --> 0..1 [origCreds]             Credentials
+  Credentials      [hashes]               * <-- HashedCredentials     --> 0..1 [origCreds]              Credentials
       user info: "Credentials can be associated with their hashed counterparts. Multiple hashes can be generated for the same Credentials, but a hash is unique to one set of Credentials."
-  Credentials      [credentials]          * <-- ConditionalAuthentication --> *[requiredFactors]        Credentials
+  Credentials      [credentials]          * <-- ConditionalAuthentication --> * [requiredFactors]       Credentials
       user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
       mitre info: "Used for M1032: Multi-factor Authentication"
-  Data             [originData]        0..1 <-- Origin                --> 0..1[originSoftwareProduct]  SoftwareProduct
+  Data             [originData]        0..1 <-- Origin                --> 0..1 [originSoftwareProduct]  SoftwareProduct
       user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained." 
   // ### Access Control happens below
-  Identity         [identities]           * <-- IdentityCredentials   --> *   [credentials]            Credentials
-  Identity         [userIds]              * <-- UserAssignedIdentities--> *   [users]                  User
-  Identity         [parentId]             * <-- CanAssume             --> *   [childId]                Identity
+  Identity         [identities]           * <-- IdentityCredentials   --> *    [credentials]            Credentials
+  Identity         [userIds]              * <-- UserAssignedIdentities--> *    [users]                  User
+  Identity         [parentId]             * <-- CanAssume             --> *    [childId]                Identity
       user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance."
-  Group            [memberOf]             * <-- MemberOf              --> *   [groupIds]               Identity
-  Group            [parentGroup]          * <-- MemberOf              --> *   [childGroups]            Group
-  // First on system level
-  Identity         [highPrivSysIds]       * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
-      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Identity         [lowPrivSysIds]        * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
-      user info: "Low privilege access on a System provides individual identity access on the system."
-  // And the same for Groups
-  Group            [highPrivSysGroups]    * <-- HighPrivilegeAccess   --> *   [highPrivManagedSystems] System
-      user info: "High privilege access on a System results in the compromise of all the privileges assigned to that system."
-  Group            [lowPrivSysGroups]     * <-- LowPrivilegeAccess    --> *   [lowPrivManagedSystems]  System
-      user info: "Low privilege access on a System provides individual identity access on the system."
+  Group            [memberOf]             * <-- MemberOf              --> *    [groupIds]               Identity
+  Group            [parentGroup]          * <-- MemberOf              --> *    [childGroups]            Group
   // Then, Access Control on application level
-  Identity         [executionPrivIds]     * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
+  IAMObject        [executionPrivIAMs]    * <-- ExecutionPrivilegeAccess       --> * [execPrivApps]     Application
       user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
-  Identity         [highPrivAppIds]       * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
+  IAMObject        [highPrivAppIAMs]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]     Application
       user info: "High privilege application access on an Application results in the (full) access/compromise of the application and all the child applications."
-  Identity         [lowPrivAppIds]        * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
+  IAMObject        [lowPrivAppIAMs]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]      Application
       user info: "Low privilege application access on an Application allows only the local interaction with the application and all the specified privileges."
-  // And the same for Groups
-  Group           [executionPrivGroups]   * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
-      user info: "An application can execute on a system with privileges of a specified group. If the application is compromised then the group privileges should be compromised."
-  Group           [highPrivAppGroups]     * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
-      user info: "High privilege application access on an Application results in the compromise of all the child applications."
-  Group           [lowPrivAppGroups]      * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
-      user info: "Low privilege application access on an Application allows only the local interaction with the application."
   // Finally, Access control on data
-  Identity         [readingIds]           * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Identity         [writingIds]           * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Identity         [deletingIds]          * <-- DeletePrivileges      --> *   [deletePrivData]         Data
-  // And again for Groups
-  Group            [readingGroups]        * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Group            [writingGroups]        * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Group            [deletingGroups]       * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  IAMObject        [readingIAMs]          * <-- ReadPrivileges        --> *    [readPrivData]           Data
+  IAMObject        [writingIAMs]          * <-- WritePrivileges       --> *    [writePrivData]          Data
+  IAMObject        [deletingIAMs]         * <-- DeletePrivileges      --> *    [deletePrivData]         Data
   // Associations for the Privileges asset
-  Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *   [identityPrivileges]     Privileges
-      user info: "Any Identity can be associated with a Privileges asset that groups privileges for Applications and Data." 
-  Privileges       [executionPrivAppPriv] * <-- ExecutionPrivilegeAccess  --> *   [execPrivApps]       Application
-  Privileges       [highPrivAppPriv]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]    Application
-  Privileges       [lowPrivAppPriv]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]     Application
-  Privileges       [readingPriv]          * <-- ReadPrivileges        --> *   [readPrivData]           Data
-  Privileges       [writingPriv]          * <-- WritePrivileges       --> *   [writePrivData]          Data
-  Privileges       [deletingPriv]         * <-- DeletePrivileges      --> *   [deletePrivData]         Data
+  Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *    [identityPrivileges]     Privileges
+  Group            [privilegeGroups]      * <-- HasPrivileges         --> *    [groupPrivileges]        Privileges
+      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
+  IAMObject        [managers]             * <-- AccountManagement     --> *    [managedIAMs]            IAMObject
+
 }

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 public class IAMIntegrationTests extends CoreLangTest {
     public class IAMIntegrationTestModel {
-        public final System server = new System("Server");
+        public final Hardware server = new Hardware("Server");
         public final Application rhel = new Application("RHEL");
         public final Application oracle = new Application("Oracle");
         public final Application otherapp = new Application("OtherApp");
@@ -23,11 +23,11 @@ public class IAMIntegrationTests extends CoreLangTest {
 
         public IAMIntegrationTestModel() {
             // Create associations
-            rhel.addLowPrivAppIds(rhel_luser);
-            rhel.addHighPrivAppIds(rhel_oracle);
-            rhel.addHighPrivAppIds(rhel_root);
-            oracle.addExecutionPrivIds(rhel_oracle);
-            oracle.addHighPrivAppIds(oracle_dba);
+            rhel.addLowPrivAppIAMs(rhel_luser);
+            rhel.addHighPrivAppIAMs(rhel_oracle);
+            rhel.addHighPrivAppIAMs(rhel_root);
+            oracle.addExecutionPrivIAMs(rhel_oracle);
+            oracle.addHighPrivAppIAMs(oracle_dba);
             rhel_oracle.addUsers(dba_user);
             rhel_root.addUsers(root_user);
             server.addSysExecutedApps(rhel);
@@ -36,8 +36,8 @@ public class IAMIntegrationTests extends CoreLangTest {
             oracle.addContainedData(db);
             db.addContainedData(table1);
             db.addContainedData(table2);
-            table1.addReadingIds(oracle_analyst);
-            table1.addWritingIds(oracle_analyst);
+            table1.addReadingIAMs(oracle_analyst);
+            table1.addWritingIAMs(oracle_analyst);
             oracle.addVulnerabilities(vuln);
         }
 
@@ -90,7 +90,7 @@ public class IAMIntegrationTests extends CoreLangTest {
             // Create associations
             network.addApplications(application);
             application.addContainedData(data);
-            data.addReadingIds(identity);
+            data.addReadingIAMs(identity);
         }
 
         public void addAttacker(Attacker attacker) {
