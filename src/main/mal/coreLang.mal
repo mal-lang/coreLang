@@ -154,7 +154,7 @@ category ComputeResources {
       # disabled [Disabled]
         user info: "If application is disabled it should behave as nonexistent, thus all attack vectors are removed."
         developer info: "This would even allow us to have a much more dynamic and probabilistic aspect on our model and simulations."
-        mitre info: "Used for M1042: Disable or Remove Feature or Program"
+        mitre info: "Used for M1042: Disable or Remove Feature or Program, M1033: Limit Software Installation, M1028: Operating System Configuration"
         ->  specificAccessFromLocalConnection,
             specificAccessFromNetworkConnection,
             localAccess,
@@ -347,6 +347,7 @@ category ComputeResources {
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
+        mitre info: "Used for M1047: Audit"
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
@@ -504,6 +505,7 @@ category ComputeResources {
       # effectiveness [Enabled]
         user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
         modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
+        mitre info: "Used for M1049: Antivirus/Antimalware, M1038: Execution Prevention, M1050: Exploit Protection, M1051: Update Software, M1016: Vulnerability Scanning"
         ->  protectionBypassed
 
       # disabled @Override @hidden [Disabled]
@@ -610,6 +612,7 @@ category DataResources {
       # dataNotPresent [Disabled]
         user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
         developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+        mitre info: "Used for M1029: Remote Data Storage, M1057: Data Loss Prevention"
         ->  access,
             readContainedInformation,
             applicationRespondConnect,
@@ -773,6 +776,7 @@ category IAM {
     {
       # disabled [Disabled]
         user info: "It should be used to model the probability that the IAM object does not actually exist."
+        mitre info: "Used for M1026: Privileged Account Management, M1025: Privileged Process Integrity, M1022: Restrict File and Directory Permissions, M1052: User Account Control, M1018: User Account Management, M1024: Restrict Registry Permissions"
         ->  successfulAssume
 
       | attemptAssume
@@ -836,14 +840,17 @@ category IAM {
     {
       # notDisclosed [Enabled]
         user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
+        mitre info: "Used for M1027: Password Policies"
         ->  useLeakedCredentials
 
       # notGuessable [Enabled]
         user info: "Describes if the credentials can be guessed by the attacker(e. g. they represent a password or passphrase)."
+        mitre info: "Used for M1027: Password Policies"
         ->  guessCredentials
 
       # unique [Enabled]
         user info: "Describes if the credentials are known to be unique and therefore cannot be used in a credentials reuse attack."
+        mitre info: "Used for M1027: Password Policies"
         ->  credentialsReuse,
             propagateOneCredentialCompromised
 
@@ -1081,12 +1088,13 @@ category Networking {
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
         modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
+        mitre info: "Used for M1031: Network Intrusion Prevention"
         ->  eavesdrop,
             eavesdropAfterPhysicalAccess
 
       # manInTheMiddleDefense
         user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
-        mitre info: "Used for M1042: Disable or Remove Feature or Program(removing legacy protocols)"
+        mitre info: "Used for M1042: Disable or Remove Feature or Program(removing legacy protocols), M1031: Network Intrusion Prevention"
         ->  manInTheMiddle
 
       & eavesdrop {C}
@@ -1145,7 +1153,7 @@ category Networking {
 
       # restricted [Disabled]
         user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
-        mitre info: "Used for M1030: Network Segmentation"
+        mitre info: "Used for M1031: Network Intrusion Prevention, M1037: Filter Network Traffic, M1030: Network Segmentation"
         ->  accessNetworks,
             connectToApplications,
             connectToApplicationsWithoutTriggeringVulnerabilities,
