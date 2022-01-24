@@ -133,7 +133,7 @@ category ComputeResources {
         user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
 
-      & write @Override
+      | write @Override
         developer info: "If the attacker is able to write the software product they are able to compromise the applications using it."
         +>  compromiseApplication
     }
@@ -532,18 +532,68 @@ category DataResources {
       | attemptAccess
         user info: "The attacker is attempting to access the information."
 
+      | attemptReadFromReplica @hidden
+        developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
+        ->  successfulReadFromReplica
+
+      & attemptWriteFromReplica @hidden
+        developer info: "Information can be overwritten only if all replicas have been overwritten."
+        ->  successfulWriteFromReplica
+
+      & attemptDeleteFromReplica @hidden
+        developer info: "Information can be deleted only if all replicas have been deleted."
+        ->  successfulDeleteFromReplica
+
+      & attemptDenyFromReplica @hidden
+        developer info: "Information can be denied only if all replicas have been denied."
+        ->  successfulDenyFromReplica
+
+      | attemptExtractFromReplica @hidden
+        developer info: "The attacker attempts to extract the information."
+        ->  successfulExtractFromReplica
+
+      & successfulReadFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  read
+
+      & successfulWriteFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  write
+
+      & successfulDeleteFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  delete
+
+      & successfulDenyFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  deny
+
+      & successfulExtractFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  extract
+
       | read
-        user info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
-        ->  dataReplicas.read
+        user info: "The attacker is able to read the information. They may still be unable to extract it."
+        ->  dataReplicas.read,
+            containerData.read
 
-      & write
-        user info: "Information can be overwritten only if all replicas have been overwritten."
+      | write
+        user info: "The attacker is able to write the information."
+        ->  dataReplicas.write,
+            containerData.write
 
-      & delete
-        user info: "Information can be deleted only if all replicas have been deleted."
+      | delete
+        user info: "The attacker is able to delete the information."
+        ->  dataReplicas.delete,
+            containerData.delete
 
-      & deny
-        user info: "Information can be denied only if all replicas have been denied."
+      | deny
+        user info: "The attacker is able to deny the information."
+        ->  dataReplicas.deny,
+            containerData.deny
+
+      | extract
+        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
     }
 
     asset Data
@@ -595,7 +645,6 @@ category DataResources {
       | accessDecryptedData @hidden
         user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
         ->  access,
-            readContainedInformation,
             applicationRespondConnect,
             successfulRead,
             successfulWrite,
@@ -605,16 +654,11 @@ category DataResources {
         user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
         developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
         ->  access,
-            readContainedInformation,
             applicationRespondConnect,
             successfulRead,
             successfulWrite,
             successfulDeny,
             successfulDelete
-
-      & readContainedInformation
-        user info: "From the data, attempt to access also the contained information, if exists."
-        ->  information.attemptAccess
 
       | attemptApplicationRespondConnect @hidden
         developer info: "Intermediate attack step to handle defenses."
@@ -667,29 +711,31 @@ category DataResources {
       | read {C}
         user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
         ->  containedData.attemptRead,
-            readContainedInformation,
-            replicatedInformation.read,
+            information.read,
+            replicatedInformation.attemptReadFromReplica,
             extract
 
       & successfulWrite @hidden
         developer info: "Intermediate attack step to model the requirements."
-        ->  replicatedInformation.write,
-            write
+        ->  write
 
       | write {I}
         user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
         ->  containedData.attemptWrite,
+            information.write,
+            replicatedInformation.attemptWriteFromReplica,
             attemptDelete,
             compromiseAppOrigin
 
       & successfulDelete @hidden
         developer info: "Intermediate attack step to model the requirements."
-        ->  replicatedInformation.delete,
-            delete
+        ->  delete
 
       | delete {I,A}
         user info: "The attacker can delete the data."
         ->  containedData.attemptDelete,
+            information.delete,
+            replicatedInformation.attemptDeleteFromReplica,
             attemptDeny
 
       | attemptDeny @hidden
@@ -698,12 +744,13 @@ category DataResources {
 
       & successfulDeny @hidden
         developer info: "Intermediate attack step to model the requirements."
-        ->  replicatedInformation.deny,
-            deny
+        ->  deny
 
       | deny {A}
         user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
-        ->  containedData.attemptDeny
+        ->  containedData.attemptDeny,
+            information.deny,
+            replicatedInformation.attemptDenyFromReplica
 
       | attemptWriteDataInTransitFromApplication @hidden
         developer info: "Intermediate attack step to allow data in transit to be written from the Application side."
@@ -749,7 +796,8 @@ category DataResources {
 
       & extract
         user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
-        ->  information.read
+        ->  information.extract,
+            replicatedInformation.attemptExtractFromReplica
 
       | compromiseAppOrigin
         user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
