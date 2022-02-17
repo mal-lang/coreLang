@@ -257,9 +257,7 @@ category ComputeResources {
             containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
             sentData.identityAttemptRead, // Both Data sent and received can be read
             receivedData.identityAttemptRead,
-            sentData.attemptIdentityWriteDataInTransitFromApplication,
-            clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
-            clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
+            sentData.identityAttemptWrite, // But only sent Data can be written
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 
@@ -300,9 +298,7 @@ category ComputeResources {
             containedData.attemptAccess,  // and access on all the contained data
             sentData.attemptRead, // Both Data sent and received can be read
             receivedData.attemptRead,
-            sentData.attemptWriteDataInTransitFromApplication,
-            clientApplicationConnections().attemptAllowWriteDataInTransit, // Only data in transit that initiate from this Application can be written
-            clientApplicationConnections().attemptAllowDenyDataInTransit,  // or denied
+            sentData.attemptWrite, // But only sent Data can be written
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
@@ -485,7 +481,6 @@ category ComputeResources {
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
-            sentData.attemptDenyDataInTransitFromApplication,
             appExecutedApps.attemptDeny
 
       & denyFromNetworkingAsset @hidden
@@ -751,39 +746,6 @@ category DataResources {
         ->  containedData.attemptDeny,
             information.deny,
             replicatedInformation.attemptDenyFromReplica
-
-      | attemptWriteDataInTransitFromApplication @hidden
-        developer info: "Intermediate attack step to allow data in transit to be written from the Application side."
-        ->  writeDataInTransit
-
-      | attemptIdentityWriteDataInTransitFromApplication @hidden
-        developer info: "Intermediate attack step to allow data in transit to be written if the Identity associated is also compromised from the Application side."
-        ->  identityWriteDataInTransit
-
-      | attemptWriteDataInTransitFromConnectionRule @hidden
-        developer info: "Intermediate attack step to allow data in transit to be written from the ConnectionRule side."
-        ->  writeDataInTransit,
-            identityWriteDataInTransit
-
-      & identityWriteDataInTransit @hidden {C, I}
-        developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
-        ->  identityAttemptWrite
-
-      & writeDataInTransit @hidden {C, I}
-        developer info: "For Data in transit to be witten via an Application they have to be reachable from an outgoing ConnectionRule as well."
-        ->  attemptWrite
-
-      | attemptDenyDataInTransitFromApplication @hidden
-        developer info: "Intermediate attack step to allow data in transit to be denied from the Application side."
-        ->  denyDataInTransit
-
-      | attemptDenyDataInTransitFromConnectionRule @hidden
-        developer info: "Intermediate attack step to allow data in transit to be denied from the ConnectionRule side."
-        ->  denyDataInTransit
-
-      & denyDataInTransit @hidden {C, I}
-        developer info: "For Data in transit to be denied via an Application they have to be reachable from an outgoing ConnectionRule as well."
-        ->  attemptDeny
 
       | attemptReverseReach @hidden
         developer info: "Intermediate attack step."
@@ -1176,8 +1138,6 @@ category Networking {
             connectToApplications,
             connectToApplicationsWithoutTriggeringVulnerabilities,
             denialOfService,
-            allowWriteDataInTransit,
-            allowDenyDataInTransit,
             reverseReach
 
       # payloadInspection [Disabled]
@@ -1222,22 +1182,6 @@ category Networking {
 
       & denialOfService {A}
         ->  allApplications().denyFromNetworkingAsset
-
-      | attemptAllowWriteDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  allowWriteDataInTransit
-
-      & allowWriteDataInTransit @hidden
-        developer info: "Only trigger write on Data in transit on client connections."
-        ->  (networks  \/ inNetworks  \/ diodeInNetworks).transitData.attemptWriteDataInTransitFromConnectionRule
-
-      | attemptAllowDenyDataInTransit @hidden
-        developer info: "Intermediate attack step."
-        ->  allowDenyDataInTransit
-
-      & allowDenyDataInTransit @hidden
-        developer info: "Only trigger deny on Data in transit on client connections."
-        ->  (networks  \/ inNetworks  \/ diodeInNetworks).transitData.attemptDenyDataInTransitFromConnectionRule
     }
 }
 
