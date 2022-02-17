@@ -122,15 +122,15 @@ category ComputeResources {
         ->  softApplications.attemptFullAccessAfterSoftProdCompromise
 
       | readApplication
-        user info: "If the vulnerability has a read imapct, it should propagate that on all the applications."
+        user info: "If the vulnerability has a read impact, it should propagate that on all the applications."
         ->  softApplications.attemptReadAfterSoftProdVulnerability
 
       | modifyApplication
-        user info: "If the vulnerability has a modify imapct, it should propagate that on all the applications."
+        user info: "If the vulnerability has a modify impact, it should propagate that on all the applications."
         ->  softApplications.attemptModifyAfterSoftProdVulnerability
 
       | denyApplication
-        user info: "If the vulnerability has a deny imapct, it should propagate that on all the applications."
+        user info: "If the vulnerability has a deny impact, it should propagate that on all the applications."
         ->  softApplications.attemptDenyAfterSoftProdVulnerability
 
       | write @Override
@@ -254,7 +254,7 @@ category ComputeResources {
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
-            containedData.attemptAccessFromIdentity, // This also enables the use of compromised identites but only after specificAccess is reached
+            containedData.attemptAccessFromIdentity, // This also enables the use of compromised identities but only after specificAccess is reached
             sentData.identityAttemptRead, // Both Data sent and received can be read
             receivedData.identityAttemptRead,
             sentData.identityAttemptWrite, // But only sent Data can be written
@@ -281,11 +281,11 @@ category ComputeResources {
             softwareProductVulnerabilityLowPrivilegesAchieved
 
       & localAccess @hidden
-        developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
+        developer info: "Intermediate attack steps for modeling the two requirements (reachability and authentication) for access."
         ->  fullAccess
 
       & networkAccess @hidden
-        developer info: "Intermediate attack steps for modeling the two requirements (reachabiltiy and authentication) for access."
+        developer info: "Intermediate attack steps for modeling the two requirements (reachability and authentication) for access."
         ->  fullAccess
 
       | fullAccess {C,I,A}
@@ -668,7 +668,7 @@ category DataResources {
         ->  successfulRead
 
       | identityAttemptRead @hidden
-        user info: "Attempt to read the data through a compormised identity."
+        user info: "Attempt to read the data through a compromised identity."
         ->  identityRead
 
       & identityRead @hidden
@@ -680,7 +680,7 @@ category DataResources {
         ->  successfulWrite
 
       | identityAttemptWrite @hidden
-        user info: "Attempt to write the data through a compormised identity."
+        user info: "Attempt to write the data through a compromised identity."
         ->  identityWrite
 
       & identityWrite @hidden
@@ -692,7 +692,7 @@ category DataResources {
         -> successfulDelete
 
       | identityAttemptDelete @hidden
-        user info: "Attempt to delete the data through a compormised identity."
+        user info: "Attempt to delete the data through a compromised identity."
         ->  identityDelete
 
       & identityDelete @hidden
@@ -1026,7 +1026,7 @@ category Networking {
         ->  successfulAccess
 
       & attemptAccess @hidden
-        user info: "Access on a Network can be atempted after physicalAccess."
+        user info: "Access on a Network can be attempted after physicalAccess."
         ->  access
 
       | access
@@ -1081,11 +1081,11 @@ category Networking {
         ->  manInTheMiddle
 
       & eavesdrop {C}
-        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transfered data over that network."
+        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
         ->  successfulEavesdrop
 
       | bypassEavesdropProtection {C} [HardAndUncertain]
-        user info: "The eavesdrop protection can be bypassesed."
+        user info: "The eavesdrop protection can be bypassed."
         ->  successfulEavesdrop
 
       | successfulEavesdrop @hidden
@@ -1093,11 +1093,11 @@ category Networking {
         ->  transitData.attemptRead
 
       & manInTheMiddle {C, I}
-        user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transfered data over that network."
+        user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transferred data over that network."
         ->  successfulManInTheMiddle
 
       | bypassMitMProtection {C, I} [HardAndUncertain]
-        user info: "The MitM protection can be bypassesed."
+        user info: "The MitM protection can be bypassed."
         ->  successfulManInTheMiddle
 
       | successfulManInTheMiddle @hidden
@@ -1206,7 +1206,7 @@ associations {
   RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *    [connectionRules]        ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1 [managerApp]             Application
-      user info: "A routing firewall can have an admin/manager interface (application) that is accesible from a network location."
+      user info: "A routing firewall can have an admin/manager interface (application) that is accessible from a network location."
   Network          [networks]             * <-- NetworkExposure       --> *    [applications]           Application
       user info: "An application can communicate / be exposed on a network."
       modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
@@ -1227,16 +1227,16 @@ associations {
   Network          [outNetworks]          * <-- OutNetworkConnection  --> *    [outgoingNetConnections] ConnectionRule
       user info: "Two or more networks can also be inter-connected via a uni-directional connection. Out means that outgoing traffic from the network is allowed."
   Network          [diodeInNetworks]      * <-- DiodeInNetworkConnection --> * [diodeIngoingNetConnections] ConnectionRule
-      user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no repsonses can come back after connection initiation."
+      user info: "Two or more networks can also be inter-connected via a uni-directional connection that acts like a diode. That means that no responses can come back after connection initiation."
   // ### Data related associations
   Data             [containingData]       * <-- DataContainment       --> *    [containedData]          Data
       user info: "Data can be contained inside other data."
   Data             [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
       user info: "An application should be able to contain some data."
   Data             [sentData]             * <-- SendData              --> *    [senderApp]              Application
-      user info: "An application can also send some data that are supposed to be transfered over a connection. This expresses an active connection."
+      user info: "An application can also send some data that are supposed to be transferred over a connection. This expresses an active connection."
   Data             [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
-      user info: "An application can also receive some data that are supposed to be transfered over a connection. This expresses an active connection."
+      user info: "An application can also receive some data that are supposed to be transferred over a connection. This expresses an active connection."
   Data             [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
   Hardware         [hardware]          0..1 <-- DataHosting           --> *    [hostedData]             Data
