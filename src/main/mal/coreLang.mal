@@ -484,8 +484,13 @@ category ComputeResources {
             appExecutedApps.attemptDeny
 
       & denyFromNetworkingAsset @hidden
-        user info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
+        developer info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
         ->  attemptDeny
+
+      & denyFromLockout @hidden
+        developer info: "This is an intermediate attack step to only allow deny on an application when all the executing identities are locked out."
+        ->  attemptDeny
+
     }
 
     asset IDPS extends Application
@@ -575,12 +580,14 @@ category DataResources {
       | write
         user info: "The attacker is able to write the information."
         ->  dataReplicas.write,
-            containerData.write
+            containerData.write,
+            delete
 
       | delete
         user info: "The attacker is able to delete the information."
         ->  dataReplicas.delete,
-            containerData.delete
+            containerData.delete,
+            deny
 
       | deny
         user info: "The attacker is able to deny the information."
@@ -805,6 +812,14 @@ category IAM {
         +>  parentId.attemptAssume,
             memberOf.attemptAssume,
             identityPrivileges.attemptAssume
+
+      & attemptLockout @hidden
+        developer info: "Only lockout an identity if all of the Credentials that could be used to authenticate have been denied."
+        ->  lockout
+
+      | lockout {A}
+        user info: "The identity has been locked out and cannot be used by legitimate users."
+        ->  execPrivApps.denyFromLockout
     }
 
     asset Privileges extends IAMObject
@@ -852,6 +867,14 @@ category IAM {
       | read @Override
         developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
         +> attemptUse
+
+      | write @Override
+        developer info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
+        +> attemptUse
+
+      | deny @Override
+        developer info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
+        +> identities.attemptLockout
 
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
