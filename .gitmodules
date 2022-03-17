@@ -1,0 +1,3 @@
+[submodule "documentation/corelang-examples"]
+	path = documentation/corelang-examples
+	url = https://github.com/mal-lang/corelang-examples.git
