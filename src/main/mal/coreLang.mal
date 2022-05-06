@@ -25,7 +25,8 @@ category ComputeResources {
     {
       | attemptUseVulnerability @hidden
         developer info: "Intermediate attack step to allow for defences."
-        ->  successfulUseVulnerability
+        ->  successfulUseVulnerability,
+            bypassHardwareModificationsProtection
 
       & successfulUseVulnerability @ hidden
         developer info: "Intermediate attack step to enable defences."
@@ -50,7 +51,8 @@ category ComputeResources {
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
-        ->  successfulSupplyChainAttack
+        ->  successfulSupplyChainAttack,
+            bypassSupplyChainAuditing
 
       & successfulSupplyChainAttack @hidden
         developer info: "Intermediate attack step to enable defences."
@@ -65,6 +67,15 @@ category ComputeResources {
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "Supply chain auditing is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
         ->  successfulSupplyChainAttack
 
       | physicalAccess
@@ -75,7 +86,8 @@ category ComputeResources {
 
       | attemptHardwareModifications @hidden
         developer info: "Intermediate attack step."
-        ->  successfulHardwareModifications
+        ->  successfulHardwareModifications,
+            bypassHardwareModificationsProtection
 
       & successfulHardwareModifications @hidden
         developer info: "Intermediate attack step to enable defences."
@@ -89,13 +101,23 @@ category ComputeResources {
       # hardwareModificationsProtection
         user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
         developer info: "But it does not protect against denial of service attacks or local connect."
+        ->  hardwareModificationsProtectionBypassed
+
+      | bypassHardwareModificationsProtection [VeryHardAndUncertain]
+        user info: "Hardware modifications protection can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  hardwareModificationsProtectionBypassed
+
+      | hardwareModificationsProtectionBypassed @hidden
+        developer info: "Hardware modifications protection is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
         ->  successfulUseVulnerability,
             successfulHardwareModifications,
             successfulUnsafeUserActivity
 
       | attemptUnsafeUserActivity
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
-        ->  successfulUnsafeUserActivity
+        ->  successfulUnsafeUserActivity,
+            bypassHardwareModificationsProtection
 
       & successfulUnsafeUserActivity @hidden
         developer info: "Intermediate attack step to enable defences."
