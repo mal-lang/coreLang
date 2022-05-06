@@ -25,35 +25,47 @@ category ComputeResources {
     {
       | attemptUseVulnerability @hidden
         developer info: "Intermediate attack step to allow for defences."
+        ->  successfulUseVulnerability
+
+      & successfulUseVulnerability @ hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  useVulnerability
 
-      & useVulnerability
+      | useVulnerability
         user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
         ->  vulnerabilities.attemptAbuse
 
-      | attemptGainFullAccess @hidden
+      | attemptFullAccess @hidden
         developer info: "Intermediate attack step to allow for defences."
+        ->  successfulFullAccess
+
+      & successfulFullAccess @ hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  fullAccess
 
-      & fullAccess {C,I,A}
+      | fullAccess {C,I,A}
         user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
             hostedData.attemptAccess
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
-        ->  supplyChainAttack
+        ->  successfulSupplyChainAttack
 
-      & supplyChainAttack [VeryHardAndUncertain]
+      & successfulSupplyChainAttack @hidden
+        developer info: "Intermediate attack step to enable defences."
+        -> supplyChainAttack
+
+      | supplyChainAttack [VeryHardAndUncertain]
         user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
         modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
-        ->  bypassHardwareModificationsProtection
+        ->  attemptFullAccess
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
-        ->  supplyChainAttack
+        ->  successfulSupplyChainAttack
 
       | physicalAccess
         user info: "Attacker has physical access to the location where the hardware is physically deployed. They could then deny the hardware, locally connect to the hosted applications, and exploit physical vulnerabilities."
@@ -77,15 +89,19 @@ category ComputeResources {
       # hardwareModificationsProtection
         user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
         developer info: "But it does not protect against denial of service attacks or local connect."
-        ->  useVulnerability,
+        ->  successfulUseVulnerability,
             successfulHardwareModifications,
-            unsafeUserActivity
+            successfulUnsafeUserActivity
 
       | attemptUnsafeUserActivity
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
+        ->  successfulUnsafeUserActivity
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  unsafeUserActivity
 
-      & unsafeUserActivity
+      | unsafeUserActivity
         user info: "A user is performing unsafe actions on the hardware."
         developer info: "This exposes the Applications running on top of the hardware and fulfils the physical access requirement of SoftwareVulnerabilities associated with them."
         modeler info: "Currently only represents connecting a malicious removable media drive."
@@ -104,13 +120,9 @@ category ComputeResources {
 
       | modify {I}
         user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
-        ->  attemptGainFullAccess,
+        ->  attemptFullAccess,
             sysExecutedApps.attemptModify,
             hostedData.attemptWrite
-
-      | bypassHardwareModificationsProtection @hidden {C, I}
-        user info: "The attacker can bypass the hardware modifications protection and gain full access after performing a supply chain attack."
-        ->  attemptGainFullAccess
     }
 
     asset SoftwareProduct extends Information
@@ -303,8 +315,7 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
-            hostHardware.attemptUseVulnerability
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
