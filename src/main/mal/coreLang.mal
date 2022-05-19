@@ -201,7 +201,8 @@ category ComputeResources {
 
       | attemptUseVulnerability @hidden
         developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
-        ->  successfulUseVulnerability
+        ->  successfulUseVulnerability,
+            protectorIDPSs.bypassEffectiveness
 
       & successfulUseVulnerability @hidden
         developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
@@ -347,9 +348,14 @@ category ComputeResources {
 
       | attemptUnsafeActivityByUser @hidden
         developer info: "Intermediate attack step."
+        ->  successfulUnsafeActivityByUser,
+            protectorIDPSs.bypassEffectiveness
+
+      & successfulUnsafeActivityByUser @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  unsafeActivityByUser
 
-      & unsafeActivityByUser
+      | unsafeActivityByUser
         user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
             networkConnect,
@@ -371,11 +377,21 @@ category ComputeResources {
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "The supply chain audit is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
         developer info: "Intermediate attack step."
-        ->  fullAccessAfterSoftProdCompromise
+        ->  fullAccessAfterSoftProdCompromise,
+            bypassSupplyChainAuditing
 
       & fullAccessAfterSoftProdCompromise @hidden
         developer info: "Intermediate attack step."
@@ -529,22 +545,27 @@ category ComputeResources {
     asset IDPS extends Application
       user info: "An IDPS is tasked with protecting other applications from malicious activity."
     {
-      # effectiveness [Enabled]
-        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
-        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
-        ->  protectionBypassed
-
       # disabled @Override @hidden [Disabled]
         modeller info: "As per the comment for the effectiveness defence, the disabled defence does not function as desired for the IDPS asset and should not be used. The effectiveness defence should be adjusted to reflect the likelihood that the IDPS is present instead."
         developer info: "It would be ideal to hide this defence when using modelling tools to avoid confusion."
 
-      | protectionBypassed @hidden
+      # effectiveness [Enabled]
+        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
+        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
+        ->  effectivenessBypassed
+
+      | bypassEffectiveness [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  effectivenessBypassed
+
+      | effectivenessBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
-        ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
-            protectedApps.unsafeActivityByUser
+        ->  protectedApps.successfulUseVulnerability,
+            protectedApps.successfulUnsafeActivityByUser
 
       | fullAccess {C,I,A}
-        +>  protectionBypassed // The application is no longer able to protect the apps assigned to it
+        +>  effectivenessBypassed // The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself
     }
 
     asset PhysicalZone
