@@ -232,7 +232,7 @@ category ComputeResources {
             clientAccessNetworks.attemptReverseReach,
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
-            unsafeUserActivityWithAttackerInteraction,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
             containedData.attemptReverseReach,
             sentData.attemptReverseReach,
             receivedData.attemptReverseReach,
@@ -346,33 +346,34 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-      | attemptUnsafeActivityByUser @hidden
+      | attemptUnsafeUserActivity @hidden
         developer info: "Intermediate attack step."
-        ->  successfulUnsafeActivityByUser,
+        ->  successfulUnsafeUserActivity,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
+            attackerUnsafeUserActivityCapabilityWithoutReverseReach,
             protectorIDPSs.bypassEffectiveness
 
-      & successfulUnsafeActivityByUser @hidden
+      & successfulUnsafeUserActivity @hidden
         developer info: "Intermediate attack step to model defences."
-        ->  unsafeActivityByUser
+        ->  unsafeUserActivity
 
-      | unsafeActivityByUser
+      | unsafeUserActivity
         user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
             networkConnect,
             allVulnerabilities().userInteractionAchieved
 
-      & unsafeUserActivityWithAttackerInteraction @hidden
+      | attackerUnsafeUserActivityCapability @hidden
+        developer info: "The impacts of the user's unsafe actions are greatly limited if there are no channels through which the attacker can be reached by the unwitting user."
+        ->  successfulUnsafeUserActivity
+
+      & attackerUnsafeUserActivityCapabilityWithReverseReach @hidden
         developer info: "The attacker can be reached from this application and can therefore more easily exploit the unsafe user actions."
-        ->  attemptUnsafeActivityByUser
+        ->  attackerUnsafeUserActivityCapability
 
-      | unsafeUserActivityWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
-        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done before and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements its counterpart is missing."
-        ->  attemptUnsafeActivityByUser
-
-      | attemptUnsafeUserActivity @hidden
-        developer info: "This attack step represents a user with privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  unsafeUserActivityWithAttackerInteraction,
-            unsafeUserActivityWithoutAttackerInteraction
+      | attackerUnsafeUserActivityCapabilityWithoutReverseReach @hidden [VeryHardAndUncertain]
+        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done beforehand and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application which restricts the capabilities of being successful. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements it is missing."
+        ->  attackerUnsafeUserActivityCapability
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
@@ -562,7 +563,7 @@ category ComputeResources {
       | effectivenessBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
         ->  protectedApps.successfulUseVulnerability,
-            protectedApps.successfulUnsafeActivityByUser
+            protectedApps.successfulUnsafeUserActivity
 
       | fullAccess {C,I,A}
         +>  effectivenessBypassed // The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself
