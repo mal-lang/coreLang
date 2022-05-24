@@ -1004,7 +1004,7 @@ category IAM {
 category User {
 
     asset User
-      user info: "This asset represents the user himself. It is the suitable attack surface for social engineering attacks!"
+      user info: "This asset represents the user themselves. It is the suitable attack surface for social engineering attacks."
     {
       # noPasswordReuse [Enabled]
         user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
@@ -1012,10 +1012,19 @@ category User {
 
       # securityAwareness
         user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
-        ->  socialEngineering,
-            unsafeUserActivity,
-            weakCredentials,
-            deliverMaliciousRemovableMedia
+        ->  securityAwarenessBypassed,
+            weakCredentials
+
+      | bypassSecurityAwareness [VeryHardAndUncertain]
+        user info: "Security awareness can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  securityAwarenessBypassed
+
+      | securityAwarenessBypassed @hidden
+        developer info: "Security awareness is bypassed either because it was not set, the attacker was able to circumvent it through additional effort, or we simply assume that everyone has an off day every now and then."
+        ->  successfulSocialEngineering,
+            successfulUnsafeUserActivity,
+            successfulDeliverMaliciousRemovableMedia
 
       | oneCredentialCompromised @hidden
         developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
@@ -1031,19 +1040,29 @@ category User {
 
       | attemptSocialEngineering
         developer info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
+        ->  successfulSocialEngineering,
+            bypassSecurityAwareness
+
+      & successfulSocialEngineering @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  socialEngineering
 
-      & socialEngineering @hidden
-        modeler info: "An attacker can try to perform social engineering techniques such as phishing."
+      | socialEngineering @hidden
+        modeler info: "An attacker can try to perform social engineering techniques such as phishing and inducing the user to perform malicious actions."
         developer info: "In the future, other social engineering techniques should be connected to this attack step."
         ->  phishUser,
             unsafeUserActivity
 
       | attemptDeliverMaliciousRemovableMedia
         user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
+        ->  successfulDeliverMaliciousRemovableMedia,
+            bypassSecurityAwareness
+
+      & successfulDeliverMaliciousRemovableMedia @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  deliverMaliciousRemovableMedia
 
-      & deliverMaliciousRemovableMedia @hidden [Exponential(0.01)]
+      | deliverMaliciousRemovableMedia @hidden [Exponential(0.01)]
         modeler info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
         developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
         ->  userIds.attemptAssume,
@@ -1063,7 +1082,16 @@ category User {
         modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
         ->  userIds.credentials.attemptCredentialTheft
 
-      & unsafeUserActivity @hidden [Exponential(0.03)]
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulUnsafeUserActivity,
+            bypassSecurityAwareness
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity @hidden [Exponential(0.03)]
         developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
         modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
         ->  userIds.attemptAssume,
