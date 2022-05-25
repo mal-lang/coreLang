@@ -1120,28 +1120,33 @@ category Networking {
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
         ->  denialOfService,
             eavesdropAfterPhysicalAccess,
-            attemptAccess,
-            bypassAccessControl
+            attemptAccess
 
       # networkAccessControl
         user info: "Access control protects from unauthorized physical access on the network."
-        ->  eavesdropAfterPhysicalAccess,
-            attemptAccess
+        ->  accessControlBypassed
 
       | bypassAccessControl [VeryHardAndUncertain]
         user info: "If access control is enabled, the attacker can still try to bypass it and gain access on the network."
-        ->  successfulAccess
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  accessControlBypassed
 
-      & attemptAccess @hidden
+      | accessControlBypassed @hidden
+        developer info: "Access control is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  eavesdropAfterPhysicalAccess,
+            successfulAccess
+
+      | attemptAccess @hidden
         user info: "Access on a Network can be attempted after physicalAccess."
+        ->  successfulAccess,
+            bypassAccessControl
+
+      & successfulAccess @hidden
+        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  access
 
       | access
         user info: "Access provides connect to all reachable applications."
-        ->  successfulAccess
-
-      | successfulAccess @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnections().attemptConnectToApplications,
             applications.networkConnect,
             clientApplications.attemptNetworkConnectViaResponse,
@@ -1172,50 +1177,68 @@ category Networking {
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
-        ->  eavesdrop,
-            bypassEavesdropProtection,
-            manInTheMiddle,
-            bypassMitMProtection
+        ->  attemptEavesdrop,
+            attemptManInTheMiddle
 
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
         modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
-        ->  eavesdrop,
+        ->  eavesdropDefenseBypassed
+
+      | bypassEavesdropDefense [HardAndUncertain]
+        user info: "The eavesdrop defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  eavesdropDefenseBypassed
+
+      | eavesdropDefenseBypassed @hidden
+        developer info: "The Eavesdrop defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulEavesdrop,
             eavesdropAfterPhysicalAccess
+
+      | attemptEavesdrop @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulEavesdrop,
+            bypassEavesdropDefense
+
+      & successfulEavesdrop @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  eavesdrop
+
+      | eavesdrop {C}
+        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
+        ->  transitData.attemptRead
 
       # manInTheMiddleDefense
         user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        ->  manInTheMiddleDefenseBypassed
+
+      | bypassManInTheMiddleDefense [HardAndUncertain]
+        user info: "The man in the middle defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  manInTheMiddleDefenseBypassed
+
+      | manInTheMiddleDefenseBypassed @hidden
+        developer info: "The man in the middle defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulManInTheMiddle
+
+      | attemptManInTheMiddle @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulManInTheMiddle,
+            bypassManInTheMiddleDefense
+
+      & successfulManInTheMiddle @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  manInTheMiddle
 
-      & eavesdrop {C}
-        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
-        ->  successfulEavesdrop
-
-      | bypassEavesdropProtection {C} [HardAndUncertain]
-        user info: "The eavesdrop protection can be bypassed."
-        ->  successfulEavesdrop
-
-      | successfulEavesdrop @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptRead
-
-      & manInTheMiddle {C, I}
+      | manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transferred data over that network."
-        ->  successfulManInTheMiddle
-
-      | bypassMitMProtection {C, I} [HardAndUncertain]
-        user info: "The MitM protection can be bypassed."
-        ->  successfulManInTheMiddle
-
-      | successfulManInTheMiddle @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  transitData.attemptRead,
             transitData.attemptWrite,
             transitData.attemptApplicationRespondConnect
 
-      & eavesdropAfterPhysicalAccess @hidden {C}
+      & eavesdropAfterPhysicalAccess @hidden
         user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
-        ->  successfulEavesdrop
+        ->  eavesdrop
     }
 
     asset RoutingFirewall extends Application
@@ -1241,7 +1264,16 @@ category Networking {
 
       # restricted [Disabled]
         user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
-        ->  accessNetworks,
+        ->  restrictedBypassed
+
+      | bypassRestricted [VeryHardAndUncertain]
+        user info: "The restricted defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  restrictedBypassed
+
+      | restrictedBypassed @hidden
+        developer info: "The restricted defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulAccessNetworks,
             connectToApplications,
             connectToApplicationsWithoutTriggeringVulnerabilities,
             denialOfService,
@@ -1249,13 +1281,24 @@ category Networking {
 
       # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i. e. network-level vulnerabilities cannot be exploited)."
+        ->  payloadInspectionBypassed
+
+      | bypassPayloadInspection [VeryHardAndUncertain]
+        user info: "Payload inspection can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  payloadInspectionBypassed
+
+      | payloadInspectionBypassed @hidden
+        developer info: "Payload inspection is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
         ->  connectToApplications,
             reverseReach
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptReverseReach @hidden
         developer info: "Intermediate attack step."
-        ->  reverseReach
+        ->  reverseReach,
+            bypassRestricted,
+            bypassPayloadInspection
 
       & reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
@@ -1264,16 +1307,23 @@ category Networking {
 
       | attemptAccessNetworks @hidden
         developer info: "Intermediate attack step."
+        ->  successfulAccessNetworks,
+            bypassRestricted
+
+      & successfulAccessNetworks @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  accessNetworks
 
-      & accessNetworks
+      | accessNetworks
         developer info: "Access all networks that are associated with this ConnectionRule."
         ->  (networks  \/ inNetworks  \/ diodeInNetworks).access
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
         ->  connectToApplications,
-            connectToApplicationsWithoutTriggeringVulnerabilities
+            connectToApplicationsWithoutTriggeringVulnerabilities,
+            bypassRestricted,
+            bypassPayloadInspection
 
       & connectToApplications @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule."
@@ -1285,7 +1335,8 @@ category Networking {
 
       | attemptDenialOfService @hidden
         developer info: "Intermediate attack step."
-        ->  denialOfService
+        ->  denialOfService,
+            bypassRestricted
 
       & denialOfService {A}
         ->  allApplications().denyFromNetworkingAsset
