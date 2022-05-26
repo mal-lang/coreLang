@@ -820,6 +820,11 @@ category IAM {
       | lockout {A}
         user info: "The identity has been locked out and cannot be used by legitimate users."
         ->  execPrivApps.denyFromLockout
+
+      !E missingUser @hidden
+        developer info: "If there are no Users asociated with this Identity we make the worst case scenario assumption regarding the strength of the Credentials belonging to it."
+        <-  users
+        ->  credentials.weakCredentials
     }
 
     asset Privileges extends IAMObject
@@ -925,8 +930,13 @@ category IAM {
         user info: "The attacker is able to steal the credentials."
         ->  attemptUse
 
+      !E missingIdentity @hidden
+        developer info: "If there are no Identities asociated with these Credentials we make the worst case scenario assumption regarding the strength of the Credentials."
+        <-  identities
+        ->  weakCredentials
+
       | weakCredentials @hidden
-        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset."
+        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset associated with the Identity to which these Credentials belong. If either the User or Identity associations are missing the assumption is made that the crentials are weak and therefore guessable by the attacker."
         ->  guessCredentials,
             requiredFactors.weakCredentials
 
@@ -941,6 +951,7 @@ category IAM {
 
       & guessCredentials [HardAndUncertain]
         user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
+        modeller info: "The guessability of the Credentials is influenced by the notGuessable defence on this asset and the securityAwareness defence on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defence would play a role in restricting this attack step."
         developer info: "We should research the probability we want to use for this attack step more."
         ->  attemptUse
     }
