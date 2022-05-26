@@ -824,6 +824,7 @@ category IAM {
 
     asset Privileges extends IAMObject
       user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+      modeller info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly connected to the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
     {
       | assume @Override {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
