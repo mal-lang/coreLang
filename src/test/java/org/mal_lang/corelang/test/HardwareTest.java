@@ -68,21 +68,6 @@ public class HardwareTest extends CoreLangTest {
     }
 
     @Test
-    public void testPhysicalAccessWithHardwareModificationsProtection() {
-        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new HardwareTestModel(false, true);
-
-        var attacker = new Attacker();
-        model.addAttacker(attacker,model.hardware.physicalAccess);
-        attacker.attack();
-
-        model.hardware.deny.assertCompromisedInstantaneously();
-        model.hardware.attemptUseVulnerability.assertUncompromised();
-        model.hardware.fullAccess.assertUncompromised();
-        model.application.physicalAccessAchieved.assertUncompromised();
-    }
-
-    @Test
     public void testPhysicalAccessWithVulnerabilityNoHardwareModificationsProtection() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new HardwareWithVulnerabilityTestModel(false, false,
@@ -98,24 +83,6 @@ public class HardwareTest extends CoreLangTest {
         model.application.physicalAccessAchieved.assertCompromisedInstantaneously();
         model.application.fullAccess.assertCompromisedInstantaneously();
         model.data.attemptAccess.assertCompromisedInstantaneously();
-    }
-
-    @Test
-    public void testPhysicalAccessWithVulnerabilityWithHardwareModificationsProtection() {
-        printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
-        var model = new HardwareWithVulnerabilityTestModel(false, true,
-                false, false, false, false, false);
-
-        var attacker = new Attacker();
-        model.addAttacker(attacker,model.hardware.physicalAccess);
-        attacker.attack();
-
-        model.hardware.deny.assertCompromisedInstantaneously();
-        model.hardware.attemptUseVulnerability.assertUncompromised();
-        model.hardware.fullAccess.assertUncompromised();
-        model.application.physicalAccessAchieved.assertUncompromised();
-        model.application.fullAccess.assertUncompromised();
-        model.data.attemptAccess.assertUncompromised();
     }
 
 }

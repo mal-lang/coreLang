@@ -25,35 +25,58 @@ category ComputeResources {
     {
       | attemptUseVulnerability @hidden
         developer info: "Intermediate attack step to allow for defences."
+        ->  successfulUseVulnerability,
+            bypassHardwareModificationsProtection
+
+      & successfulUseVulnerability @ hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  useVulnerability
 
-      & useVulnerability
+      | useVulnerability
         user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
         ->  vulnerabilities.attemptAbuse
 
-      | attemptGainFullAccess @hidden
+      | attemptFullAccess @hidden
         developer info: "Intermediate attack step to allow for defences."
+        ->  successfulFullAccess
+
+      & successfulFullAccess @ hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  fullAccess
 
-      & fullAccess {C,I,A}
+      | fullAccess {C,I,A}
         user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
             hostedData.attemptAccess
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
-        ->  supplyChainAttack
+        ->  successfulSupplyChainAttack,
+            bypassSupplyChainAuditing
 
-      & supplyChainAttack [VeryHardAndUncertain]
+      & successfulSupplyChainAttack @hidden
+        developer info: "Intermediate attack step to enable defences."
+        -> supplyChainAttack
+
+      | supplyChainAttack [VeryHardAndUncertain]
         user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
         modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
-        ->  bypassHardwareModificationsProtection
+        ->  attemptFullAccess
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
-        ->  supplyChainAttack
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "Supply chain auditing is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
+        ->  successfulSupplyChainAttack
 
       | physicalAccess
         user info: "Attacker has physical access to the location where the hardware is physically deployed. They could then deny the hardware, locally connect to the hosted applications, and exploit physical vulnerabilities."
@@ -63,7 +86,8 @@ category ComputeResources {
 
       | attemptHardwareModifications @hidden
         developer info: "Intermediate attack step."
-        ->  successfulHardwareModifications
+        ->  successfulHardwareModifications,
+            bypassHardwareModificationsProtection
 
       & successfulHardwareModifications @hidden
         developer info: "Intermediate attack step to enable defences."
@@ -77,15 +101,29 @@ category ComputeResources {
       # hardwareModificationsProtection
         user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
         developer info: "But it does not protect against denial of service attacks or local connect."
-        ->  useVulnerability,
+        ->  hardwareModificationsProtectionBypassed
+
+      | bypassHardwareModificationsProtection [VeryHardAndUncertain]
+        user info: "Hardware modifications protection can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  hardwareModificationsProtectionBypassed
+
+      | hardwareModificationsProtectionBypassed @hidden
+        developer info: "Hardware modifications protection is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
+        ->  successfulUseVulnerability,
             successfulHardwareModifications,
-            unsafeUserActivity
+            successfulUnsafeUserActivity
 
       | attemptUnsafeUserActivity
         user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
+        ->  successfulUnsafeUserActivity,
+            bypassHardwareModificationsProtection
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to enable defences."
         ->  unsafeUserActivity
 
-      & unsafeUserActivity
+      | unsafeUserActivity
         user info: "A user is performing unsafe actions on the hardware."
         developer info: "This exposes the Applications running on top of the hardware and fulfils the physical access requirement of SoftwareVulnerabilities associated with them."
         modeler info: "Currently only represents connecting a malicious removable media drive."
@@ -104,13 +142,9 @@ category ComputeResources {
 
       | modify {I}
         user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
-        ->  attemptGainFullAccess,
+        ->  attemptFullAccess,
             sysExecutedApps.attemptModify,
             hostedData.attemptWrite
-
-      | bypassHardwareModificationsProtection @hidden {C, I}
-        user info: "The attacker can bypass the hardware modifications protection and gain full access after performing a supply chain attack."
-        ->  attemptGainFullAccess
     }
 
     asset SoftwareProduct extends Information
@@ -167,7 +201,8 @@ category ComputeResources {
 
       | attemptUseVulnerability @hidden
         developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
-        ->  successfulUseVulnerability
+        ->  successfulUseVulnerability,
+            protectorIDPSs.bypassEffectiveness
 
       & successfulUseVulnerability @hidden
         developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
@@ -197,7 +232,7 @@ category ComputeResources {
             clientAccessNetworks.attemptReverseReach,
             serverApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
-            unsafeUserActivityWithAttackerInteraction,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
             containedData.attemptReverseReach,
             sentData.attemptReverseReach,
             receivedData.attemptReverseReach,
@@ -303,8 +338,7 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            specificAccess, // And also provide specificAccess, mainly for completeness and more intuitive results
-            hostHardware.attemptUseVulnerability
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
         developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
@@ -312,37 +346,53 @@ category ComputeResources {
             softwareProductVulnerabilityPhysicalAccessAchieved,
             appExecutedApps.physicalAccessAchieved
 
-      | attemptUnsafeActivityByUser @hidden
+      | attemptUnsafeUserActivity @hidden
         developer info: "Intermediate attack step."
-        ->  unsafeActivityByUser
+        ->  successfulUnsafeUserActivity,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
+            attackerUnsafeUserActivityCapabilityWithoutReverseReach,
+            protectorIDPSs.bypassEffectiveness
 
-      & unsafeActivityByUser
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity
         user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
             networkConnect,
             allVulnerabilities().userInteractionAchieved
 
-      & unsafeUserActivityWithAttackerInteraction @hidden
+      | attackerUnsafeUserActivityCapability @hidden
+        developer info: "The impacts of the user's unsafe actions are greatly limited if there are no channels through which the attacker can be reached by the unwitting user."
+        ->  successfulUnsafeUserActivity
+
+      & attackerUnsafeUserActivityCapabilityWithReverseReach @hidden
         developer info: "The attacker can be reached from this application and can therefore more easily exploit the unsafe user actions."
-        ->  attemptUnsafeActivityByUser
+        ->  attackerUnsafeUserActivityCapability
 
-      | unsafeUserActivityWithoutAttackerInteraction @hidden [VeryHardAndUncertain]
-        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done before and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements its counterpart is missing."
-        ->  attemptUnsafeActivityByUser
-
-      | attemptUnsafeUserActivity @hidden
-        developer info: "This attack step represents a user with privileges on this application engaging in unsafe behaviour that could lead to exposing the application to the attacker."
-        ->  unsafeUserActivityWithAttackerInteraction,
-            unsafeUserActivityWithoutAttackerInteraction
+      | attackerUnsafeUserActivityCapabilityWithoutReverseReach @hidden [VeryHardAndUncertain]
+        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done beforehand and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application which restricts the capabilities of being successful. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements it is missing."
+        ->  attackerUnsafeUserActivityCapability
 
       # supplyChainAuditing
         user info: "Auditing inside the supply chain can detect possible supply chain attacks."
         developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "The supply chain audit is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
         developer info: "Intermediate attack step."
-        ->  fullAccessAfterSoftProdCompromise
+        ->  fullAccessAfterSoftProdCompromise,
+            bypassSupplyChainAuditing
 
       & fullAccessAfterSoftProdCompromise @hidden
         developer info: "Intermediate attack step."
@@ -496,22 +546,27 @@ category ComputeResources {
     asset IDPS extends Application
       user info: "An IDPS is tasked with protecting other applications from malicious activity."
     {
-      # effectiveness [Enabled]
-        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
-        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
-        ->  protectionBypassed
-
       # disabled @Override @hidden [Disabled]
         modeller info: "As per the comment for the effectiveness defence, the disabled defence does not function as desired for the IDPS asset and should not be used. The effectiveness defence should be adjusted to reflect the likelihood that the IDPS is present instead."
         developer info: "It would be ideal to hide this defence when using modelling tools to avoid confusion."
 
-      | protectionBypassed @hidden
+      # effectiveness [Enabled]
+        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
+        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
+        ->  effectivenessBypassed
+
+      | bypassEffectiveness [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  effectivenessBypassed
+
+      | effectivenessBypassed @hidden
         developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
-        ->  protectedApps.useVulnerability, // The IDPS is no longer able to protect the apps assigned to it
-            protectedApps.unsafeActivityByUser
+        ->  protectedApps.successfulUseVulnerability,
+            protectedApps.successfulUnsafeUserActivity
 
       | fullAccess {C,I,A}
-        +>  protectionBypassed // The application is no longer able to protect the apps assigned to it
+        +>  effectivenessBypassed // The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself
     }
 
     asset PhysicalZone
@@ -960,7 +1015,7 @@ category IAM {
 category User {
 
     asset User
-      user info: "This asset represents the user himself. It is the suitable attack surface for social engineering attacks!"
+      user info: "This asset represents the user themselves. It is the suitable attack surface for social engineering attacks."
     {
       # noPasswordReuse [Enabled]
         user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
@@ -968,10 +1023,19 @@ category User {
 
       # securityAwareness
         user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
-        ->  socialEngineering,
-            unsafeUserActivity,
-            weakCredentials,
-            deliverMaliciousRemovableMedia
+        ->  securityAwarenessBypassed,
+            weakCredentials
+
+      | bypassSecurityAwareness [VeryHardAndUncertain]
+        user info: "Security awareness can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  securityAwarenessBypassed
+
+      | securityAwarenessBypassed @hidden
+        developer info: "Security awareness is bypassed either because it was not set, the attacker was able to circumvent it through additional effort, or we simply assume that everyone has an off day every now and then."
+        ->  successfulSocialEngineering,
+            successfulUnsafeUserActivity,
+            successfulDeliverMaliciousRemovableMedia
 
       | oneCredentialCompromised @hidden
         developer info: "This intermediate attack step is needed in order to block passwordReuseCompromise when no other credential is first compromised."
@@ -987,19 +1051,29 @@ category User {
 
       | attemptSocialEngineering
         developer info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
+        ->  successfulSocialEngineering,
+            bypassSecurityAwareness
+
+      & successfulSocialEngineering @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  socialEngineering
 
-      & socialEngineering @hidden
-        modeler info: "An attacker can try to perform social engineering techniques such as phishing."
+      | socialEngineering @hidden
+        modeler info: "An attacker can try to perform social engineering techniques such as phishing and inducing the user to perform malicious actions."
         developer info: "In the future, other social engineering techniques should be connected to this attack step."
         ->  phishUser,
             unsafeUserActivity
 
       | attemptDeliverMaliciousRemovableMedia
         user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
+        ->  successfulDeliverMaliciousRemovableMedia,
+            bypassSecurityAwareness
+
+      & successfulDeliverMaliciousRemovableMedia @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  deliverMaliciousRemovableMedia
 
-      & deliverMaliciousRemovableMedia @hidden [Exponential(0.01)]
+      | deliverMaliciousRemovableMedia @hidden [Exponential(0.01)]
         modeler info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
         developer info: "The probability distribution is entirely arbitrary and should be researched in greater detail."
         ->  userIds.attemptAssume,
@@ -1019,7 +1093,16 @@ category User {
         modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
         ->  userIds.credentials.attemptCredentialTheft
 
-      & unsafeUserActivity @hidden [Exponential(0.03)]
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulUnsafeUserActivity,
+            bypassSecurityAwareness
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity @hidden [Exponential(0.03)]
         developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
         modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
         ->  userIds.attemptAssume,
@@ -1047,29 +1130,44 @@ category Networking {
       | physicalAccess {C, A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
         ->  denialOfService,
-            eavesdropAfterPhysicalAccess,
             attemptAccess,
-            bypassAccessControl
+            bypassEavesdropDefenseViaPhysicalAccess,
+            bypassManInTheMiddleDefenseViaPhysicalAccess
+
+      | bypassEavesdropDefenseViaPhysicalAccess @hidden [VeryHardAndUncertain]
+        modeller info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network."
+        developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
+        ->  eavesdropDefenseBypassed
+
+      | bypassManInTheMiddleDefenseViaPhysicalAccess @hidden [VeryHardAndUncertain]
+        modeller info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network."
+        developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
+        ->  manInTheMiddleDefenseBypassed
 
       # networkAccessControl
         user info: "Access control protects from unauthorized physical access on the network."
-        ->  eavesdropAfterPhysicalAccess,
-            attemptAccess
+        ->  accessControlBypassed
 
       | bypassAccessControl [VeryHardAndUncertain]
         user info: "If access control is enabled, the attacker can still try to bypass it and gain access on the network."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  accessControlBypassed
+
+      | accessControlBypassed @hidden
+        developer info: "Access control is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
         ->  successfulAccess
 
-      & attemptAccess @hidden
+      | attemptAccess @hidden
         user info: "Access on a Network can be attempted after physicalAccess."
+        ->  successfulAccess,
+            bypassAccessControl
+
+      & successfulAccess @hidden
+        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  access
 
       | access
         user info: "Access provides connect to all reachable applications."
-        ->  successfulAccess
-
-      | successfulAccess @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
         ->  allowedApplicationConnections().attemptConnectToApplications,
             applications.networkConnect,
             clientApplications.attemptNetworkConnectViaResponse,
@@ -1100,50 +1198,63 @@ category Networking {
 
       | accessNetworkData
         user info: "Access also the data that are network-wide available."
-        ->  eavesdrop,
-            bypassEavesdropProtection,
-            manInTheMiddle,
-            bypassMitMProtection
+        ->  attemptEavesdrop,
+            attemptManInTheMiddle
 
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
         modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
-        ->  eavesdrop,
-            eavesdropAfterPhysicalAccess
+        ->  eavesdropDefenseBypassed
+
+      | bypassEavesdropDefense [VeryHardAndUncertain]
+        user info: "The eavesdrop defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  eavesdropDefenseBypassed
+
+      | eavesdropDefenseBypassed @hidden
+        developer info: "The Eavesdrop defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulEavesdrop
+
+      | attemptEavesdrop @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulEavesdrop,
+            bypassEavesdropDefense
+
+      & successfulEavesdrop @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  eavesdrop
+
+      | eavesdrop {C}
+        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
+        ->  transitData.attemptRead
 
       # manInTheMiddleDefense
         user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        ->  manInTheMiddleDefenseBypassed
+
+      | bypassManInTheMiddleDefense [VeryHardAndUncertain]
+        user info: "The man in the middle defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  manInTheMiddleDefenseBypassed
+
+      | manInTheMiddleDefenseBypassed @hidden
+        developer info: "The man in the middle defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulManInTheMiddle
+
+      | attemptManInTheMiddle @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulManInTheMiddle,
+            bypassManInTheMiddleDefense
+
+      & successfulManInTheMiddle @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  manInTheMiddle
 
-      & eavesdrop {C}
-        user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
-        ->  successfulEavesdrop
-
-      | bypassEavesdropProtection {C} [HardAndUncertain]
-        user info: "The eavesdrop protection can be bypassed."
-        ->  successfulEavesdrop
-
-      | successfulEavesdrop @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptRead
-
-      & manInTheMiddle {C, I}
+      | manInTheMiddle {C, I}
         user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transferred data over that network."
-        ->  successfulManInTheMiddle
-
-      | bypassMitMProtection {C, I} [HardAndUncertain]
-        user info: "The MitM protection can be bypassed."
-        ->  successfulManInTheMiddle
-
-      | successfulManInTheMiddle @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
-        ->  transitData.attemptRead,
+        ->  eavesdrop,
             transitData.attemptWrite,
             transitData.attemptApplicationRespondConnect
-
-      & eavesdropAfterPhysicalAccess @hidden {C}
-        user info: "If a network is not a switching network and the attacker has physical access on it, eavesdrop can happen."
-        ->  successfulEavesdrop
     }
 
     asset RoutingFirewall extends Application
@@ -1169,7 +1280,16 @@ category Networking {
 
       # restricted [Disabled]
         user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
-        ->  accessNetworks,
+        ->  restrictedBypassed
+
+      | bypassRestricted [VeryHardAndUncertain]
+        user info: "The restricted defense can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  restrictedBypassed
+
+      | restrictedBypassed @hidden
+        developer info: "The restricted defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulAccessNetworks,
             connectToApplications,
             connectToApplicationsWithoutTriggeringVulnerabilities,
             denialOfService,
@@ -1177,13 +1297,24 @@ category Networking {
 
       # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i. e. network-level vulnerabilities cannot be exploited)."
+        ->  payloadInspectionBypassed
+
+      | bypassPayloadInspection [VeryHardAndUncertain]
+        user info: "Payload inspection can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  payloadInspectionBypassed
+
+      | payloadInspectionBypassed @hidden
+        developer info: "Payload inspection is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
         ->  connectToApplications,
             reverseReach
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptReverseReach @hidden
         developer info: "Intermediate attack step."
-        ->  reverseReach
+        ->  reverseReach,
+            bypassRestricted,
+            bypassPayloadInspection
 
       & reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
@@ -1192,16 +1323,23 @@ category Networking {
 
       | attemptAccessNetworks @hidden
         developer info: "Intermediate attack step."
+        ->  successfulAccessNetworks,
+            bypassRestricted
+
+      & successfulAccessNetworks @hidden
+        developer info: "Intermediate attack step to model defences."
         ->  accessNetworks
 
-      & accessNetworks
+      | accessNetworks
         developer info: "Access all networks that are associated with this ConnectionRule."
         ->  (networks  \/ inNetworks  \/ diodeInNetworks).access
 
       | attemptConnectToApplications @hidden
         developer info: "Intermediate attack step."
         ->  connectToApplications,
-            connectToApplicationsWithoutTriggeringVulnerabilities
+            connectToApplicationsWithoutTriggeringVulnerabilities,
+            bypassRestricted,
+            bypassPayloadInspection
 
       & connectToApplications @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule."
@@ -1213,7 +1351,8 @@ category Networking {
 
       | attemptDenialOfService @hidden
         developer info: "Intermediate attack step."
-        ->  denialOfService
+        ->  denialOfService,
+            bypassRestricted
 
       & denialOfService {A}
         ->  allApplications().denyFromNetworkingAsset
