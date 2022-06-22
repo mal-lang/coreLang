@@ -859,7 +859,8 @@ category IAM {
             readPrivData.identityAttemptRead,
             writePrivData.identityAttemptWrite,
             deletePrivData.identityAttemptDelete,
-            managedIAMs.attemptAssume
+            managedIAMs.attemptAssume,
+            subprivileges.attemptAssume
 
       | deny
         user info: "Denying Identity, Group, or Privileges means that they are unavailable to legitimate users and which are locked out."
@@ -880,7 +881,8 @@ category IAM {
       | lockout {A}
         user info: "The Identity, Group, or Privileges has been locked out and cannot be used by legitimate users. This means that the applications that they can execute and data they can read might also be denied if all of the access roles that could execute or read them, respectively, have been locked out."
         ->  execPrivApps.denyFromLockout,
-            readPrivData.denyFromLockout
+            readPrivData.denyFromLockout,
+            subprivileges.lockout
     }
 
     asset Identity extends IAMObject
@@ -894,8 +896,7 @@ category IAM {
         user info: "After authentication or compromise of an account/identity, assume its privileges."
         developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
         +>  parentId.attemptAssume,
-            memberOf.attemptAssume,
-            identityPrivileges.attemptAssume
+            memberOf.attemptAssume
 
       & attemptLockoutFromCredentials @hidden
         developer info: "Only lockout an identity if all of the Credentials that could be used to authenticate have been denied."
@@ -918,8 +919,7 @@ category IAM {
       | assume @Override {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
         developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
-        +>  privilegeIdentities.attemptAssume,
-            privilegeGroups.attemptAssume
+        +>  IAMOwners.attemptAssume
     }
 
     asset Group extends IAMObject
@@ -929,8 +929,7 @@ category IAM {
       | assume @Override {C,I,A}
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
-        +>  parentGroup.attemptAssume,
-            groupPrivileges.attemptAssume
+        +>  parentGroup.attemptAssume
     }
 
     asset Credentials extends Information
@@ -1136,11 +1135,11 @@ category User {
         modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario. The choice of probability is entirely arbitrary and should be replaced with a scientifically grounded distribution."
         ->  userIds.attemptAssume,
             userIds.execPrivApps.attemptUnsafeUserActivity,
-            userIds.identityPrivileges.execPrivApps.attemptUnsafeUserActivity,
+            userIds.subprivileges.subprivileges*.execPrivApps.attemptUnsafeUserActivity,
             userIds.highPrivApps.attemptUnsafeUserActivity,
-            userIds.identityPrivileges.highPrivApps.attemptUnsafeUserActivity,
+            userIds.subprivileges.subprivileges*.highPrivApps.attemptUnsafeUserActivity,
             userIds.lowPrivApps.attemptUnsafeUserActivity,
-            userIds.identityPrivileges.lowPrivApps.attemptUnsafeUserActivity
+            userIds.subprivileges.subprivileges*.lowPrivApps.attemptUnsafeUserActivity
     }
 }
 
@@ -1477,9 +1476,10 @@ associations {
   IAMObject        [writingIAMs]          * <-- WritePrivileges       --> *    [writePrivData]          Data
   IAMObject        [deletingIAMs]         * <-- DeletePrivileges      --> *    [deletePrivData]         Data
   // Associations for the Privileges asset
-  Identity         [privilegeIdentities]  * <-- HasPrivileges         --> *    [identityPrivileges]     Privileges
-  Group            [privilegeGroups]      * <-- HasPrivileges         --> *    [groupPrivileges]        Privileges
-      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
+  IAMObject        [IAMOwners]            * <-- HasPrivileges         --> *    [subprivileges]          Privileges
+      user info: "Identities, Groups, and Privileges may have a subset of Privileges that we logically separate to model specific scenarios, such as partial lockouts or speculating about possible privileges."
+  // Self-referential associations for the IAMObject asset
   IAMObject        [managers]             * <-- AccountManagement     --> *    [managedIAMs]            IAMObject
+      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
 
 }
