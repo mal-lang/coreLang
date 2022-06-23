@@ -906,6 +906,10 @@ category IAM {
         developer info: "Intermediate attack step to model defences."
         ->  lockout
 
+      | lockout
+        user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
+        +>  memberOf.lockoutFromMembers
+
       !E missingUser @hidden
         developer info: "If there are no Users asociated with this Identity we make the worst case scenario assumption regarding the strength of the Credentials belonging to it."
         <-  users
@@ -930,6 +934,10 @@ category IAM {
         user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
         +>  parentGroup.attemptAssume
+
+      & lockoutFromMembers @hidden
+        user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
+        ->  lockout
     }
 
     asset Credentials extends Information
