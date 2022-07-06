@@ -566,7 +566,12 @@ category ComputeResources {
             protectedApps.successfulUnsafeUserActivity
 
       | fullAccess {C,I,A}
-        +>  effectivenessBypassed // The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself
+        developer info: "The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself."
+        +>  effectivenessBypassed
+
+      | deny
+        developer info: "The IDPS is no longer able to protect the apps assigned to it if it has been denied itself."
+        +>  effectivenessBypassed
     }
 
     asset PhysicalZone
