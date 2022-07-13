@@ -1,0 +1,264 @@
+/*
+ * Copyright 2019-2021 coreLang contributors <https://mal-lang.org/coreLang/contributors.html>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+category IAM {
+
+    abstract asset IAMObject extends Information
+      user info: "An IAM object represents the base logic shared by all assets used for Identity and Access Management roles(Identity, Group, Privileges)."
+    {
+      # disabled [Disabled]
+        user info: "It should be used to model the probability that the IAM object does not actually exist."
+        ->  successfulAssume,
+            successfulLockout
+
+      | attemptAssume
+        user info: "Attempt to assume the privileges associated with the IAM object. If disabled this will not be possible."
+        ->  successfulAssume
+
+      & successfulAssume @hidden
+        developer info: "Intermediate attack step to model the requirements for the assume attack step."
+        ->  assume
+
+      | assume
+        user info: "When an attacker is able to assume an IAM asset the privileges associated with it can always be exploited, other behaviour is asset specific."
+        ->  execPrivApps.authenticate,
+            highPrivApps.authenticate,
+            lowPrivApps.specificAccessAuthenticate,
+            readPrivData.identityAttemptRead,
+            writePrivData.identityAttemptWrite,
+            deletePrivData.identityAttemptDelete,
+            managedIAMs.attemptAssume,
+            subprivileges.attemptAssume
+
+      | deny
+        user info: "Denying Identity, Group, or Privileges means that they are unavailable to legitimate users and which are locked out."
+        +>  attemptLockout
+
+      | write
+        user info: "Overwriting Identity, Group, or Privileges means that the attacker is able to assume them."
+        +>  attemptAssume
+
+      | attemptLockout @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulLockout
+
+      & successfulLockout @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  lockout
+
+      | lockout {A}
+        user info: "The Identity, Group, or Privileges has been locked out and cannot be used by legitimate users. This means that the applications that they can execute and data they can read might also be denied if all of the access roles that could execute or read them, respectively, have been locked out."
+        ->  execPrivApps.denyFromLockout,
+            readPrivData.denyFromLockout,
+            subprivileges.lockout
+    }
+
+    asset Identity extends IAMObject
+      user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
+      developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
+    {
+      # disabled
+        +>  successfulLockoutFromCredentials
+
+      | assume @Override {C,I,A}
+        user info: "After authentication or compromise of an account/identity, assume its privileges."
+        developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
+        +>  parentId.attemptAssume,
+            memberOf.attemptAssume
+
+      & attemptLockoutFromCredentials @hidden
+        developer info: "Only lockout an identity if all of the Credentials that could be used to authenticate have been denied."
+        ->  successfulLockoutFromCredentials
+
+      & successfulLockoutFromCredentials @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  lockout
+
+      | lockout
+        user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
+        +>  memberOf.lockoutFromMembers
+
+      !E missingUser @hidden
+        developer info: "If there are no Users asociated with this Identity we make the worst case scenario assumption regarding the strength of the Credentials belonging to it."
+        <-  users
+        ->  credentials.weakCredentials
+    }
+
+    asset Privileges extends IAMObject
+      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+      modeller info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly connected to the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
+    {
+      | assume @Override {C,I,A}
+        user info: "After authentication or compromise of an account/identity, assume its privileges."
+        developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
+        +>  IAMOwners.attemptAssume
+    }
+
+    asset Group extends IAMObject
+      user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
+      modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
+    {
+      | assume @Override {C,I,A}
+        user info: "If an identity of a group is compromised then the whole group (i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
+        developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
+        +>  parentGroup.attemptAssume
+
+      & lockoutFromMembers @hidden
+        user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
+        ->  lockout
+    }
+
+    asset Credentials extends Information
+      user info: "Credentials can be used to get access to an Identity, but they can also be used as an encryption/signing key for Data."
+      modeler info: "Credentials represent a variety of access control mechanism(e.g. username and password pair, keycards, biometric data)."
+    {
+      # notDisclosed [Enabled]
+        user info: "Describes the case where the password/credential is leaked to some location, it can then be available to the attacker."
+        ->  useLeakedCredentials
+
+      # notGuessable [Enabled]
+        user info: "Describes if the credentials can be guessed by the attacker(e. g. they represent a password or passphrase)."
+        ->  guessCredentials
+
+      # unique [Enabled]
+        user info: "Describes if the credentials are known to be unique and therefore cannot be used in a credentials reuse attack."
+        ->  credentialsReuse,
+            propagateOneCredentialCompromised
+
+      # notPhishable [Disabled]
+        user info: "Describes if the credentials cannot be phished(they are biometric, e. g. fingerprints or iris scans, or physical, e. g. access cards or keys, elements)."
+        ->  credentialTheft
+
+      | read @Override
+        developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
+        +> attemptUse
+
+      | write @Override
+        developer info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
+        +> attemptUse
+
+      | deny @Override
+        developer info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
+        +> identities.attemptLockoutFromCredentials
+
+      | useLeakedCredentials [EasyAndCertain]
+        user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
+        ->  attemptUse
+
+      | attemptCredentialsReuse @hidden
+        developer info: "Intermediate step used to trigger the reuse attack step on other credentials belonging to the same user."
+        ->  credentialsReuse,
+            requiredFactors.attemptCredentialsReuse
+
+      & credentialsReuse
+        developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
+        ->  attemptUse
+
+      | attemptUse
+        user info: "Someone is using the credentials to perform a legitimate authentication."
+        ->  use
+
+      & use {C}
+        user info: "Someone is using the credentials to perform a legitimate authentication."
+        ->  identities.attemptAssume,
+            encryptedData.accessDecryptedData,
+            signedData.accessSpoofedData,
+            attemptPropagateOneCredentialCompromised,
+            credentials.use,
+            hashes.attemptUse,
+            origCreds.guessCredentialsFromHash
+
+      | attemptPropagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  propagateOneCredentialCompromised
+
+      & propagateOneCredentialCompromised @hidden
+        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        ->  credentials*.identities.users.oneCredentialCompromised
+
+      | attemptAccess
+        user info: "The attacker is attempting to access the credentials."
+        ->  attemptUse
+
+      | attemptCredentialTheft @hidden
+        developer info: "Intermediate step used to trigger the credential theft attack step."
+        ->  credentialTheft,
+            requiredFactors.attemptCredentialTheft
+
+      & credentialTheft
+        user info: "The attacker is able to steal the credentials."
+        ->  attemptUse
+
+      !E missingIdentity @hidden
+        developer info: "If there are no Identities asociated with these Credentials we make the worst case scenario assumption regarding the strength of the Credentials."
+        <-  identities
+        ->  weakCredentials
+
+      | weakCredentials @hidden
+        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset associated with the Identity to which these Credentials belong. If either the User or Identity associations are missing the assumption is made that the crentials are weak and therefore guessable by the attacker."
+        ->  guessCredentials,
+            requiredFactors.weakCredentials
+
+      !E credsHashed @hidden
+        developer info: "If there are no associated hashes the assumption is that the credentials are guessable without any additional requirements."
+        <-  hashes
+        ->  guessCredentialsFromHash
+
+      | guessCredentialsFromHash @hidden
+        developer info: "If hashes are associated with this Credentials asset the assumption is that one of those hashes is required by the attacker to be able to perform a guessing attack."
+        ->  guessCredentials
+
+      & guessCredentials [HardAndUncertain]
+        user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
+        modeller info: "The guessability of the Credentials is influenced by the notGuessable defence on this asset and the securityAwareness defence on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defence would play a role in restricting this attack step."
+        developer info: "We should research the probability we want to use for this attack step more."
+        ->  attemptUse
+    }
+}
+
+associations {
+  Credentials      [encryptCreds]      0..1 <-- EncryptionCredentials --> *    [encryptedData]          Data
+      user info: "Encrypted data can be associated with the relevant encryption credentials."
+  Credentials      [signingCreds]      0..1 <-- SigningCredentials    --> *    [signedData]             Data
+      user info: "Signed data can be associated with the relevant signing credentials."
+  Credentials      [hashes]               * <-- HashedCredentials     --> 0..1 [origCreds]              Credentials
+      user info: "Credentials can be associated with their hashed counterparts. Multiple hashes can be generated for the same Credentials, but a hash is unique to one set of Credentials."
+  Credentials      [credentials]          * <-- ConditionalAuthentication --> * [requiredFactors]       Credentials
+      user info: "Credentials can be associated with other Credentials to depict conditional authentication procedures, such as multi-factor authentication."
+  // ### Access Control happens below
+  Identity         [identities]           * <-- IdentityCredentials   --> *    [credentials]            Credentials
+  Identity         [parentId]             * <-- CanAssume             --> *    [childId]                Identity
+      user info: "Starting from a parent Identity, the child Identities can be assumed due to inheritance."
+  Group            [memberOf]             * <-- MemberOf              --> *    [groupIds]               Identity
+  Group            [parentGroup]          * <-- MemberOf              --> *    [childGroups]            Group
+  // Then, Access Control on application level
+  IAMObject        [executionPrivIAMs]    * <-- ExecutionPrivilegeAccess       --> * [execPrivApps]     Application
+      user info: "Every application executes on a system with privileges of a specified identity on the system. If the application is compromised then the privileges should be compromised."
+  IAMObject        [highPrivAppIAMs]      * <-- HighPrivilegeApplicationAccess --> * [highPrivApps]     Application
+      user info: "High privilege application access on an Application results in the (full) access/compromise of the application and all the child applications."
+  IAMObject        [lowPrivAppIAMs]       * <-- LowPrivilegeApplicationAccess  --> * [lowPrivApps]      Application
+      user info: "Low privilege application access on an Application allows only the local interaction with the application and all the specified privileges."
+  // Finally, Access control on data
+  IAMObject        [readingIAMs]          * <-- ReadPrivileges        --> *    [readPrivData]           Data
+  IAMObject        [writingIAMs]          * <-- WritePrivileges       --> *    [writePrivData]          Data
+  IAMObject        [deletingIAMs]         * <-- DeletePrivileges      --> *    [deletePrivData]         Data
+  // Associations for the Privileges asset
+  IAMObject        [IAMOwners]            * <-- HasPrivileges         --> *    [subprivileges]          Privileges
+      user info: "Identities, Groups, and Privileges may have a subset of Privileges that we logically separate to model specific scenarios, such as partial lockouts or speculating about possible privileges."
+  // Self-referential associations for the IAMObject asset
+  IAMObject        [managers]             * <-- AccountManagement     --> *    [managedIAMs]            IAMObject
+      user info: "Identities, Groups, and Privileges may have account management roles for other Identities, Groups, and Privileges."
+}

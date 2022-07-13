@@ -1,0 +1,596 @@
+/*
+ * Copyright 2019-2021 coreLang contributors <https://mal-lang.org/coreLang/contributors.html>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+category ComputeResources {
+
+    asset Hardware
+      user info: "Specifies the hardware on which applications can run."
+    {
+      | attemptUseVulnerability @hidden
+        developer info: "Intermediate attack step to allow for defences."
+        ->  successfulUseVulnerability,
+            bypassHardwareModificationsProtection
+
+      & successfulUseVulnerability @ hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  useVulnerability
+
+      | useVulnerability
+        user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
+        ->  vulnerabilities.attemptAbuse
+
+      | attemptFullAccess @hidden
+        developer info: "Intermediate attack step to allow for defences."
+        ->  successfulFullAccess
+
+      & successfulFullAccess @ hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  fullAccess
+
+      | fullAccess {C,I,A}
+        user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
+        ->  sysExecutedApps.fullAccess,
+            hostedData.attemptAccess
+
+      | attemptSupplyChainAttack
+        developer info: "Intermediate attack step to allow for the auditing defence."
+        ->  successfulSupplyChainAttack,
+            bypassSupplyChainAuditing
+
+      & successfulSupplyChainAttack @hidden
+        developer info: "Intermediate attack step to enable defences."
+        -> supplyChainAttack
+
+      | supplyChainAttack [VeryHardAndUncertain]
+        user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
+        developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
+        modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
+        ->  attemptFullAccess
+
+      # supplyChainAuditing
+        user info: "Auditing inside the supply chain can detect possible supply chain attacks."
+        developer info: "Mitigation moved into coreLang from icsLang. Originally designed by Sotirios."
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "Supply chain auditing is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
+        ->  successfulSupplyChainAttack
+
+      | physicalAccess
+        user info: "Attacker has physical access to the location where the hardware is physically deployed. They could then deny the hardware, locally connect to the hosted applications, and exploit physical vulnerabilities."
+        ->  deny,
+            sysExecutedApps.localConnect,
+            attemptHardwareModifications
+
+      | attemptHardwareModifications @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulHardwareModifications,
+            bypassHardwareModificationsProtection
+
+      & successfulHardwareModifications @hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  hardwareModifications
+
+      | hardwareModifications
+        user info: "Attacker is able to modify the hardware setup. They could then exploit physical vulnerabilities or software vulnerabilities that require physical access."
+        ->  attemptUseVulnerability,
+            sysExecutedApps.physicalAccessAchieved
+
+      # hardwareModificationsProtection
+        user info: "This defence protects against unauthorized modifications to the hardware that would allow an attacker to exploit a hardware vulnerability or a user to connect malicious devices to it."
+        developer info: "But it does not protect against denial of service attacks or local connect."
+        ->  hardwareModificationsProtectionBypassed
+
+      | bypassHardwareModificationsProtection [VeryHardAndUncertain]
+        user info: "Hardware modifications protection can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  hardwareModificationsProtectionBypassed
+
+      | hardwareModificationsProtectionBypassed @hidden
+        developer info: "Hardware modifications protection is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
+        ->  successfulUseVulnerability,
+            successfulHardwareModifications,
+            successfulUnsafeUserActivity
+
+      | attemptUnsafeUserActivity
+        user info: "Intermediate attack step that allows for the hardware modifications defence to reduce the impact of unsafe user activity."
+        ->  successfulUnsafeUserActivity,
+            bypassHardwareModificationsProtection
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to enable defences."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity
+        user info: "A user is performing unsafe actions on the hardware."
+        developer info: "This exposes the Applications running on top of the hardware and fulfils the physical access requirement of SoftwareVulnerabilities associated with them."
+        modeler info: "Currently only represents connecting a malicious removable media drive."
+        ->  sysExecutedApps.attemptUnsafeUserActivity,
+            sysExecutedApps.physicalAccessAchieved
+
+      | deny {A}
+        user info: "Denial of service (DoS) attack on hardware leads to DoS on all the applications running on it and hosted data."
+        ->  sysExecutedApps.attemptDeny,
+            hostedData.attemptDeny
+
+      | read {C}
+        user info: "Read on hardware leads to a read on all the applications running on it and hosted data."
+        ->  sysExecutedApps.attemptRead,
+            hostedData.attemptRead
+
+      | modify {I}
+        user info: "Modify on hardware leads to a modify/write on all the applications running on it and hosted data."
+        ->  attemptFullAccess,
+            sysExecutedApps.attemptModify,
+            hostedData.attemptWrite
+    }
+
+    asset SoftwareProduct extends Information
+      user info: "A software product is a specific type of software/application which can be associated with specific vulnerabilities."
+      developer info: "This asset is only introduced in order to improve the usability of the language."
+    {
+      | compromiseApplication
+        user info: "If the origin of a software product is compromised (modified maliciously) then the associated application should also be fully compromised."
+        ->  softApplications.attemptFullAccessAfterSoftProdCompromise
+
+      | readApplication
+        user info: "If the vulnerability has a read impact, it should propagate that on all the applications."
+        ->  softApplications.attemptReadAfterSoftProdVulnerability
+
+      | modifyApplication
+        user info: "If the vulnerability has a modify impact, it should propagate that on all the applications."
+        ->  softApplications.attemptModifyAfterSoftProdVulnerability
+
+      | denyApplication
+        user info: "If the vulnerability has a deny impact, it should propagate that on all the applications."
+        ->  softApplications.attemptDenyAfterSoftProdVulnerability
+
+      | write @Override
+        developer info: "If the attacker is able to write the software product they are able to compromise the applications using it."
+        +>  compromiseApplication
+    }
+
+    asset Application
+      user info: "An application models pretty much everything that is executed or can execute other applications."
+    {
+      let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
+
+      let allApplicationConnections = (appConnections \/ outgoingAppConnections \/ ingoingAppConnections)
+      let clientApplicationConnections = (appConnections \/ outgoingAppConnections)
+      let serverApplicationConnections = (appConnections \/ ingoingAppConnections)
+
+      # disabled [Disabled]
+        user info: "If application is disabled it should behave as nonexistent, thus all attack vectors are removed."
+        developer info: "This would even allow us to have a much more dynamic and probabilistic aspect on our model and simulations."
+        ->  specificAccessFromLocalConnection,
+            specificAccessFromNetworkConnection,
+            localAccess,
+            networkAccess,
+            fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability,
+            successfulReverseReach,
+            successfulUseVulnerability,
+            successfulApplicationRespondConnectThroughData,
+            successfulRead,
+            successfulModify,
+            successfulDeny
+
+      | attemptUseVulnerability @hidden
+        developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        ->  successfulUseVulnerability,
+            protectorIDPSs.bypassEffectiveness
+
+      & successfulUseVulnerability @hidden
+        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
+        ->  useVulnerability
+
+      | useVulnerability
+        user info: "Attempt to exploit the the connected vulnerabilities."
+        ->  allVulnerabilities().attemptAbuse,
+            attemptSoftwareProductAbuse,
+            fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
+
+      | attemptReverseReach
+        developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
+        modeller info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeller if the attacker is assumed to have reverse reachability on it."
+        ->  successfulReverseReach
+
+      & successfulReverseReach @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  reverseReach
+
+      | reverseReach @hidden
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        ->  networks.attemptReverseReach,
+            clientAccessNetworks.attemptReverseReach,
+            serverApplicationConnections().attemptReverseReach,
+            appExecutedApps.attemptReverseReach,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
+            containedData.attemptReverseReach,
+            sentData.attemptReverseReach,
+            receivedData.attemptReverseReach,
+            networkConnectViaResponse
+
+      | localConnect
+        user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
+        ->  localAccess,
+            specificAccessFromLocalConnection,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().localAccessAchieved,
+            softwareProductVulnerabilityLocalAccessAchieved
+
+      | networkConnect
+        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        ->  networkConnectWithoutTriggeringVulnerabilities,
+            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            allVulnerabilities().networkAccessAchieved,
+            softwareProductVulnerabilityNetworkAccessAchieved
+
+      | networkConnectWithoutTriggeringVulnerabilities @hidden
+        developer info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
+        ->  networkAccess,
+            specificAccessFromNetworkConnection
+
+      | accessNetworkAndConnections
+        user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
+        ->  networks.access,
+            clientAccessNetworks.access,
+            clientApplicationConnections().attemptConnectToApplications,
+            clientApplicationConnections().attemptAccessNetworks
+
+      | attemptNetworkConnectViaResponse
+        developer info: "Intermediate attack step to handle defences."
+        ->  networkConnectViaResponse
+
+      & networkConnectViaResponse [VeryHardAndUncertain]
+        user info: "An attacker may be able to respond to requests submitted by a client application."
+        developer info: "Adopted from awsLang."
+        modeler info: "The probability and its value are just estimations and are subject to change."
+        ->  networkConnect
+
+      & specificAccessFromLocalConnection @hidden
+        developer info: "This intermediate step is used to represent that localConnect has happened before being able to get 'specificAccess'. Same as 'localAccess' attack step."
+        ->  specificAccess
+
+      & specificAccessFromNetworkConnection @hidden
+        developer info: "This intermediate step is used to represent that networkConnect has happened before being able to get 'specificAccess'. Same as 'networkAccess' attack step."
+        ->  specificAccess
+
+      | specificAccess
+        user info: "This level of access models a low-privilege access and requires all other privileges to be modeled separately."
+        developer info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
+        ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
+            attemptLocalConnectVulnOnHost,
+            attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
+            containedData.attemptAccessFromIdentity, // This also enables the use of compromised identities but only after specificAccess is reached
+            sentData.identityAttemptRead, // Both Data sent and received can be read
+            receivedData.identityAttemptRead,
+            sentData.identityAttemptWrite, // But only sent Data can be written
+            attemptApplicationRespondConnectThroughData,
+            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
+
+      | attemptLocalConnectVulnOnHost [HardAndUncertain]
+        user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
+        modeler info: "The probability and its value are just estimations and are subject to change."
+        ->  hostApp.attemptUseVulnerability
+
+      | authenticate
+        user info: "The attacker is able to authenticate with the appropriate credentials."
+        ->  localAccess,
+            networkAccess,
+            allVulnerabilities().highPrivilegesAchieved,
+            softwareProductVulnerabilityHighPrivilegesAchieved
+
+      | specificAccessAuthenticate
+        user info: "The attacker is able to authenticate with the appropriate specific access credentials."
+        ->  specificAccessFromLocalConnection,
+            specificAccessFromNetworkConnection,
+            allVulnerabilities().lowPrivilegesAchieved,
+            softwareProductVulnerabilityLowPrivilegesAchieved
+
+      & localAccess @hidden
+        developer info: "Intermediate attack steps for modeling the two requirements (reachability and authentication) for access."
+        ->  fullAccess
+
+      & networkAccess @hidden
+        developer info: "Intermediate attack steps for modeling the two requirements (reachability and authentication) for access."
+        ->  fullAccess
+
+      | fullAccess {C,I,A}
+        user info: "Legitimate (or not i.e. 0wned) full access on the Application, as root/administrator."
+        ->  attemptRead,
+            attemptModify,
+            attemptDeny,
+            appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
+            executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application
+            containedData.attemptAccess,  // and access on all the contained data
+            sentData.attemptRead, // Both Data sent and received can be read
+            receivedData.attemptRead,
+            sentData.attemptWrite, // But only sent Data can be written
+            attemptApplicationRespondConnectThroughData,
+            accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
+            hostApp.localConnect,    // and localConnect on the host application
+            managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
+
+      | physicalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to propagate physical access throughout application nesting."
+        ->  allVulnerabilities().physicalAccessAchieved,
+            softwareProductVulnerabilityPhysicalAccessAchieved,
+            appExecutedApps.physicalAccessAchieved
+
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulUnsafeUserActivity,
+            attackerUnsafeUserActivityCapabilityWithReverseReach,
+            attackerUnsafeUserActivityCapabilityWithoutReverseReach,
+            protectorIDPSs.bypassEffectiveness
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity
+        user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
+        ->  localConnect,
+            networkConnect,
+            allVulnerabilities().userInteractionAchieved
+
+      | attackerUnsafeUserActivityCapability @hidden
+        developer info: "The impacts of the user's unsafe actions are greatly limited if there are no channels through which the attacker can be reached by the unwitting user."
+        ->  successfulUnsafeUserActivity
+
+      & attackerUnsafeUserActivityCapabilityWithReverseReach @hidden
+        developer info: "The attacker can be reached from this application and can therefore more easily exploit the unsafe user actions."
+        ->  attackerUnsafeUserActivityCapability
+
+      | attackerUnsafeUserActivityCapabilityWithoutReverseReach @hidden [VeryHardAndUncertain]
+        developer info: "The attacker cannot be reached from this application. This means that the autonomous malicious code must either be able to do reconnaissance on the fly or the reconnaissance was done beforehand and coded into it. This is much more complex and difficult than the situation where the attacker is reachable from the application which restricts the capabilities of being successful. Important Note: This step should never directly or indirectly lead to reverse reach as it would fulfil the attacker interactivity requirements it is missing."
+        ->  attackerUnsafeUserActivityCapability
+
+      # supplyChainAuditing
+        user info: "Auditing inside the supply chain can detect possible supply chain attacks."
+        developer info: "Mitigation based on the hardware/firmware supply chain attack mitigation in icsLang as designed by Sotirios."
+        ->  supplyChainAuditingBypassed
+
+      | bypassSupplyChainAuditing [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  supplyChainAuditingBypassed
+
+      | supplyChainAuditingBypassed @hidden
+        developer info: "The supply chain audit is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
+        ->  fullAccessAfterSoftProdCompromise
+
+      | attemptFullAccessAfterSoftProdCompromise @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccessAfterSoftProdCompromise,
+            bypassSupplyChainAuditing
+
+      & fullAccessAfterSoftProdCompromise @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccess
+
+      // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
+      | attemptFullAccessAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  fullAccessAfterSoftProdVulnerability
+
+      | attemptReadAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  readAfterSoftProdVulnerability
+
+      | attemptModifyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  modifyAfterSoftProdVulnerability
+
+      | attemptDenyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step."
+        ->  denyAfterSoftProdVulnerability
+
+      E softwareCheck @hidden
+        user info: "Existence attack step to only allow the connected attacks steps only if a SoftwareProduct is associated."
+        <-  appSoftProduct
+        ->  fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
+
+      | softwareProductVulnerabilityLocalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.localAccessAchieved,
+            softwareProductAbuse
+
+      | softwareProductVulnerabilityNetworkAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.networkAccessAchieved,
+            softwareProductAbuse
+
+      | softwareProductVulnerabilityPhysicalAccessAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.physicalAccessAchieved,
+            softwareProductAbuse
+
+      | softwareProductVulnerabilityLowPrivilegesAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.lowPrivilegesAchieved,
+            softwareProductAbuse
+
+      | softwareProductVulnerabilityHighPrivilegesAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.highPrivilegesAchieved,
+            softwareProductAbuse
+
+      | softwareProductVulnerabilityUserInteractionAchieved @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  appSoftProduct.softProductVulnerabilities.userInteractionAchieved,
+            softwareProductAbuse
+
+      | attemptSoftwareProductAbuse @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  softwareProductAbuse
+
+      & softwareProductAbuse @hidden
+        developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
+        ->  fullAccessAfterSoftProdVulnerability,
+            readAfterSoftProdVulnerability,
+            modifyAfterSoftProdVulnerability,
+            denyAfterSoftProdVulnerability
+
+      & fullAccessAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  fullAccess
+
+      & readAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  attemptRead
+
+      & modifyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  attemptModify
+
+      & denyAfterSoftProdVulnerability @hidden
+        developer info: "Intermediate attack step to handle existence."
+        ->  attemptDeny
+
+      | attemptApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulApplicationRespondConnectThroughData
+
+      & successfulApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  applicationRespondConnectThroughData
+
+      | applicationRespondConnectThroughData @hidden
+        user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
+        modeler info: "This is an intermediate attack step that groups connections to attack steps."
+        ->  receivedData.attemptApplicationRespondConnect
+
+      | attemptRead @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulRead
+
+      & successfulRead @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  read
+
+      | read {C}
+        user info: "The attacker can read some or all of this service's code and data."
+        developer info: "We don't model the services data, as we do not expect that information will be available to the parser. We also don't differentiate between service administrators and service users (e.g., mail service admins and users), as we have no information about the services. Adopted from awsLang."
+        ->  containedData.attemptRead,
+            appExecutedApps.attemptRead
+
+      | attemptModify @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulModify
+
+      & successfulModify @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  modify
+
+      | modify {I}
+        user info: "The attacker can modify some or all of this service's data and/or source code."
+        ->  containedData.attemptAccess,
+            fullAccess
+
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step."
+        ->  successfulDeny
+
+      & successfulDeny @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  deny
+
+      | deny {A}
+        user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
+        ->  containedData.attemptDeny,
+            appExecutedApps.attemptDeny
+
+      & denyFromNetworkingAsset @hidden
+        developer info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
+        ->  attemptDeny
+
+      & denyFromLockout @hidden
+        developer info: "This is an intermediate attack step to only trigger deny on an application when all the executing access control roles are locked out."
+        ->  attemptDeny
+
+    }
+
+    asset IDPS extends Application
+      user info: "An IDPS is tasked with protecting other applications from malicious activity."
+    {
+      # disabled @Override @hidden [Disabled]
+        modeller info: "As per the comment for the effectiveness defence, the disabled defence does not function as desired for the IDPS asset and should not be used. The effectiveness defence should be adjusted to reflect the likelihood that the IDPS is present instead."
+        developer info: "It would be ideal to hide this defence when using modelling tools to avoid confusion."
+
+      # effectiveness [Enabled]
+        user info: "The effectiveness defence represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
+        modeller info: "The disabled defence should inversely impact the effectiveness defence. However, because this is not currently implemented in coreLang it is up to the modeller to properly take this into account when setting the values of these defences."
+        ->  effectivenessBypassed
+
+      | bypassEffectiveness [VeryHardAndUncertain]
+        user info: "Supply chain auditing can be bypassed."
+        developer info: "The probability distribution for this attack step needs to be researched more."
+        ->  effectivenessBypassed
+
+      | effectivenessBypassed @hidden
+        developer info: "The protection of the IDPS has been bypassed either as a result of attacker activity or due to some internal property of the IDPS."
+        ->  protectedApps.successfulUseVulnerability,
+            protectedApps.successfulUnsafeUserActivity
+
+      | fullAccess {C,I,A}
+        developer info: "The IDPS is no longer able to protect the apps assigned to it if it has been compromised itself."
+        +>  effectivenessBypassed
+
+      | deny
+        developer info: "The IDPS is no longer able to protect the apps assigned to it if it has been denied itself."
+        +>  effectivenessBypassed
+    }
+
+    asset PhysicalZone
+      user info: "A physical zone is the location where hardware systems are physically deployed."
+    {
+      | gainPhysicalAccess
+        user info: "By gaining access on a physical zone, physical access on the housed hardware is also gained."
+        ->  hardwareSystems.physicalAccess,
+            networks.physicalAccess
+    }
+}
+
+associations {
+  Hardware         [hostHardware]      0..1 <-- SysExecution          --> *    [sysExecutedApps]        Application
+      developer info: "Hardware on which Applications are running. The host hardware is not mandatory to be specified but if it is, it adds on the model!"
+  Application      [hostApp]           0..1 <-- AppExecution          --> *    [appExecutedApps]        Application
+      developer info: "Application 1 runs application 2 runs application 3. (Where application 1 can be an OS, application 2 is a VM and application 3 is app running on the VM."
+  IDPS             [protectorIDPSs]       * <-- AppProtection         --> *    [protectedApps]          Application
+      developer info: "IDPSs can provide protection to other applications."
+  SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *    [softApplications]       Application
+      user info: "An application can be associated with a software product that has some specific characteristics such as specific Vulnerabilities."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *    [hardwareSystems]        Hardware
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed Hardware, but access to the hardware does not provide access to the physical zone (e.g. iLOs)."
+  PhysicalZone     [physicalZones]        * <-- ZoneInclusion         --> *    [networks]               Network
+      developer info: "Access on PhysicalZone will give physicalAccess on the deployed networks, but access to the network does not provide access to the physical zone."
+}

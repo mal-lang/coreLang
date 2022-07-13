@@ -1,0 +1,291 @@
+/*
+ * Copyright 2019-2021 coreLang contributors <https://mal-lang.org/coreLang/contributors.html>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+category DataResources {
+
+    asset Information
+      user info: "Represents any type of information that might be contained inside Data."
+    {
+      | attemptAccess
+        user info: "The attacker is attempting to access the information."
+
+      | attemptReadFromReplica @hidden
+        developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
+        ->  successfulReadFromReplica
+
+      & attemptWriteFromReplica @hidden
+        developer info: "Information can be overwritten only if all replicas have been overwritten."
+        ->  successfulWriteFromReplica
+
+      & attemptDeleteFromReplica @hidden
+        developer info: "Information can be deleted only if all replicas have been deleted."
+        ->  successfulDeleteFromReplica
+
+      & attemptDenyFromReplica @hidden
+        developer info: "Information can be denied only if all replicas have been denied."
+        ->  successfulDenyFromReplica
+
+      | attemptExtractFromReplica @hidden
+        developer info: "The attacker attempts to extract the information."
+        ->  successfulExtractFromReplica
+
+      & successfulReadFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  read
+
+      & successfulWriteFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  write
+
+      & successfulDeleteFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  delete
+
+      & successfulDenyFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  deny
+
+      & successfulExtractFromReplica @hidden
+        developer info: "Intermediate attack step to model defences."
+        ->  extract
+
+      | read
+        user info: "The attacker is able to read the information. They may still be unable to extract it."
+        ->  dataReplicas.read,
+            containerData.read
+
+      | write
+        user info: "The attacker is able to write the information."
+        ->  dataReplicas.write,
+            containerData.write,
+            delete
+
+      | delete
+        user info: "The attacker is able to delete the information."
+        ->  dataReplicas.delete,
+            containerData.delete,
+            deny
+
+      | deny
+        user info: "The attacker is able to deny the information."
+        ->  dataReplicas.deny,
+            containerData.deny
+
+      | extract
+        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
+    }
+
+    asset Data
+      user info: "Any form of data that can be stored or transmitted."
+      developer info: "Adopted from awsLang but significantly changed."
+    {
+      | attemptAccess
+        user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
+        ->  access
+
+      | attemptAccessFromIdentity
+        user info: "Access the data through a compormised identity."
+        ->  identityRead,
+            identityWrite,
+            identityDelete
+
+      & access
+        user info: "Access the data."
+        ->  attemptRead,
+            attemptWrite,
+            attemptDelete,
+            containedData.attemptAccess
+
+      !E dataEncrypted @hidden
+        user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
+        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        <-  encryptCreds
+        ->  accessUnencryptedData
+
+      !E dataSigned @hidden
+        user info: "If the data are authenticated, then modifying them is not possible to achieve."
+        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        <-  signingCreds
+        ->  accessUnsignedData
+
+      & accessUnencryptedData @hidden
+        user info: "If data are unencrypted then access them."
+        ->  accessDecryptedData
+
+      & accessUnsignedData @hidden
+        user info: "If data are unsigned then alter them."
+        ->  accessSpoofedData
+
+      | accessSpoofedData @hidden
+        user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
+        ->  containedData*.applicationRespondConnect,
+            containedData*.successfulWrite
+
+      | accessDecryptedData @hidden
+        user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
+        ->  access,
+            applicationRespondConnect,
+            successfulRead,
+            successfulWrite,
+            successfulDelete
+
+      # dataNotPresent [Disabled]
+        user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
+        developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+        ->  access,
+            applicationRespondConnect,
+            successfulRead,
+            successfulWrite,
+            successfulDeny,
+            successfulDelete
+
+      | attemptApplicationRespondConnect @hidden
+        developer info: "Intermediate attack step to handle defenses."
+        ->  applicationRespondConnect
+
+      & applicationRespondConnect
+        user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
+        ->  senderApp.attemptNetworkConnectViaResponse
+
+      | attemptRead @hidden
+        user info: "Attempt to read the data."
+        ->  successfulRead
+
+      | identityAttemptRead @hidden
+        user info: "Attempt to read the data through a compromised identity."
+        ->  identityRead
+
+      & identityRead @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        ->  attemptRead
+
+      | attemptWrite @hidden
+        user info: "Attempt to write on the data."
+        ->  successfulWrite
+
+      | identityAttemptWrite @hidden
+        user info: "Attempt to write the data through a compromised identity."
+        ->  identityWrite
+
+      & identityWrite @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        ->  attemptWrite
+
+      | attemptDelete @hidden
+         user info: "Attempt to delete the data."
+        -> successfulDelete
+
+      | identityAttemptDelete @hidden
+        user info: "Attempt to delete the data through a compromised identity."
+        ->  identityDelete
+
+      & identityDelete @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        ->  attemptDelete
+
+      & successfulRead @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  read
+
+      | read {C}
+        user info: "The attacker can read the data. This means that the data can be used for further attack steps, but they are not necessarily obtained by the attacker. The extract attack step covers the scenario where the attacker actually collects the data."
+        ->  containedData.attemptRead,
+            information.read,
+            replicatedInformation.attemptReadFromReplica,
+            extract
+
+      & successfulWrite @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  write
+
+      | write {I}
+        user info: "The attacker can write to the location of the data, effectively modifying or deleting it."
+        ->  containedData.attemptWrite,
+            information.write,
+            replicatedInformation.attemptWriteFromReplica,
+            attemptDelete,
+            compromiseAppOrigin
+
+      & successfulDelete @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  delete
+
+      | delete {I,A}
+        user info: "The attacker can delete the data."
+        ->  containedData.attemptDelete,
+            information.delete,
+            replicatedInformation.attemptDeleteFromReplica,
+            attemptDeny
+
+      | attemptDeny @hidden
+        developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
+        ->  successfulDeny
+
+      & successfulDeny @hidden
+        developer info: "Intermediate attack step to model the requirements."
+        ->  deny
+
+      | deny {A}
+        user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
+        ->  containedData.attemptDeny,
+            information.deny,
+            replicatedInformation.attemptDenyFromReplica
+
+      & denyFromLockout @hidden
+        developer info: "This is an intermediate attack step to only trigger deny on data when all the access control roles that can read them are locked out."
+        ->  attemptDeny
+
+      | attemptReverseReach @hidden
+        developer info: "Intermediate attack step."
+        ->  reverseReach
+
+      & reverseReach @hidden
+        developer info: "Reverse reach for Data is used to determine whether or not the data can be transferred to attacker."
+        ->  extract,
+            containedData.attemptReverseReach
+
+      & extract
+        user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
+        ->  information.extract,
+            replicatedInformation.attemptExtractFromReplica
+
+      | compromiseAppOrigin
+        user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
+        ->  originSoftwareProduct.compromiseApplication
+    }
+}
+
+associations {
+  // ### Data related associations
+  Data             [containingData]       * <-- DataContainment       --> *    [containedData]          Data
+      user info: "Data can be contained inside other data."
+  Data             [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
+      user info: "An application should be able to contain some data."
+  Data             [sentData]             * <-- SendData              --> *    [senderApp]              Application
+      user info: "An application can also send some data that are supposed to be transferred over a connection. This expresses an active connection."
+  Data             [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
+      user info: "An application can also receive some data that are supposed to be transferred over a connection. This expresses an active connection."
+  Data             [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
+      user info: "A network can also contain some data that are supposed to be network-wide available."
+  Data             [hostedData]           * <-- DataHosting           --> 0..1 [hardware]               Hardware
+      user info: "Data can be hosted on hardware."
+  Data             [containerData]        * <-- InfoContainment       --> *    [information]            Information
+      user info: "Data can contain information, as for example credentials."
+  Data             [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
+      user info: "Information can be replicated across multiple data assets that offer redundancy."
+  Data             [originData]        0..1 <-- Origin                --> 0..1 [originSoftwareProduct]  SoftwareProduct
+      user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained."
+}
