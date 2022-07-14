@@ -44,7 +44,7 @@ category IAM {
             subprivileges.attemptAssume
 
       | deny
-        user info: "Denying Identity, Group, or Privileges means that they are unavailable to legitimate users and which are locked out."
+        user info: "Denying Identity, Group, or Privileges means that they are unavailable to legitimate users and which may be locked out as a result."
         +>  attemptLockout
 
       | write
@@ -168,11 +168,11 @@ category IAM {
         ->  attemptUse
 
       | attemptUse
-        user info: "Someone is using the credentials to perform a legitimate authentication."
+        user info: "The attacker is using the credentials to perform a legitimate authentication."
         ->  use
 
       & use {C}
-        user info: "Someone is using the credentials to perform a legitimate authentication."
+        user info: "The attacker is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
             signedData.accessSpoofedData,

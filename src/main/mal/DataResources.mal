@@ -158,7 +158,8 @@ category DataResources {
 
       & applicationRespondConnect
         user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
-        ->  senderApp.attemptNetworkConnectViaResponse
+        ->  senderApp.attemptNetworkConnectViaResponse,
+            containedData.applicationRespondConnect
 
       | attemptRead @hidden
         user info: "Attempt to read the data."
@@ -264,7 +265,7 @@ category DataResources {
 
       | compromiseAppOrigin
         user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-        ->  originSoftwareProduct.compromiseApplication
+        ->  originSoftwareProduct.compromiseApplications
     }
 }
 
