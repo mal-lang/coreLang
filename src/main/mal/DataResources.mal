@@ -97,7 +97,7 @@ category DataResources {
         ->  access
 
       | attemptAccessFromIdentity
-        user info: "Access the data through a compormised identity."
+        user info: "Access the data through a compromised identity."
         ->  identityRead,
             identityWrite,
             identityDelete
@@ -106,8 +106,7 @@ category DataResources {
         user info: "Access the data."
         ->  attemptRead,
             attemptWrite,
-            attemptDelete,
-            containedData.attemptAccess
+            attemptDelete
 
       !E dataEncrypted @hidden
         user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
@@ -131,8 +130,8 @@ category DataResources {
 
       | accessSpoofedData @hidden
         user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
-        ->  containedData*.applicationRespondConnect,
-            containedData*.successfulWrite
+        ->  applicationRespondConnect,
+            successfulWrite
 
       | accessDecryptedData @hidden
         user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."

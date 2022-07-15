@@ -33,9 +33,21 @@ public class DataTest extends CoreLangTest {
         attacker.attack();
 
         model.data1.access.assertCompromisedInstantaneously();
-        model.data2.access.assertCompromisedInstantaneously();
-        model.encdata.access.assertUncompromised();
-        model.notexistdata.access.assertUncompromised();
+        model.data1.read.assertCompromisedInstantaneously();
+        model.data1.write.assertCompromisedInstantaneously();
+        model.data1.delete.assertCompromisedInstantaneously();
+
+        model.data2.read.assertCompromisedInstantaneously();
+        model.data2.write.assertCompromisedInstantaneously();
+        model.data2.delete.assertCompromisedInstantaneously();
+
+        model.encdata.read.assertUncompromised();
+        model.encdata.write.assertUncompromised();
+        model.encdata.delete.assertUncompromised();
+
+        model.notexistdata.read.assertUncompromised();
+        model.notexistdata.write.assertUncompromised();
+        model.notexistdata.delete.assertUncompromised();
     }
 
     @Test
@@ -51,17 +63,14 @@ public class DataTest extends CoreLangTest {
         model.data1.write.assertUncompromised();
         model.data1.delete.assertUncompromised();
 
-        model.data2.access.assertUncompromised();
         model.data2.read.assertUncompromised();
         model.data2.write.assertUncompromised();
         model.data2.delete.assertUncompromised();
 
-        model.encdata.access.assertUncompromised();
         model.encdata.read.assertUncompromised();
         model.encdata.write.assertUncompromised();
         model.encdata.delete.assertUncompromised();
 
-        model.notexistdata.access.assertUncompromised();
         model.notexistdata.read.assertUncompromised();
         model.notexistdata.write.assertUncompromised();
         model.notexistdata.delete.assertUncompromised();
@@ -78,13 +87,21 @@ public class DataTest extends CoreLangTest {
         attacker.attack();
 
         model.data1.access.assertCompromisedInstantaneously();
-        model.data2.access.assertCompromisedInstantaneously();
-        model.encdata.access.assertCompromisedInstantaneously();
+        model.data1.read.assertCompromisedInstantaneously();
+        model.data1.write.assertCompromisedInstantaneously();
+        model.data1.delete.assertCompromisedInstantaneously();
+
+        model.data2.read.assertCompromisedInstantaneously();
+        model.data2.write.assertCompromisedInstantaneously();
+        model.data2.delete.assertCompromisedInstantaneously();
+
         model.encdata.read.assertCompromisedInstantaneously();
         model.encdata.write.assertCompromisedInstantaneously();
         model.encdata.delete.assertCompromisedInstantaneously();
 
-        model.notexistdata.access.assertUncompromised();
+        model.notexistdata.read.assertUncompromised();
+        model.notexistdata.write.assertUncompromised();
+        model.notexistdata.delete.assertUncompromised();
     }
 
 }
