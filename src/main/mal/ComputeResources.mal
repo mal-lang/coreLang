@@ -285,10 +285,10 @@ category ComputeResources {
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptLocalConnectVulnOnHost,
             attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
-            containedData.attemptAccessFromIdentity, // This also enables the use of compromised identities but only after specificAccess is reached
-            sentData.identityAttemptRead, // Both Data sent and received can be read
-            receivedData.identityAttemptRead,
-            sentData.identityAttemptWrite, // But only sent Data can be written
+            containedData.authorizedAccessFromApplication, // This also enables the use of compromised permissions but only after specificAccess is reached
+            sentData.authorizedReadFromApplication, // Both Data sent and received can be read
+            receivedData.authorizedReadFromApplication,
+            sentData.authorizedWriteFromApplication, // But only sent Data can be written
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
 

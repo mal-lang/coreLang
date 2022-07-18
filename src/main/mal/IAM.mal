@@ -37,9 +37,9 @@ category IAM {
         ->  execPrivApps.authenticate,
             highPrivApps.authenticate,
             lowPrivApps.specificAccessAuthenticate,
-            readPrivData.identityAttemptRead,
-            writePrivData.identityAttemptWrite,
-            deletePrivData.identityAttemptDelete,
+            readPrivData.authorizedReadFromIAM,
+            writePrivData.authorizedWriteFromIAM,
+            deletePrivData.authorizedDeleteFromIAM,
             managedIAMs.attemptAssume,
             subprivileges.attemptAssume
 

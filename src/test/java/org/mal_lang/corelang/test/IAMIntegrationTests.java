@@ -103,11 +103,14 @@ public class IAMIntegrationTests extends CoreLangTest {
             network.access.assertCompromisedInstantaneously();
             application.networkConnect.assertCompromisedInstantaneously();
             identity.assume.assertCompromisedInstantaneously();
-            data.identityAttemptRead.assertCompromisedInstantaneously();
-            data.identityAttemptWrite.assertUncompromised();
-            data.identityAttemptDelete.assertUncompromised();
+            data.authorizedReadFromIAM.assertCompromisedInstantaneously();
+            data.authorizedWriteFromIAM.assertUncompromised();
+            data.authorizedDeleteFromIAM.assertUncompromised();
             data.attemptAccess.assertUncompromised();
-            data.attemptAccessFromIdentity.assertUncompromised();
+            data.authorizedAccessFromApplication.assertUncompromised();
+            data.authorizedReadFromApplication.assertUncompromised();
+            data.authorizedWriteFromApplication.assertUncompromised();
+            data.authorizedDeleteFromApplication.assertUncompromised();
             data.access.assertUncompromised();
             data.read.assertUncompromised();
             data.write.assertUncompromised();
@@ -115,7 +118,7 @@ public class IAMIntegrationTests extends CoreLangTest {
             data.deny.assertCompromisedInstantaneously(); //Because of network.denialOfService
         }
     }
-    
+
     @Test
     public void identityDataIAMTest() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());

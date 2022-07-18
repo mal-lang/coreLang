@@ -96,11 +96,11 @@ category DataResources {
         user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
         ->  access
 
-      | attemptAccessFromIdentity
-        user info: "Access the data through a compromised identity."
-        ->  identityRead,
-            identityWrite,
-            identityDelete
+      | authorizedAccessFromApplication
+        user info: "Attempt to gain access to the data through permissions."
+        ->  authorizedReadFromApplication,
+            authorizedWriteFromApplication,
+            authorizedDeleteFromApplication
 
       & access
         user info: "Access the data."
@@ -164,38 +164,6 @@ category DataResources {
         user info: "Attempt to read the data."
         ->  successfulRead
 
-      | identityAttemptRead @hidden
-        user info: "Attempt to read the data through a compromised identity."
-        ->  identityRead
-
-      & identityRead @hidden
-        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-        ->  attemptRead
-
-      | attemptWrite @hidden
-        user info: "Attempt to write on the data."
-        ->  successfulWrite
-
-      | identityAttemptWrite @hidden
-        user info: "Attempt to write the data through a compromised identity."
-        ->  identityWrite
-
-      & identityWrite @hidden
-        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-        ->  attemptWrite
-
-      | attemptDelete @hidden
-         user info: "Attempt to delete the data."
-        -> successfulDelete
-
-      | identityAttemptDelete @hidden
-        user info: "Attempt to delete the data through a compromised identity."
-        ->  identityDelete
-
-      & identityDelete @hidden
-        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
-        ->  attemptDelete
-
       & successfulRead @hidden
         developer info: "Intermediate attack step to model the requirements."
         ->  read
@@ -206,6 +174,22 @@ category DataResources {
             information.read,
             replicatedInformation.attemptReadFromReplica,
             extract
+
+      | authorizedReadFromIAM @hidden
+        user info: "The attacker has obtained the access control permissions required to read the data."
+        ->  authorizedRead
+
+      | authorizedReadFromApplication @hidden
+        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to read it."
+        ->  authorizedRead
+
+      & authorizedRead @hidden
+        developer info: "An attacker is able to read the Data through legitimate means, this requires both access to the Data and the adequate permissions."
+        ->  attemptRead
+
+      | attemptWrite @hidden
+        user info: "Attempt to write on the data."
+        ->  successfulWrite
 
       & successfulWrite @hidden
         developer info: "Intermediate attack step to model the requirements."
@@ -219,6 +203,22 @@ category DataResources {
             attemptDelete,
             compromiseAppOrigin
 
+      | authorizedWriteFromIAM @hidden
+        user info: "The attacker has obtained the access control permissions required to write the data."
+        ->  authorizedWrite
+
+      | authorizedWriteFromApplication @hidden
+        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to write it."
+        ->  authorizedWrite
+
+      & authorizedWrite @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        ->  attemptWrite
+
+      | attemptDelete @hidden
+         user info: "Attempt to delete the data."
+        -> successfulDelete
+
       & successfulDelete @hidden
         developer info: "Intermediate attack step to model the requirements."
         ->  delete
@@ -229,6 +229,18 @@ category DataResources {
             information.delete,
             replicatedInformation.attemptDeleteFromReplica,
             attemptDeny
+
+      | authorizedDeleteFromIAM @hidden
+        user info: "The attacker has obtained the access control permissions required to delete the data."
+        ->  authorizedDelete
+
+      | authorizedDeleteFromApplication @hidden
+        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to delete it."
+        ->  authorizedDelete
+
+      & authorizedDelete @hidden
+        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        ->  attemptDelete
 
       | attemptDeny @hidden
         developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
