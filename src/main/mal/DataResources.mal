@@ -122,6 +122,16 @@ category DataResources {
         <-  signingCreds
         ->  accessUnsignedData
 
+      E payloadInspectionBypassViaEncryptedData
+        user info: "If the data are encrypted then payload inspection cannot be performed on the connection rules they are transmitted over."
+        <-  encryptCreds
+        ->  bypassPayloadInspectionViaEncryptedData
+
+      | bypassPayloadInspectionViaEncryptedData @hidden
+        developer info: "The connection rules that the encrypted data traverse over cannot provide payload inspection since they are assumed to permit encrypted traffic. This implies that the attacker could simply encrypt their own communications to evade inspection."
+        ->  (senderApp.clientApplicationConnections() /\ transitNetwork.inboundAllowedConnections()).payloadInspectionBypassed,
+            (receiverApp.serverApplicationConnections() /\ transitNetwork.outboundAllowedConnections()).payloadInspectionBypassed
+
       & accessUnencryptedData @hidden
         user info: "If data are unencrypted then access them."
         ->  accessDecryptedData
