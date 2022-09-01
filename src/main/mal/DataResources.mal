@@ -71,6 +71,7 @@ category DataResources {
         user info: "The attacker is able to write the information."
         ->  dataReplicas.write,
             containerData.write,
+            dependentApps.fullAccess,
             delete
 
       | delete
@@ -82,7 +83,8 @@ category DataResources {
       | deny
         user info: "The attacker is able to deny the information."
         ->  dataReplicas.deny,
-            containerData.deny
+            containerData.deny,
+            dependentApps.deny
 
       | extract
         user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
@@ -200,8 +202,9 @@ category DataResources {
         ->  containedData.attemptWrite,
             information.write,
             replicatedInformation.attemptWriteFromReplica,
-            attemptDelete,
-            compromiseAppOrigin
+            compromiseAppOrigin,
+            dependentApps.fullAccess,
+            attemptDelete
 
       | authorizedWriteFromIAM @hidden
         user info: "The attacker has obtained the access control permissions required to write the data."
@@ -254,7 +257,8 @@ category DataResources {
         user info: "If a DoS is performed data are denied, it has the same effects as deleting the data."
         ->  containedData.attemptDeny,
             information.deny,
-            replicatedInformation.attemptDenyFromReplica
+            replicatedInformation.attemptDenyFromReplica,
+            dependentApps.deny
 
       & denyFromLockout @hidden
         developer info: "This is an intermediate attack step to only trigger deny on data when all the access control roles that can read them are locked out."
@@ -282,22 +286,38 @@ category DataResources {
 
 associations {
   // ### Data related associations
-  Data             [containingData]       * <-- DataContainment       --> *    [containedData]          Data
+  Data        [containingData]       * <-- DataContainment       --> *    [containedData]          Data
       user info: "Data can be contained inside other data."
-  Data             [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
+  Data        [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
       user info: "An application should be able to contain some data."
-  Data             [sentData]             * <-- SendData              --> *    [senderApp]              Application
+  Data        [sentData]             * <-- SendData              --> *    [senderApp]              Application
       user info: "An application can also send some data that are supposed to be transferred over a connection. This expresses an active connection."
-  Data             [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
+  Data        [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
       user info: "An application can also receive some data that are supposed to be transferred over a connection. This expresses an active connection."
-  Data             [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
+  Data        [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
-  Data             [hostedData]           * <-- DataHosting           --> 0..1 [hardware]               Hardware
+  Data        [hostedData]           * <-- DataHosting           --> 0..1 [hardware]               Hardware
       user info: "Data can be hosted on hardware."
-  Data             [containerData]        * <-- InfoContainment       --> *    [information]            Information
+  Data        [containerData]        * <-- InfoContainment       --> *    [information]            Information
       user info: "Data can contain information, as for example credentials."
-  Data             [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
+  Data        [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
-  Data             [originData]        0..1 <-- Origin                --> 0..1 [originSoftwareProduct]  SoftwareProduct
+  Data        [originData]        0..1 <-- Origin                --> 0..1 [originSoftwareProduct]  SoftwareProduct
       user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained."
+  // ### Application dependence associations
+  /* Dependence is used to represent various situations where the operations
+   * of the Application are impacted by modifying/denying the Data/Information
+   * it depends upon. Examples of this type of behaviour are configurations,
+   * plugins, libraries, or other input data that is critical to the purpose
+   * of the software component represented by the Application. This
+   * association should only be used for circumstances where the workflow of
+   * the Application is not altered, but the Data/Information are modified
+   * within the regular operating process. For situations where abnormal
+   * behaviour is induced to impact the Application SoftwareVulnerabilities
+   * should be used instead.
+   */
+  Data        [dataDependedUpon]     * <-- Dependence            --> *    [dependentApps]         Application
+      user info: "Data can be specified as a dependence for an Application."
+  Information [infoDependedUpon]     * <-- Dependence            --> *    [dependentApps]         Application
+      user info: "Information can be specified as a dependence for an Application."
 }
