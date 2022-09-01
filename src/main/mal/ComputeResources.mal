@@ -24,13 +24,18 @@ category ComputeResources {
         ->  successfulUseVulnerability,
             bypassHardwareModificationsProtection
 
-      & successfulUseVulnerability @ hidden
+      & successfulUseVulnerability @hidden
         developer info: "Intermediate attack step to enable defences."
         ->  useVulnerability
 
       | useVulnerability
         user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
         ->  vulnerabilities.attemptAbuse
+
+      | spreadWormViaRemovableMedia @hidden
+        developer info: "Attempt to spread malware via removable media that the users connect to the hardware system."
+        ->  users.attemptDeliverMaliciousRemovableMedia,
+            physicalZones.users.attemptDeliverMaliciousRemovableMedia
 
       | attemptFullAccess @hidden
         developer info: "Intermediate attack step to allow for defences."
@@ -43,7 +48,8 @@ category ComputeResources {
       | fullAccess {C,I,A}
         user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
-            hostedData.attemptAccess
+            hostedData.attemptAccess,
+            spreadWormViaRemovableMedia
 
       | attemptSupplyChainAttack
         developer info: "Intermediate attack step to allow for the auditing defence."
@@ -334,6 +340,7 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
+            hostHardware.spreadWormViaRemovableMedia, // Propagate malware worms via removable media
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden

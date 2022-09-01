@@ -23,6 +23,10 @@ category User {
         user info: "If one credential of that user is compromised there is a probability that all other credentials of that user are also compromised."
         ->  passwordReuseCompromise
 
+      # noRemovableMediaUsage [Enabled]
+        user info: "The user does not utilise removable media and therefore the attack steps associated with it cannot be reached."
+        ->  successfulDeliverMaliciousRemovableMedia
+
       # securityAwareness
         user info: "The security awareness of the user makes it less likely that social engineering would be successful and reduces the likelihood that the user will engage in unsafe behaviour."
         ->  securityAwarenessBypassed,
