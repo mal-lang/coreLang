@@ -95,13 +95,13 @@ public class IAMIntegrationTests extends CoreLangTest {
 
         public void addAttacker(Attacker attacker) {
             attacker.addAttackPoint(identity.assume);
-            attacker.addAttackPoint(network.access);
+            attacker.addAttackPoint(network.accessUninspected);
         }
 
         public void assertModel() {
             // Make assertions
-            network.access.assertCompromisedInstantaneously();
-            application.networkConnect.assertCompromisedInstantaneously();
+            network.accessUninspected.assertCompromisedInstantaneously();
+            application.networkConnectUninspected.assertCompromisedInstantaneously();
             identity.assume.assertCompromisedInstantaneously();
             data.authorizedReadFromIAM.assertCompromisedInstantaneously();
             data.authorizedWriteFromIAM.assertUncompromised();

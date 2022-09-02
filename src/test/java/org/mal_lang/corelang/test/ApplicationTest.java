@@ -60,7 +60,7 @@ public class ApplicationTest extends CoreLangTest {
         var model = new ApplicationTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.application.networkConnect);
+        model.addAttacker(attacker,model.application.networkConnectUninspected);
         model.addAttacker(attacker,model.application.authenticate);
         attacker.attack();
 
@@ -78,7 +78,7 @@ public class ApplicationTest extends CoreLangTest {
         var model = new ApplicationTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.application.networkConnect);
+        model.addAttacker(attacker,model.application.networkConnectUninspected);
         model.addAttacker(attacker,model.application.specificAccessAuthenticate);
         attacker.attack();
 

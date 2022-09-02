@@ -248,24 +248,37 @@ category ComputeResources {
             allVulnerabilities().localAccessAchieved,
             softwareProductVulnerabilityLocalAccessAchieved
 
-      | networkConnect
+      | networkConnectUninspected
         user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
-        ->  networkConnectWithoutTriggeringVulnerabilities,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+        ->  attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
             allVulnerabilities().networkAccessAchieved,
-            softwareProductVulnerabilityNetworkAccessAchieved
+            softwareProductVulnerabilityNetworkAccessAchieved,
+            networkConnect,
+            specificAccessNetworkConnect
 
-      | networkConnectWithoutTriggeringVulnerabilities @hidden
-        developer info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
-        ->  networkAccess,
-            specificAccessFromNetworkConnection
+
+      | networkConnectInspected
+        user info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
+        ->  networkConnect,
+            specificAccessNetworkConnect
+
+      | networkConnect @hidden
+        user info: "Intermediate attack step."
+        ->  networkAccess
+
+      | specificAccessNetworkConnect
+        ->  specificAccessFromNetworkConnection
 
       | accessNetworkAndConnections
         user info: "An attacker is also possible to access the network(s) and connections to which this application is connected to, and perform client-side attacks."
-        ->  networks.access,
-            clientAccessNetworks.access,
-            clientApplicationConnections().attemptConnectToApplications,
-            clientApplicationConnections().attemptAccessNetworks
+        ->  networks.accessUninspected,
+            networks.accessInspected,
+            clientAccessNetworks.accessUninspected,
+            clientAccessNetworks.accessInspected,
+            clientApplicationConnections().attemptConnectToApplicationsUninspected,
+            clientApplicationConnections().attemptConnectToApplicationsInspected,
+            clientApplicationConnections().attemptAccessNetworksUninspected,
+            clientApplicationConnections().attemptAccessNetworksInspected
 
       | attemptNetworkConnectViaResponse
         developer info: "Intermediate attack step to handle defences."
@@ -275,7 +288,7 @@ category ComputeResources {
         user info: "An attacker may be able to respond to requests submitted by a client application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
-        ->  networkConnect
+        ->  networkConnectUninspected
 
       & specificAccessFromLocalConnection @hidden
         developer info: "This intermediate step is used to represent that localConnect has happened before being able to get 'specificAccess'. Same as 'localAccess' attack step."
@@ -363,7 +376,7 @@ category ComputeResources {
       | unsafeUserActivity
         user info: "The unsafe actions of users on this application open it up to attacks and enable vulnerabilities that require user interaction."
         ->  localConnect,
-            networkConnect,
+            networkConnectUninspected,
             allVulnerabilities().userInteractionAchieved
 
       | attackerUnsafeUserActivityCapability @hidden

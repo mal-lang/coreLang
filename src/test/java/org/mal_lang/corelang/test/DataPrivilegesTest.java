@@ -59,7 +59,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(true, false, false, false);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -79,7 +79,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(false, true, false, false);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -100,7 +100,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(false, false, true, false);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -122,7 +122,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(true, false, false, true);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -142,7 +142,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(false, true, false, true);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -163,7 +163,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new ApplicationToDataModel(false, false, true, true);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.app.networkConnect);
+        model.addAttacker(attacker, model.app.networkConnectUninspected);
         model.addAttacker(attacker, model.anyone.assume);
         attacker.attack();
 
@@ -210,7 +210,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new NetworkToDataModel(false);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.network.access);
+        model.addAttacker(attacker, model.network.accessUninspected);
         attacker.attack();
 
         model.outerData.read.assertCompromisedInstantaneously();
@@ -230,7 +230,7 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new NetworkToDataModel(true);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.network.access);
+        model.addAttacker(attacker, model.network.accessUninspected);
         attacker.attack();
 
         model.outerData.read.assertCompromisedInstantaneously();

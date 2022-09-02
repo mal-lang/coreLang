@@ -70,7 +70,7 @@ public class DataInTransitTest extends CoreLangTest {
         var model = new DataInTransitTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.netA.attemptAccess);
+        model.addAttacker(attacker,model.netA.attemptAccessUninspected);
         attacker.attack();
 
         model.dataIn.read.assertCompromisedInstantaneously();
@@ -86,7 +86,7 @@ public class DataInTransitTest extends CoreLangTest {
         var model = new DataInTransitTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.netB.attemptAccess);
+        model.addAttacker(attacker,model.netB.attemptAccessUninspected);
         attacker.attack();
 
         model.dataIn.read.assertUncompromised();
@@ -95,5 +95,4 @@ public class DataInTransitTest extends CoreLangTest {
         model.dataOut.read.assertCompromisedInstantaneously();
         model.dataOut.write.assertCompromisedInstantaneously();
     }
-
 }

@@ -42,15 +42,15 @@ public class NetworkIntegrationTests extends CoreLangTest {
         }
 
         public void addAttacker(Attacker attacker) {
-            attacker.addAttackPoint(netA.access);
+            attacker.addAttackPoint(netA.accessUninspected);
         }
 
         public void assertModel() {
             // Make assertions
-            netB.access.assertCompromisedInstantaneously();
-            netC.access.assertUncompromised();
-            netD.access.assertCompromisedInstantaneously();
-            app1.networkConnect.assertCompromisedInstantaneously();
+            netB.accessUninspected.assertCompromisedInstantaneously();
+            netC.accessUninspected.assertUncompromised();
+            netD.accessUninspected.assertCompromisedInstantaneously();
+            app1.networkConnectUninspected.assertCompromisedInstantaneously();
             routingfw.attemptUseVulnerability.assertUncompromised();
             routingfw.fullAccess.assertUncompromised();
         }
@@ -105,15 +105,15 @@ public class NetworkIntegrationTests extends CoreLangTest {
         }
 
         public void addAttacker(Attacker attacker) {
-          attacker.addAttackPoint(routingfw.networkConnect);
-          attacker.addAttackPoint(netA.access);
+          attacker.addAttackPoint(routingfw.networkConnectUninspected);
+          attacker.addAttackPoint(netA.accessUninspected);
         }
 
         public void assertModel() {
          // Make assertions
-         netA.access.assertCompromisedInstantaneously();
-         netB.access.assertCompromisedInstantaneously();
-         netC.access.assertCompromisedInstantaneously();
+         netA.accessUninspected.assertCompromisedInstantaneously();
+         netB.accessUninspected.assertCompromisedInstantaneously();
+         netC.accessUninspected.assertCompromisedInstantaneously();
          routingfw.attemptUseVulnerability.assertCompromisedInstantaneously();
          routingfw.fullAccess.assertCompromisedInstantaneously();
         }
@@ -132,5 +132,5 @@ public class NetworkIntegrationTests extends CoreLangTest {
       // Assert model
       model.assertModel();
     }
-    
+
 }
