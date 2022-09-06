@@ -21,10 +21,10 @@ category Networking {
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
       let allNetApplications = (clientApplications \/ applications)
-      let allowedNetworkConnections =  netConnections \/ outgoingNetConnections
-      let allowedApplicationConnections = (netConnections \/ outgoingNetConnections)
-      let allNetConnections = netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections
-      let allowedApplicationConnectionsApplications = allNetApplications() \/ allNetConnections().applications
+      let outboundAllowedConnections = (netConnections \/ outgoingNetConnections)
+      let inboundAllowedConnections = (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections)
+      let allNetConnections = (netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections)
+      let allowedApplicationConnectionsApplications = (allNetApplications() \/ allNetConnections().applications)
 
       | physicalAccess {C, A}
         developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
@@ -78,7 +78,7 @@ category Networking {
 
       | accessUninspected
         user info: "Uninspected access provides connect to all reachable applications without any restrictions."
-        ->  allowedApplicationConnections().attemptConnectToApplicationsUninspected,
+        ->  outboundAllowedConnections().attemptConnectToApplicationsUninspected,
             applications.networkConnectUninspected,
             networkForwardingUninspected,
             attemptReverseReach,
@@ -88,7 +88,7 @@ category Networking {
 
       | accessInspected
         user info: "Inspected access provides connect to all reachable applications, but with limitations."
-        ->  allowedApplicationConnections().attemptConnectToApplicationsInspected,
+        ->  outboundAllowedConnections().attemptConnectToApplicationsInspected,
             applications.networkConnectInspected,
             networkForwardingInspected,
             accessNetworkData,
@@ -106,14 +106,14 @@ category Networking {
 
       | networkForwardingUninspected
         developer info: "By using the allowed connections (connection rules), uninspected forwarding from one network to another network or applications can happen."
-          ->  allowedNetworkConnections().attemptAccessNetworksUninspected,
-              allowedNetworkConnections().attemptConnectToApplicationsUninspected,
+          ->  outboundAllowedConnections().attemptAccessNetworksUninspected,
+              outboundAllowedConnections().attemptConnectToApplicationsUninspected,
               networkForwardingInspected
 
       | networkForwardingInspected
         developer info: "By using the allowed connections (connection rules), inspected forwarding from one network to another network or applications can happen."
-          ->  allowedNetworkConnections().attemptAccessNetworksInspected,
-              allowedNetworkConnections().attemptConnectToApplicationsInspected
+          ->  outboundAllowedConnections().attemptAccessNetworksInspected,
+              outboundAllowedConnections().attemptConnectToApplicationsInspected
 
       | denialOfService {A}
         user info: "If a DoS is performed it affects, the applications communicating over the network as well as the connected application."
