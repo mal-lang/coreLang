@@ -154,7 +154,7 @@ category DataResources {
             successfulDelete
 
       # dataNotPresent [Disabled]
-        user info: "It should be used to model the probability of data actually not existing on the connected container (i.e. Hardware, Application, Connection, etc.)."
+        user info: "It should be used to model the probability of data actually not existing on the associated container (i.e. Hardware, Application, Network, etc.)."
         developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
         ->  access,
             applicationRespondConnect,

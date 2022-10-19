@@ -29,7 +29,7 @@ category ComputeResources {
         ->  useVulnerability
 
       | useVulnerability
-        user info: "The attacker is able to use the connected vulnerabilities, usually as a result of obtaining physical access."
+        user info: "The attacker is able to use the associated vulnerabilities, usually as a result of obtaining physical access."
         ->  vulnerabilities.attemptAbuse
 
       | spreadWormViaRemovableMedia @hidden
@@ -202,7 +202,7 @@ category ComputeResources {
             successfulDeny
 
       | attemptUseVulnerability @hidden
-        developer info: "Attempt to use the connected vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        developer info: "Attempt to use the associated vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
         ->  successfulUseVulnerability,
             protectorIDPSs.bypassEffectiveness
 
@@ -211,7 +211,7 @@ category ComputeResources {
         ->  useVulnerability
 
       | useVulnerability
-        user info: "Attempt to exploit the connected vulnerabilities."
+        user info: "Attempt to exploit the associated vulnerabilities."
         ->  allVulnerabilities().attemptAbuse,
             attemptSoftwareProductAbuse,
             fullAccessAfterSoftProdVulnerability,
@@ -244,18 +244,17 @@ category ComputeResources {
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
         ->  localAccess,
             specificAccessFromLocalConnection,
-            attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+            attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             allVulnerabilities().localAccessAchieved,
             softwareProductVulnerabilityLocalAccessAchieved
 
       | networkConnectUninspected
         user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
-        ->  attemptUseVulnerability, // Connection to all possible vulnerabilities that might be connected to the Application
+        ->  attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             allVulnerabilities().networkAccessAchieved,
             softwareProductVulnerabilityNetworkAccessAchieved,
             networkConnect,
             specificAccessNetworkConnect
-
 
       | networkConnectInspected
         user info: "This attack step is used if the network connection occurs via a ConnectionRule that has its payload inspected, in which case the attacker can still authenticate, but they cannot trigger vulnerabilities."
@@ -303,13 +302,13 @@ category ComputeResources {
         developer info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
             attemptLocalConnectVulnOnHost,
-            attemptUseVulnerability,   // Connection to all possible vulnerabilities that might be connected to the Application
+            attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             containedData.authorizedAccessFromApplication, // This also enables the use of compromised permissions but only after specificAccess is reached
             sentData.authorizedReadFromApplication, // Both Data sent and received can be read
             receivedData.authorizedReadFromApplication,
             sentData.authorizedWriteFromApplication, // But only sent Data can be written
             attemptApplicationRespondConnectThroughData,
-            accessNetworkAndConnections  // and access the network(s) and connections on/to which the app is connected
+            accessNetworkAndConnections // and access the network(s) and connections on/to which the app is connected
 
       | attemptLocalConnectVulnOnHost [HardAndUncertain]
         user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
@@ -432,7 +431,7 @@ category ComputeResources {
         ->  denyAfterSoftProdVulnerability
 
       E softwareCheck @hidden
-        user info: "Existence attack step to only allow the connected attacks steps only if a SoftwareProduct is associated."
+        user info: "Only enable the following attacks steps if a SoftwareProduct is associated with this Application."
         <-  appSoftProduct
         ->  fullAccessAfterSoftProdVulnerability,
             readAfterSoftProdVulnerability,
