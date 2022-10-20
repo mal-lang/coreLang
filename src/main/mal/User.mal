@@ -52,7 +52,7 @@ category User {
         ->  userIds.credentials.attemptCredentialsReuse
 
       | weakCredentials @hidden
-        developer info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defence."
+        developer info: "Intermediate attack step that defines the strength of all of the Credentials associated with the user. This is inversely proportional with the user's securityAwareness defense."
         ->  userIds.credentials.weakCredentials
 
       | attemptSocialEngineering
@@ -61,7 +61,7 @@ category User {
             bypassSecurityAwareness
 
       & successfulSocialEngineering @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  socialEngineering
 
       | socialEngineering @hidden
@@ -76,7 +76,7 @@ category User {
             bypassSecurityAwareness
 
       & successfulDeliverMaliciousRemovableMedia @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  deliverMaliciousRemovableMedia
 
       | deliverMaliciousRemovableMedia @hidden [Exponential(0.01)]
@@ -105,7 +105,7 @@ category User {
             bypassSecurityAwareness
 
       & successfulUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  unsafeUserActivity
 
       | unsafeUserActivity @hidden [Exponential(0.03)]

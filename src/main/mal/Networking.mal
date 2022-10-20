@@ -35,12 +35,12 @@ category Networking {
             bypassManInTheMiddleDefenseViaPhysicalAccess
 
       | bypassEavesdropDefenseViaPhysicalAccess @hidden [VeryHardAndUncertain]
-        modeller info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network."
+        modeler info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network."
         developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
         ->  eavesdropDefenseBypassed
 
       | bypassManInTheMiddleDefenseViaPhysicalAccess @hidden [VeryHardAndUncertain]
-        modeller info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network."
+        modeler info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network."
         developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
         ->  manInTheMiddleDefenseBypassed
 
@@ -145,7 +145,7 @@ category Networking {
             bypassEavesdropDefense
 
       & successfulEavesdrop @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  eavesdrop
 
       | eavesdrop {C}
@@ -171,7 +171,7 @@ category Networking {
             bypassManInTheMiddleDefense
 
       & successfulManInTheMiddle @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  manInTheMiddle
 
       | manInTheMiddle {C, I}
@@ -203,7 +203,7 @@ category Networking {
       let serverApplications = (applications \/ inApplications)
 
       # restricted [Disabled]
-        user info: "The restricted defence can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
+        user info: "The restricted defense can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
         ->  restrictedBypassed
 
       | bypassRestricted [VeryHardAndUncertain]
@@ -258,11 +258,11 @@ category Networking {
             bypassRestricted
 
       & successfulAccessNetworksUninspected @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  accessNetworksUninspected
 
       & successfulAccessNetworksInspected @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  accessNetworksInspected
 
       | accessNetworksUninspected

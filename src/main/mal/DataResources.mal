@@ -43,23 +43,23 @@ category DataResources {
         ->  successfulExtractFromReplica
 
       & successfulReadFromReplica @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  read
 
       & successfulWriteFromReplica @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  write
 
       & successfulDeleteFromReplica @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  delete
 
       & successfulDenyFromReplica @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  deny
 
       & successfulExtractFromReplica @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  extract
 
       | read

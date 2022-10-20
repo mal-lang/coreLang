@@ -56,7 +56,7 @@ category IAM {
         ->  successfulLockout
 
       & successfulLockout @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  lockout
 
       | lockout {A}
@@ -84,7 +84,7 @@ category IAM {
         ->  successfulLockoutFromCredentials
 
       & successfulLockoutFromCredentials @hidden
-        developer info: "Intermediate attack step to model defences."
+        developer info: "Intermediate attack step to model defenses."
         ->  lockout
 
       | lockout
@@ -99,7 +99,7 @@ category IAM {
 
     asset Privileges extends IAMObject
       user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
-      modeller info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly associated with the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
+      modeler info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly associated with the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
     {
       | assume @Override {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
@@ -208,7 +208,7 @@ category IAM {
         ->  weakCredentials
 
       | weakCredentials @hidden
-        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defence on the User asset associated with the Identity to which these Credentials belong. If either the User or Identity associations are missing the assumption is made that the crentials are weak and therefore guessable by the attacker."
+        developer info: "Intermediate step used to represent how weak the credentials the user employs are. This is inversely related to the securityAwareness defense on the User asset associated with the Identity to which these Credentials belong. If either the User or Identity associations are missing the assumption is made that the crentials are weak and therefore guessable by the attacker."
         ->  guessCredentials,
             requiredFactors.weakCredentials
 
@@ -223,7 +223,7 @@ category IAM {
 
       & guessCredentials [HardAndUncertain]
         user info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
-        modeller info: "The guessability of the Credentials is influenced by the notGuessable defence on this asset and the securityAwareness defence on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defence would play a role in restricting this attack step."
+        modeler info: "The guessability of the Credentials is influenced by the notGuessable defense on this asset and the securityAwareness defense on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defense would play a role in restricting this attack step."
         developer info: "We should research the probability we want to use for this attack step more."
         ->  attemptUse
     }
