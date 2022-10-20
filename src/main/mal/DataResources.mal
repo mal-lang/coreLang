@@ -99,7 +99,7 @@ category DataResources {
         ->  access
 
       | authorizedAccessFromApplication
-        user info: "Attempt to gain access to the data through permissions."
+        user info: "Try to gain access to the data through permissions."
         ->  authorizedReadFromApplication,
             authorizedWriteFromApplication,
             authorizedDeleteFromApplication

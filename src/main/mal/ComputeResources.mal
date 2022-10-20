@@ -33,9 +33,8 @@ category ComputeResources {
         ->  vulnerabilities.attemptAbuse
 
       | spreadWormViaRemovableMedia @hidden
-        developer info: "Attempt to spread malware via removable media that the users connect to the hardware system."
-        ->  users.attemptDeliverMaliciousRemovableMedia,
-            physicalZones.users.attemptDeliverMaliciousRemovableMedia
+        developer info: "Try to spread malware via removable media that the users connect to the hardware system."
+        ->  (users \/ physicalZones.users).attemptDeliverMaliciousRemovableMedia
 
       | attemptFullAccess @hidden
         developer info: "Intermediate attack step to allow for defences."
@@ -211,7 +210,7 @@ category ComputeResources {
         ->  useVulnerability
 
       | useVulnerability
-        user info: "Attempt to exploit the associated vulnerabilities."
+        user info: "Try to exploit the associated vulnerabilities."
         ->  allVulnerabilities().attemptAbuse,
             attemptSoftwareProductAbuse,
             fullAccessAfterSoftProdVulnerability,
@@ -249,7 +248,7 @@ category ComputeResources {
             softwareProductVulnerabilityLocalAccessAchieved
 
       | networkConnectUninspected
-        user info: "An attacker can connect to any network exposed application and attempt to authenticate or trigger vulnerabilities."
+        user info: "An attacker can connect to any network exposed application and try to authenticate or trigger vulnerabilities."
         ->  attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             allVulnerabilities().networkAccessAchieved,
             softwareProductVulnerabilityNetworkAccessAchieved,
@@ -504,7 +503,7 @@ category ComputeResources {
         ->  applicationRespondConnectThroughData
 
       | applicationRespondConnectThroughData @hidden
-        user info: "After access on the application the contained data or data in transit can be used to attempt a respond connect to the client side application."
+        user info: "After access on the application the contained data or data in transit can be used to try a connect via Respond to the client side application."
         modeler info: "This is an intermediate attack step that groups connections to attack steps."
         ->  receivedData.attemptApplicationRespondConnect
 

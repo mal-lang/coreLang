@@ -222,7 +222,7 @@ category IAM {
         ->  guessCredentials
 
       & guessCredentials [HardAndUncertain]
-        user info: "The attacker can attempt to just guess a set of credentials. The likelihood of succeeding is depend on how strong the credentials are."
+        user info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
         modeller info: "The guessability of the Credentials is influenced by the notGuessable defence on this asset and the securityAwareness defence on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defence would play a role in restricting this attack step."
         developer info: "We should research the probability we want to use for this attack step more."
         ->  attemptUse
