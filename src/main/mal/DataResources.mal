@@ -19,9 +19,6 @@ category DataResources {
     asset Information
       user info: "Represents any type of information that might be contained inside Data."
     {
-      | attemptAccess
-        user info: "The attacker is attempting to access the information."
-
       | attemptReadFromReplica @hidden
         developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
         ->  successfulReadFromReplica
@@ -95,20 +92,20 @@ category DataResources {
       developer info: "Adopted from awsLang but significantly changed."
     {
       | attemptAccess
-        user info: "Attempt to access the data, this might fail if the 'dataNotPresent' defense is used."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  access
-
-      | authorizedAccessFromApplication
-        user info: "Try to gain access to the data through permissions."
-        ->  authorizedReadFromApplication,
-            authorizedWriteFromApplication,
-            authorizedDeleteFromApplication
 
       & access
         user info: "Access the data."
         ->  attemptRead,
             attemptWrite,
             attemptDelete
+
+      | authorizedAccessFromApplication
+        user info: "Try to gain access to the data through permissions."
+        ->  authorizedReadFromApplication,
+            authorizedWriteFromApplication,
+            authorizedDeleteFromApplication
 
       !E dataEncrypted @hidden
         user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
@@ -173,11 +170,11 @@ category DataResources {
             containedData.applicationRespondConnect
 
       | attemptRead @hidden
-        user info: "Attempt to read the data."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulRead
 
       & successfulRead @hidden
-        developer info: "Intermediate attack step to model the requirements."
+        developer info: "Intermediate attack step to model defenses."
         ->  read
 
       | read {C}
@@ -200,11 +197,11 @@ category DataResources {
         ->  attemptRead
 
       | attemptWrite @hidden
-        user info: "Attempt to write on the data."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulWrite
 
       & successfulWrite @hidden
-        developer info: "Intermediate attack step to model the requirements."
+        developer info: "Intermediate attack step to model defenses."
         ->  write
 
       | write {I}
@@ -229,11 +226,11 @@ category DataResources {
         ->  attemptWrite
 
       | attemptDelete @hidden
-         user info: "Attempt to delete the data."
+        developer info: "Intermediate attack step to allow for defenses."
         -> successfulDelete
 
       & successfulDelete @hidden
-        developer info: "Intermediate attack step to model the requirements."
+        developer info: "Intermediate attack step to model defenses."
         ->  delete
 
       | delete {I,A}
@@ -256,11 +253,11 @@ category DataResources {
         ->  attemptDelete
 
       | attemptDeny @hidden
-        developer info: "Intermediate attack step to only allow deny on data after only if 'dataNotPresent' defense is disabled."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulDeny
 
       & successfulDeny @hidden
-        developer info: "Intermediate attack step to model the requirements."
+        developer info: "Intermediate attack step to model defenses."
         ->  deny
 
       | deny {A}
@@ -275,7 +272,7 @@ category DataResources {
         ->  attemptDeny
 
       | attemptReverseReach @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  reverseReach
 
       & reverseReach @hidden

@@ -25,11 +25,11 @@ category IAM {
             successfulLockout
 
       | attemptAssume
-        user info: "Attempt to assume the privileges associated with the IAM object. If disabled this will not be possible."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulAssume
 
       & successfulAssume @hidden
-        developer info: "Intermediate attack step to model the requirements for the assume attack step."
+        developer info: "Intermediate attack step to model defenses."
         ->  assume
 
       | assume
@@ -52,7 +52,7 @@ category IAM {
         +>  attemptAssume
 
       | attemptLockout @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulLockout
 
       & successfulLockout @hidden
@@ -159,7 +159,7 @@ category IAM {
         ->  attemptUse
 
       | attemptCredentialsReuse @hidden
-        developer info: "Intermediate step used to trigger the reuse attack step on other credentials belonging to the same user."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  credentialsReuse,
             requiredFactors.attemptCredentialsReuse
 
@@ -168,7 +168,7 @@ category IAM {
         ->  attemptUse
 
       | attemptUse
-        user info: "The attacker is using the credentials to perform a legitimate authentication."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  use
 
       & use {C}
@@ -182,19 +182,15 @@ category IAM {
             origCreds.guessCredentialsFromHash
 
       | attemptPropagateOneCredentialCompromised @hidden
-        developer info: "Intermediate step used to propagate the credentials reuse attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  propagateOneCredentialCompromised
 
       & propagateOneCredentialCompromised @hidden
         developer info: "Intermediate step used to propagate the credentials reuse attack step."
         ->  credentials*.identities.users.oneCredentialCompromised
 
-      | attemptAccess
-        user info: "The attacker is attempting to access the credentials."
-        ->  attemptUse
-
       | attemptCredentialTheft @hidden
-        developer info: "Intermediate step used to trigger the credential theft attack step."
+        user info: "The attacker is attempting to access the credentials."
         ->  credentialTheft,
             requiredFactors.attemptCredentialTheft
 

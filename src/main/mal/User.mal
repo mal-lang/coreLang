@@ -56,7 +56,8 @@ category User {
         ->  userIds.credentials.weakCredentials
 
       | attemptSocialEngineering
-        developer info: "Intermediate attack step that allows for security awareness to reduce the impact of social engineering operations."
+        user info: "The attacker can run social engineering operations on Users."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulSocialEngineering,
             bypassSecurityAwareness
 
@@ -72,6 +73,7 @@ category User {
 
       | attemptDeliverMaliciousRemovableMedia
         user info: "Intermediate attack step that allows for security awareness to reduce the impact of delivering malicious removable media."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulDeliverMaliciousRemovableMedia,
             bypassSecurityAwareness
 
@@ -91,16 +93,16 @@ category User {
         ->  attemptCredentialTheft
 
       | attemptCredentialTheft @hidden
-        developer info: "Trick the user to provide their credentials."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  credentialTheft
 
       | credentialTheft @hidden [HardAndUncertain]
-        developer info: "This attack is hard to happen."
+        developer info: "Trick the user to provide their credentials."
         modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
         ->  userIds.credentials.attemptCredentialTheft
 
       | attemptUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulUnsafeUserActivity,
             bypassSecurityAwareness
 

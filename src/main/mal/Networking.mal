@@ -59,21 +59,21 @@ category Networking {
             successfulAccessInspected
 
       | attemptAccessUninspected @hidden
-        user info: "Access on a Network can be attempted after physicalAccess."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulAccessUninspected,
             bypassAccessControl
 
       | attemptAccessInspected @hidden
-        user info: "Access on a Network can be attempted after physicalAccess."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulAccessInspected,
             bypassAccessControl
 
       & successfulAccessUninspected @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
+        developer info: "Intermediate attack step to model defenses."
         ->  accessUninspected
 
       & successfulAccessInspected @hidden
-        developer info: "This is an intermediate attack step to prevent repeating code."
+        developer info: "Intermediate attack step to model defenses."
         ->  accessInspected
 
       | accessUninspected
@@ -95,7 +95,7 @@ category Networking {
             denialOfService
 
       | attemptReverseReach @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  reverseReach
 
       & reverseReach @hidden
@@ -140,7 +140,7 @@ category Networking {
         ->  successfulEavesdrop
 
       | attemptEavesdrop @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulEavesdrop,
             bypassEavesdropDefense
 
@@ -166,7 +166,7 @@ category Networking {
         ->  successfulManInTheMiddle
 
       | attemptManInTheMiddle @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulManInTheMiddle,
             bypassManInTheMiddleDefense
 
@@ -237,7 +237,7 @@ category Networking {
 
       // All the hidden attack steps below are hidden because they are just used for the internal mechanics of the ConnectionRules
       | attemptReverseReach @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  reverseReach,
             bypassRestricted,
             bypassPayloadInspection
@@ -248,12 +248,12 @@ category Networking {
             (networks \/ outNetworks).attemptReverseReach
 
       | attemptAccessNetworksUninspected @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulAccessNetworksUninspected,
             bypassRestricted
 
       | attemptAccessNetworksInspected @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulAccessNetworksInspected,
             bypassRestricted
 
@@ -275,13 +275,13 @@ category Networking {
         ->  (networks  \/ inNetworks  \/ diodeInNetworks).accessInspected
 
       | attemptConnectToApplicationsUninspected @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  connectToApplicationsUninspected,
             bypassRestricted,
             bypassPayloadInspection
 
       | attemptConnectToApplicationsInspected @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  connectToApplicationsInspected,
             bypassRestricted,
             bypassPayloadInspection
@@ -297,7 +297,7 @@ category Networking {
         ->  serverApplications().networkConnectInspected
 
       | attemptDenialOfService @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  denialOfService,
             bypassRestricted
 

@@ -20,12 +20,12 @@ category ComputeResources {
       user info: "Specifies the hardware on which applications can run."
     {
       | attemptUseVulnerability @hidden
-        developer info: "Intermediate attack step to allow for defenses."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulUseVulnerability,
             bypassHardwareModificationsProtection
 
       & successfulUseVulnerability @hidden
-        developer info: "Intermediate attack step to enable defenses."
+        developer info: "Intermediate attack step to model defenses."
         ->  useVulnerability
 
       | useVulnerability
@@ -41,7 +41,7 @@ category ComputeResources {
         ->  successfulFullAccess
 
       & successfulFullAccess @hidden
-        developer info: "Intermediate attack step to enable defenses."
+        developer info: "Intermediate attack step to model defenses."
         ->  fullAccess
 
       | fullAccess {C,I,A}
@@ -51,16 +51,17 @@ category ComputeResources {
             spreadWormViaRemovableMedia
 
       | attemptSupplyChainAttack
-        developer info: "Intermediate attack step to allow for the auditing defense."
+        user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulSupplyChainAttack,
             bypassSupplyChainAuditing
 
       & successfulSupplyChainAttack @hidden
-        developer info: "Intermediate attack step to enable defenses."
+        developer info: "Intermediate attack step to model defenses."
         -> supplyChainAttack
 
       | supplyChainAttack [VeryHardAndUncertain]
-        user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
+        user info: "A supply chain compromise means that the attacker has gained full access of the hardware."
         developer info: "Based on supply chain attacks in icsLang as designed by Sotirios."
         modeler info: "The probability function and its value is just an estimation! The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
         ->  attemptFullAccess
@@ -86,12 +87,12 @@ category ComputeResources {
             attemptHardwareModifications
 
       | attemptHardwareModifications @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulHardwareModifications,
             bypassHardwareModificationsProtection
 
       & successfulHardwareModifications @hidden
-        developer info: "Intermediate attack step to enable defenses."
+        developer info: "Intermediate attack step to model defenses."
         ->  hardwareModifications
 
       | hardwareModifications
@@ -115,13 +116,13 @@ category ComputeResources {
             successfulHardwareModifications,
             successfulUnsafeUserActivity
 
-      | attemptUnsafeUserActivity
-        user info: "Intermediate attack step that allows for the hardware modifications defense to reduce the impact of unsafe user activity."
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulUnsafeUserActivity,
             bypassHardwareModificationsProtection
 
       & successfulUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step to enable defenses."
+        developer info: "Intermediate attack step to model defenses."
         ->  unsafeUserActivity
 
       | unsafeUserActivity
@@ -201,12 +202,12 @@ category ComputeResources {
             successfulDeny
 
       | attemptUseVulnerability @hidden
-        developer info: "Attempt to use the associated vulnerabilities, when able to locally or via network connect to the application or when local interaction is possible."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulUseVulnerability,
             protectorIDPSs.bypassEffectiveness
 
       & successfulUseVulnerability @hidden
-        developer info: "Intermediate attack step to model the case where vulnerabilities should not be compromised because application is disabled."
+        developer info: "Intermediate attack step to model defenses."
         ->  useVulnerability
 
       | useVulnerability
@@ -219,8 +220,9 @@ category ComputeResources {
             denyAfterSoftProdVulnerability
 
       | attemptReverseReach
-        developer info: "This attack step needs to be called in order to have reverse reach start propagating from this Application to the rest of the assets."
-        modeler info: "No other attack step on the Application asset triggers this attack step which means that it must be explicitly triggered by the modeler if the attacker is assumed to have reverse reachability on it."
+        user info: "The attacker is reachable from this Application therefore start propagating reverse reach from it. Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        developer info: "Intermediate attack step to allow for defenses."
+        modeler info: "If the entry point of the attacker is an Application this attack step needs to be explicitly called on it by the modeler in order to have reverse reach start propagating from the Application to the rest of the assets in the model. This is the case because no other attack step on the Application asset triggers this attack step."
         ->  successfulReverseReach
 
       & successfulReverseReach @hidden
@@ -279,7 +281,7 @@ category ComputeResources {
             clientApplicationConnections().attemptAccessNetworksInspected
 
       | attemptNetworkConnectViaResponse
-        developer info: "Intermediate attack step to handle defenses."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  networkConnectViaResponse
 
       & networkConnectViaResponse [VeryHardAndUncertain]
@@ -300,7 +302,7 @@ category ComputeResources {
         user info: "This level of access models a low-privilege access and requires all other privileges to be modeled separately."
         developer info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the executed applications."
         ->  appExecutedApps.localConnect, // But also achieve localConnect on all child applications (this is something that needs to be reviewed again at a later stage)
-            attemptLocalConnectVulnOnHost,
+            bypassContainerization,
             attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             containedData.authorizedAccessFromApplication, // This also enables the use of compromised permissions but only after specificAccess is reached
             sentData.authorizedReadFromApplication, // Both Data sent and received can be read
@@ -309,8 +311,8 @@ category ComputeResources {
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections // and access the network(s) and connections on/to which the app is connected
 
-      | attemptLocalConnectVulnOnHost [HardAndUncertain]
-        user info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor/host application"
+      | bypassContainerization @hidden [HardAndUncertain]
+        developer info: "The attacker is able to break out of an application container/sandbox and try to exploit any vulnerability of the hypervisor, operating system, or host application."
         modeler info: "The probability and its value are just estimations and are subject to change."
         ->  hostApp.attemptUseVulnerability
 
@@ -361,7 +363,7 @@ category ComputeResources {
             appExecutedApps.physicalAccessAchieved
 
       | attemptUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulUnsafeUserActivity,
             attackerUnsafeUserActivityCapabilityWithReverseReach,
             attackerUnsafeUserActivityCapabilityWithoutReverseReach,
@@ -404,7 +406,7 @@ category ComputeResources {
         ->  fullAccessAfterSoftProdCompromise
 
       | attemptFullAccessAfterSoftProdCompromise @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  fullAccessAfterSoftProdCompromise,
             bypassSupplyChainAuditing
 
@@ -414,19 +416,19 @@ category ComputeResources {
 
       // Intermediate attack steps to allow SoftwareProduct Vulnerabilities to only happen after each Applications is reached by the attacker.
       | attemptFullAccessAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  fullAccessAfterSoftProdVulnerability
 
       | attemptReadAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  readAfterSoftProdVulnerability
 
       | attemptModifyAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  modifyAfterSoftProdVulnerability
 
       | attemptDenyAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  denyAfterSoftProdVulnerability
 
       E softwareCheck @hidden
@@ -479,23 +481,23 @@ category ComputeResources {
             denyAfterSoftProdVulnerability
 
       & fullAccessAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step to handle existence."
+        developer info: "Intermediate attack step to handle SoftwareProduct existence."
         ->  fullAccess
 
       & readAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step to handle existence."
+        developer info: "Intermediate attack step to handle SoftwareProduct existence."
         ->  attemptRead
 
       & modifyAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step to handle existence."
+        developer info: "Intermediate attack step to handle SoftwareProduct existence."
         ->  attemptModify
 
       & denyAfterSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step to handle existence."
+        developer info: "Intermediate attack step to handle SoftwareProduct existence."
         ->  attemptDeny
 
       | attemptApplicationRespondConnectThroughData @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulApplicationRespondConnectThroughData
 
       & successfulApplicationRespondConnectThroughData @hidden
@@ -508,7 +510,7 @@ category ComputeResources {
         ->  receivedData.attemptApplicationRespondConnect
 
       | attemptRead @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulRead
 
       & successfulRead @hidden
@@ -522,7 +524,7 @@ category ComputeResources {
             appExecutedApps.attemptRead
 
       | attemptModify @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulModify
 
       & successfulModify @hidden
@@ -534,7 +536,7 @@ category ComputeResources {
         ->  fullAccess
 
       | attemptDeny @hidden
-        developer info: "Intermediate attack step."
+        developer info: "Intermediate attack step to allow for defenses."
         ->  successfulDeny
 
       & successfulDeny @hidden
