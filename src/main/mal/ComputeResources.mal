@@ -32,7 +32,7 @@ category ComputeResources {
         user info: "The attacker is able to use the associated vulnerabilities, usually as a result of obtaining physical access."
         ->  vulnerabilities.attemptAbuse
 
-      | spreadWormViaRemovableMedia @hidden
+      | spreadWormFromRemovableMedia @hidden
         developer info: "Try to spread malware via removable media that the users connect to the hardware system."
         ->  (users \/ physicalZones.users).attemptDeliverMaliciousRemovableMedia
 
@@ -48,7 +48,7 @@ category ComputeResources {
         user info: "Full access on a piece of hardware confers full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
             hostedData.attemptAccess,
-            spreadWormViaRemovableMedia
+            spreadWormFromRemovableMedia
 
       | attemptSupplyChainAttack
         user info: "Adversaries may perform supply chain compromise attacks to gain control of hardware before it is put into use."
@@ -239,7 +239,7 @@ category ComputeResources {
             containedData.attemptReverseReach,
             sentData.attemptReverseReach,
             receivedData.attemptReverseReach,
-            networkConnectViaResponse
+            networkConnectFromResponse
 
       | localConnect
         user info: "An attacker with low-privilege access on the executing instance is assumed to be able to locally (on the same host i.e. using loopback) interact with the application."
@@ -280,11 +280,11 @@ category ComputeResources {
             clientApplicationConnections().attemptAccessNetworksUninspected,
             clientApplicationConnections().attemptAccessNetworksInspected
 
-      | attemptNetworkConnectViaResponse
+      | attemptNetworkConnectFromResponse
         developer info: "Intermediate attack step to allow for defenses."
-        ->  networkConnectViaResponse
+        ->  networkConnectFromResponse
 
-      & networkConnectViaResponse [VeryHardAndUncertain]
+      & networkConnectFromResponse [VeryHardAndUncertain]
         user info: "An attacker may be able to respond to requests submitted by a client application."
         developer info: "Adopted from awsLang."
         modeler info: "The probability and its value are just estimations and are subject to change."
@@ -353,7 +353,7 @@ category ComputeResources {
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
-            hostHardware.spreadWormViaRemovableMedia, // Propagate malware worms via removable media
+            hostHardware.spreadWormFromRemovableMedia, // Propagate malware worms via removable media
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
