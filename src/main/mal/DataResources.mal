@@ -17,8 +17,36 @@
 category DataResources {
 
     asset Information
-      user info: "Represents any type of information that might be contained inside Data."
+      user info: "Represents any type of information that might be contained inside Data. This include general purpose information, but also serves as the basis for more specialized types, such as Credentials and SoftwareProduct. Information represents the abstract concept while Data represent an actual instance of information stored or transmitted digitally."
     {
+      | read
+        user info: "The attacker is able to read the information. They may still be unable to extract it, which represents the adversary being able to read it themselves. This is the case if autonomous code is able to read it, but lack the required networking connections to transmit it back to the adversary."
+        ->  dataReplicas.read,
+            containerData.read
+
+      | write
+        user info: "The attacker is able to write the information."
+        ->  dataReplicas.write,
+            containerData.write,
+            dependentApps.fullAccess,
+            delete
+
+      | delete
+        user info: "The attacker is able to delete the information."
+        ->  dataReplicas.delete,
+            containerData.delete,
+            deny
+
+      | deny
+        user info: "The attacker is able to deny the information."
+        ->  dataReplicas.deny,
+            containerData.deny,
+            dependentApps.deny
+
+      | extract
+        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
+
+      // The following 10 attack steps are used to implement data replication
       | attemptReadFromReplica @hidden
         developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
         ->  successfulReadFromReplica
@@ -58,69 +86,39 @@ category DataResources {
       & successfulExtractFromReplica @hidden
         developer info: "Intermediate attack step to model defenses."
         ->  extract
-
-      | read
-        user info: "The attacker is able to read the information. They may still be unable to extract it."
-        ->  dataReplicas.read,
-            containerData.read
-
-      | write
-        user info: "The attacker is able to write the information."
-        ->  dataReplicas.write,
-            containerData.write,
-            dependentApps.fullAccess,
-            delete
-
-      | delete
-        user info: "The attacker is able to delete the information."
-        ->  dataReplicas.delete,
-            containerData.delete,
-            deny
-
-      | deny
-        user info: "The attacker is able to deny the information."
-        ->  dataReplicas.deny,
-            containerData.deny,
-            dependentApps.deny
-
-      | extract
-        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
     }
 
     asset Data
       user info: "Any form of data that can be stored or transmitted."
-      developer info: "Adopted from awsLang but significantly changed."
     {
-      | attemptAccess
+      | attemptAccess @hidden
         developer info: "Intermediate attack step to allow for defenses."
         ->  access
 
-      & access
-        user info: "Access the data."
+      & access @hidden
+        developer info: "Access the data."
         ->  attemptRead,
             attemptWrite,
             attemptDelete
 
-      | authorizedAccessFromApplication
-        user info: "Try to gain access to the data through permissions."
+      | authorizedAccessFromApplication @hidden
+        developer info: "Try to gain access to the data through permissions."
         ->  authorizedReadFromApplication,
             authorizedWriteFromApplication,
             authorizedDeleteFromApplication
 
       !E dataEncrypted @hidden
-        user info: "If the data are encrypted then accessing them requires the associated encryption credentials/key."
-        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        developer info: "If the data are encrypted then accessing them requires the associated encryption credentials/key. Data will be considered encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is triggered."
         <-  encryptCreds
         ->  accessUnencryptedData
 
       !E dataSigned @hidden
-        user info: "If the data are authenticated, then modifying them is not possible to achieve."
-        developer info: "Data will be considered as encrypted if there is at least one Credentials instance associated with it. Otherwise, 'accessUnencryptedData' is reached."
+        developer info: "If the data are signed then writing them requires the associated signing credentials/key. Data will be considered signed if there is at least one Credentials asset associated with it. Otherwise, 'accessUnsignedData' is triggered."
         <-  signingCreds
         ->  accessUnsignedData
 
-      E payloadInspectionBypassFromEncryptedData
-        user info: "If the data are encrypted then payload inspection cannot be performed on the connection rules they are transmitted over."
+      E payloadInspectionBypassFromEncryptedData @hidden
+        developer info: "If the data are encrypted then payload inspection cannot be performed on the connection rules they are transmitted over."
         <-  encryptCreds
         ->  bypassPayloadInspectionFromEncryptedData
 
@@ -130,20 +128,20 @@ category DataResources {
             (receiverApp.serverApplicationConnections() /\ transitNetwork.outboundAllowedConnections()).payloadInspectionBypassed
 
       & accessUnencryptedData @hidden
-        user info: "If data are unencrypted then access them."
+        developer info: "If data are unencrypted then access them."
         ->  accessDecryptedData
 
       & accessUnsignedData @hidden
-        user info: "If data are unsigned then alter them."
+        developer info: "If data are unsigned then alter them."
         ->  accessSpoofedData
 
       | accessSpoofedData @hidden
-        user info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
+        developer info: "Intermediate attack step to only allow effects of 'accessUnsignedData' on data after compromising the signing credentials or signing is disabled."
         ->  applicationRespondConnect,
             successfulWrite
 
       | accessDecryptedData @hidden
-        user info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
+        developer info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
         ->  access,
             applicationRespondConnect,
             successfulRead,
@@ -164,8 +162,8 @@ category DataResources {
         developer info: "Intermediate attack step to handle defenses."
         ->  applicationRespondConnect
 
-      & applicationRespondConnect
-        user info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
+      & applicationRespondConnect @hidden
+        developer info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
         ->  senderApp.attemptNetworkConnectFromResponse,
             containedData.applicationRespondConnect
 
@@ -185,15 +183,15 @@ category DataResources {
             extract
 
       | authorizedReadFromIAM @hidden
-        user info: "The attacker has obtained the access control permissions required to read the data."
+        developer info: "The attacker has obtained the access control permissions required to read the data."
         ->  authorizedRead
 
       | authorizedReadFromApplication @hidden
-        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to read it."
+        developer info: "The attacker can reach the data via an Application, but they still require the adequate permissions to read it."
         ->  authorizedRead
 
       & authorizedRead @hidden
-        developer info: "An attacker is able to read the Data through legitimate means, this requires both access to the Data and the adequate permissions."
+        developer info: "An attacker is able to read the Data through authorized permissions, this requires both access to the Data and the adequate permissions."
         ->  attemptRead
 
       | attemptWrite @hidden
@@ -214,15 +212,15 @@ category DataResources {
             attemptDelete
 
       | authorizedWriteFromIAM @hidden
-        user info: "The attacker has obtained the access control permissions required to write the data."
+        developer info: "The attacker has obtained the access control permissions required to write the data."
         ->  authorizedWrite
 
       | authorizedWriteFromApplication @hidden
-        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to write it."
+        developer info: "The attacker can reach the data via an Application, but they still require the adequate permissions to write it."
         ->  authorizedWrite
 
       & authorizedWrite @hidden
-        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        developer info: "An attacker is able to write the Data through authorized permissions, this requires both access to the Data and the adequate permissions."
         ->  attemptWrite
 
       | attemptDelete @hidden
@@ -241,15 +239,15 @@ category DataResources {
             attemptDeny
 
       | authorizedDeleteFromIAM @hidden
-        user info: "The attacker has obtained the access control permissions required to delete the data."
+        developer info: "The attacker has obtained the access control permissions required to delete the data."
         ->  authorizedDelete
 
       | authorizedDeleteFromApplication @hidden
-        user info: "The attacker can reach the data via an Application, but they still require the adequate permissions to delete it."
+        developer info: "The attacker can reach the data via an Application, but they still require the adequate permissions to delete it."
         ->  authorizedDelete
 
       & authorizedDelete @hidden
-        developer info: "Intermediate attack step to only allow operations on data after both access and identity assume is compromised."
+        developer info: "An attacker is able to delete the Data through authorized permissions, this requires both access to the Data and the adequate permissions."
         ->  attemptDelete
 
       | attemptDeny @hidden
@@ -298,9 +296,9 @@ associations {
   Data        [containedData]        * <-- AppContainment        --> *    [containingApp]          Application
       user info: "An application should be able to contain some data."
   Data        [sentData]             * <-- SendData              --> *    [senderApp]              Application
-      user info: "An application can also send some data that are supposed to be transferred over a connection. This expresses an active connection."
+      user info: "An application can also send some data that are supposed to be transferred over a network or connection. This expresses an active connection."
   Data        [receivedData]         * <-- ReceiveData           --> *    [receiverApp]            Application
-      user info: "An application can also receive some data that are supposed to be transferred over a connection. This expresses an active connection."
+      user info: "An application can also receive some data that are supposed to be transferred over a network or connection. This expresses an active connection."
   Data        [transitData]          * <-- DataInTransit         --> *    [transitNetwork]         Network
       user info: "A network can also contain some data that are supposed to be network-wide available."
   Data        [hostedData]           * <-- DataHosting           --> 0..1 [hardware]               Hardware
@@ -314,7 +312,7 @@ associations {
   // ### Application dependence associations
   /* Dependence is used to represent various situations where the operations
    * of the Application are impacted by modifying/denying the Data/Information
-   * it depends upon. Examples of this type of behaviour are configurations,
+   * it depends upon. Examples of this type of behavior are configurations,
    * plugins, libraries, or other input data that is critical to the purpose
    * of the software component represented by the Application. This
    * association should only be used for circumstances where the workflow of

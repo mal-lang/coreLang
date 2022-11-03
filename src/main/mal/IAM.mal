@@ -24,7 +24,7 @@ category IAM {
         ->  successfulAssume,
             successfulLockout
 
-      | attemptAssume
+      | attemptAssume @hidden
         developer info: "Intermediate attack step to allow for defenses."
         ->  successfulAssume
 
@@ -98,17 +98,17 @@ category IAM {
     }
 
     asset Privileges extends IAMObject
-      user info: "A privileges asset can be associated with an identity to group a set of given privileges on Applications and Data."
+      user info: "A privileges asset can be associated with another IAMObject to reason about a specific subset of given privileges on Applications and Data."
       modeler info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly associated with the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
     {
       | assume @Override {C,I,A}
-        user info: "After authentication or compromise of an account/identity, assume its privileges."
+        user info: "After authentication or compromise assume its privileges."
         developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
         +>  IAMOwners.attemptAssume
     }
 
     asset Group extends IAMObject
-      user info: "A group is a way to group together identities and/or groups. This allows the expression of hierarchical IAM (structured inheritance)."
+      user info: "A group is a way to group together identities and/or other groups. This allows the expression of hierarchical IAM (structured inheritance)."
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
       | assume @Override {C,I,A}
@@ -117,7 +117,7 @@ category IAM {
         +>  parentGroup.attemptAssume
 
       & lockoutFromMembers @hidden
-        user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
+        developer info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
         ->  lockout
     }
 
@@ -143,15 +143,15 @@ category IAM {
         ->  credentialTheft
 
       | read @Override
-        developer info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
+        user info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
         +> attemptUse
 
       | write @Override
-        developer info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
+        user info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
         +> attemptUse
 
       | deny @Override
-        developer info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
+        user info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
         +> identities.attemptLockoutFromCredentials
 
       | useLeakedCredentials [EasyAndCertain]
@@ -163,11 +163,11 @@ category IAM {
         ->  credentialsReuse,
             requiredFactors.attemptCredentialsReuse
 
-      & credentialsReuse
+      & credentialsReuse @hidden
         developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
         ->  attemptUse
 
-      | attemptUse
+      | attemptUse @hidden
         developer info: "Intermediate attack step to allow for defenses."
         ->  use
 
@@ -190,12 +190,12 @@ category IAM {
         ->  credentials*.identities.users.oneCredentialCompromised
 
       | attemptCredentialTheft @hidden
-        user info: "The attacker is attempting to access the credentials."
+        developer info: "The attacker is attempting to access the credentials."
         ->  credentialTheft,
             requiredFactors.attemptCredentialTheft
 
-      & credentialTheft
-        user info: "The attacker is able to steal the credentials."
+      & credentialTheft @hidden
+        developer info: "The attacker is able to steal the credentials."
         ->  attemptUse
 
       !E missingIdentity @hidden
@@ -217,10 +217,9 @@ category IAM {
         developer info: "If hashes are associated with this Credentials asset the assumption is that one of those hashes is required by the attacker to be able to perform a guessing attack."
         ->  guessCredentials
 
-      & guessCredentials [HardAndUncertain]
-        user info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
+      & guessCredentials @hidden [HardAndUncertain]
+        developer info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
         modeler info: "The guessability of the Credentials is influenced by the notGuessable defense on this asset and the securityAwareness defense on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defense would play a role in restricting this attack step."
-        developer info: "We should research the probability we want to use for this attack step more."
         ->  attemptUse
     }
 }

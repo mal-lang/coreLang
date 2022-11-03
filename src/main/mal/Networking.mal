@@ -26,22 +26,21 @@ category Networking {
       let allNetConnections = (netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections)
       let allowedApplicationConnectionsApplications = (allNetApplications() \/ allNetConnections().applications)
 
-      | physicalAccess {C, A}
-        developer info: "Attacker has physical access on the network. This means he can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
+      | physicalAccess @entrypoint {C, A}
+        user info: "Attacker has physical access on the network. This means they can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
+        modeler info: "This attack step can be used as an entry point when analyzing scenarios that involve gaining physical access to assets."
         ->  denialOfService,
             attemptAccessUninspected,
             attemptAccessInspected,
             bypassEavesdropDefenseFromPhysicalAccess,
             bypassManInTheMiddleDefenseFromPhysicalAccess
 
-      | bypassEavesdropDefenseFromPhysicalAccess @hidden [VeryHardAndUncertain]
-        modeler info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network."
-        developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
+      | bypassEavesdropDefenseFromPhysicalAccess [VeryHardAndUncertain]
+        user info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
         ->  eavesdropDefenseBypassed
 
-      | bypassManInTheMiddleDefenseFromPhysicalAccess @hidden [VeryHardAndUncertain]
-        modeler info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network."
-        developer info: "The probability distribution for this attack step needs to be researched more. This attack step will add its impact to the existing regular bypass."
+      | bypassManInTheMiddleDefenseFromPhysicalAccess [VeryHardAndUncertain]
+        user info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
         ->  manInTheMiddleDefenseBypassed
 
       # networkAccessControl
@@ -50,7 +49,6 @@ category Networking {
 
       | bypassAccessControl [VeryHardAndUncertain]
         user info: "If access control is enabled, the attacker can still try to bypass it and gain access on the network."
-        developer info: "The probability distribution for this attack step needs to be researched more."
         ->  accessControlBypassed
 
       | accessControlBypassed @hidden
@@ -99,18 +97,18 @@ category Networking {
         ->  reverseReach
 
       & reverseReach @hidden
-        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
         ->  (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections).attemptReverseReach,
             clientApplications.attemptReverseReach,
             applications.attemptReverseReach
 
-      | networkForwardingUninspected
+      | networkForwardingUninspected @hidden
         developer info: "By using the allowed connections (connection rules), uninspected forwarding from one network to another network or applications can happen."
           ->  outboundAllowedConnections().attemptAccessNetworksUninspected,
               outboundAllowedConnections().attemptConnectToApplicationsUninspected,
               networkForwardingInspected
 
-      | networkForwardingInspected
+      | networkForwardingInspected @hidden
         developer info: "By using the allowed connections (connection rules), inspected forwarding from one network to another network or applications can happen."
           ->  outboundAllowedConnections().attemptAccessNetworksInspected,
               outboundAllowedConnections().attemptConnectToApplicationsInspected
@@ -120,19 +118,18 @@ category Networking {
         ->  allNetConnections().attemptDenialOfService,
             allowedApplicationConnectionsApplications().denyFromNetworkingAsset
 
-      | accessNetworkData
-        user info: "Access also the data that are network-wide available."
+      | accessNetworkData @hidden
+        developer info: "Access also the data that are network-wide available."
         ->  attemptEavesdrop,
             attemptManInTheMiddle
 
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
-        modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible. This can be done by assigning a Bernoulli distribution to this defense."
+        modeler info: "If this defense is enabled, attacks such as ARP spoofing should however, still be possible."
         ->  eavesdropDefenseBypassed
 
       | bypassEavesdropDefense [VeryHardAndUncertain]
         user info: "The eavesdrop defense can be bypassed."
-        developer info: "The probability distribution for this attack step needs to be researched more."
         ->  eavesdropDefenseBypassed
 
       | eavesdropDefenseBypassed @hidden
@@ -158,7 +155,6 @@ category Networking {
 
       | bypassManInTheMiddleDefense [VeryHardAndUncertain]
         user info: "The man in the middle defense can be bypassed."
-        developer info: "The probability distribution for this attack step needs to be researched more."
         ->  manInTheMiddleDefenseBypassed
 
       | manInTheMiddleDefenseBypassed @hidden
@@ -208,7 +204,6 @@ category Networking {
 
       | bypassRestricted [VeryHardAndUncertain]
         user info: "The restricted defense can be bypassed."
-        developer info: "The probability distribution for this attack step needs to be researched more."
         ->  restrictedBypassed
 
       | restrictedBypassed @hidden
@@ -226,7 +221,6 @@ category Networking {
 
       | bypassPayloadInspection [VeryHardAndUncertain]
         user info: "Payload inspection can be bypassed."
-        developer info: "The probability distribution for this attack step needs to be researched more."
         ->  payloadInspectionBypassed
 
       | payloadInspectionBypassed @hidden
@@ -243,7 +237,7 @@ category Networking {
             bypassPayloadInspection
 
       & reverseReach @hidden
-        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user."
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
         ->  clientApplications().attemptReverseReach,
             (networks \/ outNetworks).attemptReverseReach
 
@@ -291,7 +285,6 @@ category Networking {
         ->  serverApplications().networkConnectUninspected,
             serverApplications().networkConnectInspected
 
-
       & connectToApplicationsInspected @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but taking into account that the traffic payload is being inspected. This attack step is used to allow legitimate traffic even when payload inspection is enabled on the connection."
         ->  serverApplications().networkConnectInspected
@@ -302,6 +295,7 @@ category Networking {
             bypassRestricted
 
       & denialOfService {A}
+        user info: "If a connection rule is denied it affects the applications communicating over it."
         ->  allApplications().denyFromNetworkingAsset
     }
 }
