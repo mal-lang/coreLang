@@ -195,8 +195,8 @@ category Networking {
       developer info: "This asset is mainly used to model the functionality of a network connection through a firewall. If Data is added, then it also models the data in transit."
     {
       let allApplications = (applications \/ inApplications \/ outApplications)
-      let clientApplications = (applications \/ outApplications)
-      let serverApplications = (applications \/ inApplications)
+      let senderApplications = (applications \/ outApplications)
+      let receiverApplications = (applications \/ inApplications)
 
       # restricted [Disabled]
         user info: "The restricted defense can be used to probabilistically model the likelihood of both the protocols required by the attack being enabled or the existence of the ConnectionRule altogether."
@@ -238,7 +238,7 @@ category Networking {
 
       & reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
-        ->  clientApplications().attemptReverseReach,
+        ->  senderApplications().attemptReverseReach,
             (networks \/ outNetworks).attemptReverseReach
 
       | attemptAccessNetworksUninspected @hidden
@@ -282,12 +282,12 @@ category Networking {
 
       & connectToApplicationsUninspected @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, without any restriction due to inspection."
-        ->  serverApplications().networkConnectUninspected,
-            serverApplications().networkConnectInspected
+        ->  receiverApplications().networkConnectUninspected,
+            receiverApplications().networkConnectInspected
 
       & connectToApplicationsInspected @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but taking into account that the traffic payload is being inspected. This attack step is used to allow legitimate traffic even when payload inspection is enabled on the connection."
-        ->  serverApplications().networkConnectInspected
+        ->  receiverApplications().networkConnectInspected
 
       | attemptDenialOfService @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
@@ -310,7 +310,7 @@ associations {
       user info: "An application can communicate / be exposed on a network."
       modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
       developer info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
-  Network          [clientAccessNetworks] * <-- ClientAccess          --> *    [clientApplications]     Application
+  Network          [clientAccessNetworks] * <-- NetworkClientAccess   --> *    [clientApplications]     Application
       user info: "A client application can communicate over a network."
   Application      [applications]         * <-- ApplicationConnection --> *    [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."

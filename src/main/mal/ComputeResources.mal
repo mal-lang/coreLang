@@ -192,8 +192,8 @@ category ComputeResources {
       let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
 
       let allApplicationConnections = (appConnections \/ outgoingAppConnections \/ ingoingAppConnections)
-      let clientApplicationConnections = (appConnections \/ outgoingAppConnections)
-      let serverApplicationConnections = (appConnections \/ ingoingAppConnections)
+      let outgoingApplicationConnections = (appConnections \/ outgoingAppConnections)
+      let ingoingApplicationConnections = (appConnections \/ ingoingAppConnections)
 
       # disabled [Disabled]
         user info: "If application is disabled it should behave as nonexistent, thus all attack vectors are removed."
@@ -246,7 +246,7 @@ category ComputeResources {
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
         ->  networks.attemptReverseReach,
             clientAccessNetworks.attemptReverseReach,
-            serverApplicationConnections().attemptReverseReach,
+            ingoingApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
             attackerUnsafeUserActivityCapabilityWithReverseReach,
             containedData.attemptReverseReach,
@@ -289,10 +289,10 @@ category ComputeResources {
             networks.accessInspected,
             clientAccessNetworks.accessUninspected,
             clientAccessNetworks.accessInspected,
-            clientApplicationConnections().attemptConnectToApplicationsUninspected,
-            clientApplicationConnections().attemptConnectToApplicationsInspected,
-            clientApplicationConnections().attemptAccessNetworksUninspected,
-            clientApplicationConnections().attemptAccessNetworksInspected
+            outgoingApplicationConnections().attemptConnectToApplicationsUninspected,
+            outgoingApplicationConnections().attemptConnectToApplicationsInspected,
+            outgoingApplicationConnections().attemptAccessNetworksUninspected,
+            outgoingApplicationConnections().attemptAccessNetworksInspected
 
       | attemptNetworkConnectFromResponse @hidden
         developer info: "Intermediate attack step to allow for defenses."
