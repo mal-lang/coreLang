@@ -133,9 +133,21 @@ category DataResources {
         ->  applicationRespondConnect
 
       & applicationRespondConnect @hidden
-        developer info: "If data are adversaryInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
+        developer info: "In order to perform a respond connect attack the adversary must be able to write the received data."
         ->  senderApp.attemptNetworkConnectFromResponse,
             containedData.applicationRespondConnect
+
+      | authorizedApplicationRespondConnectFromApplication @hidden
+        developer info: "The adversary can attempt a respond connect attack from an Application, but they still require write permissions in order to perform it."
+        ->  authorizedApplicationRespondConnect
+
+      | authorizedApplicationRespondConnectFromIAM @hidden
+        developer info: "The attacker has obtained the access control permissions required to modify the incoming requests."
+        ->  authorizedApplicationRespondConnect
+
+      & authorizedApplicationRespondConnect @hidden
+        developer info: "In order to perform a respond connect attack the adversary must be able to write the received data. If they only have specific access on the Application we need to see if they also have the required permissions."
+        ->  attemptApplicationRespondConnect
 
       | attemptRead @hidden
         developer info: "Intermediate attack step to allow for defenses."

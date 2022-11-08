@@ -40,6 +40,7 @@ category IAM {
             lowPrivApps.specificAccessAuthenticate,
             readPrivData.authorizedReadFromIAM,
             writePrivData.authorizedWriteFromIAM,
+            writePrivData.authorizedApplicationRespondConnectFromIAM,
             deletePrivData.authorizedDeleteFromIAM,
             managedIAMs.attemptAssume,
             subprivileges.attemptAssume

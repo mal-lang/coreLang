@@ -203,6 +203,7 @@ category ComputeResources {
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability,
             successfulApplicationRespondConnectThroughData,
+            successfulAuthorizedApplicationRespondConnectThroughData,
             successfulRead,
             successfulModify,
             successfulDeny
@@ -308,7 +309,7 @@ category ComputeResources {
             specificAccessDelete,
             bypassContainerization,
             attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
-            attemptApplicationRespondConnectThroughData,
+            attemptAuthorizedApplicationRespondConnectThroughData,
             accessNetworkAndConnections // and access the network(s) and connections on/to which the app is connected
 
       | bypassContainerization [HardAndUncertain]
@@ -494,8 +495,20 @@ category ComputeResources {
         ->  applicationRespondConnectThroughData
 
       | applicationRespondConnectThroughData @hidden
-        developer info: "After access on the application the contained data or data in transit can be used to try a connect through Respond to the client side application."
+        developer info: "After full access on the application received data can be used to try a connect through respond to the client side application."
         ->  receivedData.attemptApplicationRespondConnect
+
+      | attemptAuthorizedApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step to allow for defenses."
+        ->  successfulAuthorizedApplicationRespondConnectThroughData
+
+      & successfulAuthorizedApplicationRespondConnectThroughData @hidden
+        developer info: "Intermediate attack step to model defenses."
+        ->  authorizedApplicationRespondConnectThroughData
+
+      | authorizedApplicationRespondConnectThroughData @hidden
+        developer info: "After specific access on the application received data can be used to try a connect through respond to the client side application. To succeed the attacker must also attain write privileges on the received data."
+        ->  receivedData.authorizedApplicationRespondConnectFromApplication
 
       | attemptRead @hidden
         developer info: "Intermediate attack step to allow for defenses."
