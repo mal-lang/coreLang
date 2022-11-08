@@ -33,15 +33,15 @@ category Networking {
             attemptAccessUninspected,
             attemptAccessInspected,
             bypassEavesdropDefenseFromPhysicalAccess,
-            bypassManInTheMiddleDefenseFromPhysicalAccess
+            bypassAdversaryInTheMiddleDefenseFromPhysicalAccess
 
       | bypassEavesdropDefenseFromPhysicalAccess [VeryHardAndUncertain]
         user info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
         ->  eavesdropDefenseBypassed
 
-      | bypassManInTheMiddleDefenseFromPhysicalAccess [VeryHardAndUncertain]
-        user info: "The man in the middle defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
-        ->  manInTheMiddleDefenseBypassed
+      | bypassAdversaryInTheMiddleDefenseFromPhysicalAccess [VeryHardAndUncertain]
+        user info: "The adversary in the middle defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
+        ->  adversaryInTheMiddleDefenseBypassed
 
       # networkAccessControl
         user info: "Access control protects from unauthorized physical access on the network."
@@ -121,7 +121,7 @@ category Networking {
       | accessNetworkData @hidden
         developer info: "Access also the data that are network-wide available."
         ->  attemptEavesdrop,
-            attemptManInTheMiddle
+            attemptAdversaryInTheMiddle
 
       # eavesdropDefense
         user info: "This defense protects from eavesdrop attacks. If this defense is disabled, then it is equivalent to the network being considered a broadcast network."
@@ -149,29 +149,29 @@ category Networking {
         user info: "An attacker that performs an eavesdrop attack on a network tries to access all the transferred data over that network."
         ->  transitData.attemptRead
 
-      # manInTheMiddleDefense
-        user info: "This defense protects against man-in-the-middle (MitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
-        ->  manInTheMiddleDefenseBypassed
+      # adversaryInTheMiddleDefense
+        user info: "This defense protects against adversary-in-the-middle (AitM) attacks that are originating either form the network layer (like ARP spoofing) or by manipulating the higher network layers (like DNS poisoning)."
+        ->  adversaryInTheMiddleDefenseBypassed
 
-      | bypassManInTheMiddleDefense [VeryHardAndUncertain]
-        user info: "The man in the middle defense can be bypassed."
-        ->  manInTheMiddleDefenseBypassed
+      | bypassAdversaryInTheMiddleDefense [VeryHardAndUncertain]
+        user info: "The adversary in the middle defense can be bypassed."
+        ->  adversaryInTheMiddleDefenseBypassed
 
-      | manInTheMiddleDefenseBypassed @hidden
-        developer info: "The man in the middle defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
-        ->  successfulManInTheMiddle
+      | adversaryInTheMiddleDefenseBypassed @hidden
+        developer info: "The adversary in the middle defense is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
+        ->  successfulAdversaryInTheMiddle
 
-      | attemptManInTheMiddle @hidden
+      | attemptAdversaryInTheMiddle @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  successfulManInTheMiddle,
-            bypassManInTheMiddleDefense
+        ->  successfulAdversaryInTheMiddle,
+            bypassAdversaryInTheMiddleDefense
 
-      & successfulManInTheMiddle @hidden
+      & successfulAdversaryInTheMiddle @hidden
         developer info: "Intermediate attack step to model defenses."
-        ->  manInTheMiddle
+        ->  adversaryInTheMiddle
 
-      | manInTheMiddle {C, I}
-        user info: "An attacker that performs a MitM attack on a network tries to read and modify all the transferred data over that network."
+      | adversaryInTheMiddle {C, I}
+        user info: "An attacker that performs a AitM attack on a network tries to read and modify all the transferred data over that network."
         ->  eavesdrop,
             transitData.attemptWrite,
             transitData.attemptApplicationRespondConnect

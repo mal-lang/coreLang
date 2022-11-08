@@ -163,7 +163,7 @@ category DataResources {
         ->  applicationRespondConnect
 
       & applicationRespondConnect @hidden
-        developer info: "If data is manInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
+        developer info: "If data are adversaryInTheMiddled or the server side application is compromised, then respond connect to the client side application can be done."
         ->  senderApp.attemptNetworkConnectFromResponse,
             containedData.applicationRespondConnect
 
