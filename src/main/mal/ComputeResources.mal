@@ -346,9 +346,7 @@ category ComputeResources {
             appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
             executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application to the access to the entire execution context
             containedData.attemptAccess,  // and access on all the contained data
-            sentData.attemptRead, // Both Data sent and received can be read
-            receivedData.attemptRead,
-            sentData.attemptWrite, // But only sent Data can be written
+            sentData.attemptWrite, // Sent Data can be written/modified
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
@@ -511,10 +509,11 @@ category ComputeResources {
         ->  read
 
       | read {C}
-        user info: "The attacker can read some or all of this service's code and data."
-        developer info: "We don't model the services data, as we do not expect that information will be available to the parser."
+        user info: "The attacker can read some or all of this service's code and data (both local and sent/received)."
         ->  containedData.attemptRead,
             appExecutedApps.attemptRead
+            sentData.attemptRead, // Both sent and received Data can also be read
+            receivedData.attemptRead,
 
       | attemptModify @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -539,7 +538,8 @@ category ComputeResources {
       | deny {A}
         user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications."
         ->  containedData.attemptDeny,
-            appExecutedApps.attemptDeny
+            appExecutedApps.attemptDeny,
+            sentData.attemptDeny // Sent Data can also be denied
 
       & denyFromNetworkingAsset @hidden
         developer info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
