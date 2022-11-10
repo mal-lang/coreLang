@@ -191,7 +191,6 @@ category ComputeResources {
     {
       let allVulnerabilities = vulnerabilities \/ appSoftProduct.softProductVulnerabilities
 
-      let allApplicationConnections = (appConnections \/ outgoingAppConnections \/ ingoingAppConnections)
       let outgoingApplicationConnections = (appConnections \/ outgoingAppConnections)
       let ingoingApplicationConnections = (appConnections \/ ingoingAppConnections)
 

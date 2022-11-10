@@ -29,7 +29,7 @@ category Networking {
       | physicalAccess @entrypoint {C, A}
         user info: "Attacker has physical access on the network. This means they can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
         modeler info: "This attack step can be used as an entry point when analyzing scenarios that involve gaining physical access to assets."
-        ->  denialOfService,
+        ->  deny,
             attemptAccessUninspected,
             attemptAccessInspected,
             bypassEavesdropDefenseFromPhysicalAccess,
@@ -82,7 +82,7 @@ category Networking {
             attemptReverseReach,
             clientApplications.attemptNetworkConnectFromResponse,
             accessNetworkData,
-            denialOfService
+            deny
 
       | accessInspected
         user info: "Inspected access provides connect to all reachable applications, but with limitations."
@@ -90,7 +90,7 @@ category Networking {
             applications.networkConnectInspected,
             networkForwardingInspected,
             accessNetworkData,
-            denialOfService
+            deny
 
       | attemptReverseReach @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -113,9 +113,9 @@ category Networking {
           ->  outboundAllowedConnections().attemptAccessNetworksInspected,
               outboundAllowedConnections().attemptConnectToApplicationsInspected
 
-      | denialOfService {A}
+      | deny {A}
         user info: "If a DoS is performed it affects, the applications communicating over the network as well as the connected application."
-        ->  allNetConnections().attemptDenialOfService,
+        ->  allNetConnections().attemptDeny,
             allowedApplicationConnectionsApplications().denyFromNetworkingAsset
 
       | accessNetworkData @hidden
@@ -180,9 +180,9 @@ category Networking {
     asset RoutingFirewall extends Application
       user info: "A routing firewall specifies a router with firewall capabilities that connects many networks."
     {
-      | denialOfService {A}
+      | deny {A}
        user info: "A DoS attack should cascade on the connected networks and associated connections"
-        ->  connectionRules.attemptDenialOfService
+        ->  connectionRules.attemptDeny
 
       | fullAccess {I, A}
         developer info: "If full access is achieved on RoutingFirewall then it is 0wned and all connections can be allowed! This can happen by compromising the manager application."
@@ -212,7 +212,7 @@ category Networking {
             successfulAccessNetworksInspected,
             connectToApplicationsUninspected,
             connectToApplicationsInspected,
-            denialOfService,
+            deny,
             reverseReach
 
       # payloadInspection [Disabled]
@@ -289,12 +289,12 @@ category Networking {
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, but taking into account that the traffic payload is being inspected. This attack step is used to allow legitimate traffic even when payload inspection is enabled on the connection."
         ->  receiverApplications().networkConnectInspected
 
-      | attemptDenialOfService @hidden
+      | attemptDeny @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  denialOfService,
+        ->  deny,
             bypassRestricted
 
-      & denialOfService {A}
+      & deny {A}
         user info: "If a connection rule is denied it affects the applications communicating over it."
         ->  allApplications().denyFromNetworkingAsset
     }
