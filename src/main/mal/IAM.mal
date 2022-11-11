@@ -19,7 +19,7 @@ category IAM {
     abstract asset IAMObject extends Information
       user info: "An IAM object represents the base logic shared by all assets used for Identity and Access Management roles(Identity, Group, Privileges)."
     {
-      # disabled [Disabled]
+      # notPresent [Disabled]
         user info: "It should be used to model the probability that the IAM object does not actually exist."
         ->  successfulAssume,
             successfulLockout
@@ -70,7 +70,7 @@ category IAM {
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
-      # disabled
+      # notPresent
         +>  successfulLockoutFromCredentials
 
       | assume @Override {C,I,A}

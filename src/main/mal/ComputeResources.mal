@@ -195,8 +195,8 @@ category ComputeResources {
       let outgoingApplicationConnections = (appConnections \/ outgoingAppConnections)
       let ingoingApplicationConnections = (appConnections \/ ingoingAppConnections)
 
-      # disabled [Disabled]
-        user info: "If application is disabled it should behave as nonexistent, thus all attack vectors are removed."
+      # notPresent [Disabled]
+        user info: "If application is notPresent it should behave as nonexistent, thus all attack vectors are removed."
         developer info: "This defense allows for both speculation about the presence of a particular application and to suggest that if it is possible removing it may restrict the attacker's actions."
         ->  specificAccessFromLocalConnection,
             specificAccessFromNetworkConnection,
@@ -571,7 +571,7 @@ category ComputeResources {
     asset IDPS extends Application
       user info: "An IDPS(Intrusion Detection and Prevention System) is tasked with protecting other applications from malicious activity, such as exploiting vulnerabilities or unsafe user actions."
     {
-      # disabled @Override @hidden [Disabled]
+      # notPresent @Override @hidden [Disabled]
         developer info: "It would be ideal to hide this defense when using modelling tools to avoid confusion."
         modeler info: "As per the comment for the effectiveness defense, the disabled defense does not function as desired for the IDPS asset and should not be used. The effectiveness defense should be adjusted to reflect the likelihood that the IDPS is present instead."
 
