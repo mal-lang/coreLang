@@ -189,7 +189,6 @@ category DataResources {
         ->  containedData.attemptWrite,
             information.write,
             replicatedInformation.attemptWriteFromReplica,
-            compromiseAppOrigin,
             dependentApps.fullAccess,
             attemptDelete
 
@@ -264,10 +263,6 @@ category DataResources {
         user info: "The attacker can extract the data. The read attack step represents just being able to make use of the data for further attack steps without the attacker obtaining it."
         ->  information.extract,
             replicatedInformation.attemptExtractFromReplica
-
-      | compromiseAppOrigin
-        user info: "If origin data are modified/written then the software product is also compromised which effectively also compromises the application."
-        ->  originSoftwareProduct.compromiseApplications
     }
 }
 
@@ -289,8 +284,6 @@ associations {
       user info: "Data can contain information, as for example credentials."
   Data        [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
-  Data        [originData]        0..1 <-- Origin                --> 0..1 [originSoftwareProduct]  SoftwareProduct
-      user info: "Any SoftwareProduct can be associated with Origin Data that represents the source from which this software was obtained."
   // ### Application dependence associations
   /* Dependence is used to represent various situations where the operations
    * of the Application are impacted by modifying/denying the Data/Information
