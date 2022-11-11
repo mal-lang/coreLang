@@ -302,12 +302,11 @@ category ComputeResources {
       | specificAccess
         user info: "The adversary is able to gain low-privilege access on the Application which allows them to access the networks and connections associated with it and locally connect to hosted Applications. Additionally, if they have the required privileges the attacker may also access data hosted, sent, or received by the Application."
         ->  appExecutedApps.localConnect, // An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the executed applications.
+            specificAccessRead,
+            specificAccessModify,
+            specificAccessDeny,
             bypassContainerization,
             attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
-            containedData.authorizedAccessFromApplication, // This also enables the use of compromised permissions but only after those privileges are attained
-            sentData.authorizedReadFromApplication, // Both Data sent and received can be read given the necessary permissions
-            receivedData.authorizedReadFromApplication,
-            sentData.authorizedWriteFromApplication, // But only sent Data can be written given the necessary permissions
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections // and access the network(s) and connections on/to which the app is connected
 
@@ -343,10 +342,7 @@ category ComputeResources {
         ->  attemptRead,
             attemptModify,
             attemptDeny,
-            appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
             executionPrivIAMs.attemptAssume,  // Assume also the execution privilege identities of this application to the access to the entire execution context
-            containedData.attemptAccess,  // and access on all the contained data
-            sentData.attemptWrite, // Sent Data can be written/modified
             attemptApplicationRespondConnectThroughData,
             accessNetworkAndConnections,  // and access the network(s) and connections on/to which the app is connected
             hostApp.localConnect,    // and localConnect on the host application
@@ -509,11 +505,17 @@ category ComputeResources {
         ->  read
 
       | read {C}
-        user info: "The attacker can read some or all of this service's code and data (both local and sent/received)."
+        user info: "The attacker can read some or all of this service's (and executed by this) source code and/or data (both local and sent/received)."
         ->  containedData.attemptRead,
-            appExecutedApps.attemptRead
-            sentData.attemptRead, // Both sent and received Data can also be read
-            receivedData.attemptRead,
+            appExecutedApps.attemptRead, // Read all applications executed by this (host) application
+            sentData.attemptRead, // Both sent and received Data can be read
+            receivedData.attemptRead
+
+      | specificAccessRead {C}
+        user info: "The attacker can read the service's source code and/or sent and received Data, given the necessary permissions"
+        ->  containedData.authorizedReadFromApplication,
+            sentData.authorizedReadFromApplication, // Both Data sent and received can be read given the necessary permissions
+            receivedData.authorizedReadFromApplication
 
       | attemptModify @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -524,8 +526,16 @@ category ComputeResources {
         ->  modify
 
       | modify {I}
-        user info: "The attacker can modify some or all of this service's data and/or source code."
-        ->  fullAccess
+        user info: "The attacker can modify some or all of this service's (and executed by this) source code and/or data."
+        ->  fullAccess,
+            containedData.attemptWrite,
+            appExecutedApps.attemptModify, // Gain access on all applications executed by this (host) application
+            sentData.attemptWrite // Sent Data can be written/modified
+
+      | specificAccessModify {I}
+        user info: "The attacker can modify the service's source code and/or sent  Data, given the necessary permissions"
+        ->  containedData.authorizedWriteFromApplication,
+            sentData.authorizedWriteFromApplication // Sent Data can be written given the necessary permissions
 
       | attemptDeny @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -540,6 +550,11 @@ category ComputeResources {
         ->  containedData.attemptDeny,
             appExecutedApps.attemptDeny,
             sentData.attemptDeny // Sent Data can also be denied
+
+      | specificAccessDeny {A}
+        user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications, given the necessary permissions"
+        ->  containedData.authorizedDeleteFromApplication,
+            sentData.authorizedDeleteFromApplication // Sent Data can be denied given the necessary permissions
 
       & denyFromNetworkingAsset @hidden
         developer info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
