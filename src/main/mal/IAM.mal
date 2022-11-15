@@ -70,7 +70,7 @@ category IAM {
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
-      # notPresent
+      # notPresent [Disabled]
         +>  successfulLockoutFromCredentials
 
       | assume @Override {C,I,A}
