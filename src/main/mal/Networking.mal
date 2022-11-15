@@ -216,7 +216,7 @@ category Networking {
             reverseReach
 
       # payloadInspection [Disabled]
-        user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i. e. network-level vulnerabilities cannot be exploited, unsafe actions that the user may taken that would benefit the attacker are also prevented)."
+        user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i.e. network-level vulnerabilities cannot be exploited, unsafe actions that the user may taken that would benefit the attacker are also prevented)."
         ->  payloadInspectionBypassed
 
       | bypassPayloadInspection [VeryHardAndUncertain]

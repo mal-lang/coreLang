@@ -71,7 +71,7 @@ category User {
             unsafeUserActivity
 
       | attemptDeliverMaliciousRemovableMedia @entrypoint
-        user info: "An attacker can try to deliver a removable media drive(e.g. USB drive) containing malicious code to a location accessible to the target users."
+        user info: "An attacker can try to deliver a removable media drive(i.e. USB drive) containing malicious code to a location accessible to the target users."
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         modeler info: "Social engineering is modeled by having the attacker trigger this attack step on hthe target Users."
         ->  successfulDeliverMaliciousRemovableMedia,
