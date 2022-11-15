@@ -53,7 +53,7 @@ public class IAMIntegrationTests extends CoreLangTest {
             // vuln.abuse.assertCompromisedInstantaneously();
             oracle.fullAccess.assertCompromisedWithEffort();
             rhel_oracle.assume.assertCompromisedWithEffort();
-            db.access.assertCompromisedWithEffort();
+            db.read.assertCompromisedWithEffort();
             table1.read.assertCompromisedWithEffort();
             table2.read.assertCompromisedWithEffort();
             rhel.fullAccess.assertCompromisedWithEffort();
@@ -106,12 +106,10 @@ public class IAMIntegrationTests extends CoreLangTest {
             data.authorizedReadFromIAM.assertCompromisedInstantaneously();
             data.authorizedWriteFromIAM.assertUncompromised();
             data.authorizedDeleteFromIAM.assertUncompromised();
-            data.attemptAccess.assertUncompromised();
             data.authorizedAccessFromApplication.assertUncompromised();
             data.authorizedReadFromApplication.assertUncompromised();
             data.authorizedWriteFromApplication.assertUncompromised();
             data.authorizedDeleteFromApplication.assertUncompromised();
-            data.access.assertUncompromised();
             data.read.assertUncompromised();
             data.write.assertUncompromised();
             data.delete.assertUncompromised();

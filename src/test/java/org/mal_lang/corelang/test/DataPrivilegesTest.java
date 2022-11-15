@@ -274,7 +274,8 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new DataToDataModel(false);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.top.access);
+        model.addAttacker(attacker, model.top.attemptRead);
+        model.addAttacker(attacker, model.top.attemptWrite);
         attacker.attack();
 
         // No access control at all:
@@ -295,7 +296,8 @@ public class DataPrivilegesTest extends CoreLangTest {
         var model = new DataToDataModel(true);
 
         var attacker = new Attacker();
-        model.addAttacker(attacker, model.top.access);
+        model.addAttacker(attacker, model.top.attemptRead);
+        model.addAttacker(attacker, model.top.attemptWrite);
         attacker.attack();
 
         model.mid.read.assertCompromisedInstantaneously();

@@ -82,7 +82,8 @@ public class HardwareTest extends CoreLangTest {
         model.hardware.fullAccess.assertCompromisedInstantaneously();
         model.application.physicalAccessAchieved.assertCompromisedInstantaneously();
         model.application.fullAccess.assertCompromisedInstantaneously();
-        model.data.attemptAccess.assertCompromisedInstantaneously();
+        model.data.attemptRead.assertCompromisedInstantaneously();
+        model.data.attemptWrite.assertCompromisedInstantaneously();
     }
 
 }

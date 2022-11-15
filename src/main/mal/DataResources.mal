@@ -74,24 +74,13 @@ category DataResources {
       # notPresent [Disabled]
         user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility of data not existing on the associated container (i.e. Hardware, Application, Network, etc.)."
         developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
-        ->  access,
-            applicationRespondConnect,
+        ->  applicationRespondConnect,
             successfulRead,
             successfulWrite,
             successfulDeny,
             successfulDelete,
             reverseReach,
             extract
-
-      | attemptAccess @hidden
-        developer info: "Intermediate attack step to allow for defenses."
-        ->  access
-
-      & access @hidden
-        developer info: "Access the data."
-        ->  attemptRead,
-            attemptWrite,
-            attemptDelete
 
       | authorizedAccessFromApplication @hidden
         developer info: "Try to gain access to the data through permissions."
@@ -134,8 +123,7 @@ category DataResources {
 
       | accessDecryptedData @hidden
         developer info: "Intermediate attack step to only allow effects of 'accessUnencryptedData' on data after compromising the encryption credentials or encryption is disabled."
-        ->  access,
-            applicationRespondConnect,
+        ->  applicationRespondConnect,
             successfulRead,
             successfulWrite,
             successfulDelete

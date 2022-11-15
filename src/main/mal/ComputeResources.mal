@@ -48,7 +48,8 @@ category ComputeResources {
       | fullAccess {C,I,A}
         user info: "Full access on a piece of hardware grants full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
-            hostedData.attemptAccess,
+            hostedData.attemptRead,
+            hostedData.attemptWrite,
             attemptSpreadWormThroughRemovableMedia
 
       | attemptSupplyChainAttack @entrypoint

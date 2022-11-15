@@ -29,10 +29,10 @@ public class DataTest extends CoreLangTest {
         var model = new DataTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.data1.attemptAccess);
+        model.addAttacker(attacker,model.data1.attemptRead);
+        model.addAttacker(attacker,model.data1.attemptWrite);
         attacker.attack();
 
-        model.data1.access.assertCompromisedInstantaneously();
         model.data1.read.assertCompromisedInstantaneously();
         model.data1.write.assertCompromisedInstantaneously();
         model.data1.delete.assertCompromisedInstantaneously();
@@ -58,7 +58,6 @@ public class DataTest extends CoreLangTest {
         var attacker = new Attacker();
         attacker.attack();
 
-        model.data1.access.assertUncompromised();
         model.data1.read.assertUncompromised();
         model.data1.write.assertUncompromised();
         model.data1.delete.assertUncompromised();
@@ -82,11 +81,11 @@ public class DataTest extends CoreLangTest {
         var model = new DataTestModel();
 
         var attacker = new Attacker();
-        model.addAttacker(attacker,model.data1.attemptAccess);
+        model.addAttacker(attacker,model.data1.attemptRead);
+        model.addAttacker(attacker,model.data1.attemptWrite);
         model.addAttacker(attacker,model.datacreds.use);
         attacker.attack();
 
-        model.data1.access.assertCompromisedInstantaneously();
         model.data1.read.assertCompromisedInstantaneously();
         model.data1.write.assertCompromisedInstantaneously();
         model.data1.delete.assertCompromisedInstantaneously();
