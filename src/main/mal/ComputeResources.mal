@@ -195,17 +195,20 @@ category ComputeResources {
       let ingoingApplicationConnections = (appConnections \/ ingoingAppConnections)
 
       # notPresent [Disabled]
-        user info: "If application is notPresent it should behave as nonexistent, thus all attack vectors are removed."
+        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the Application does not actually exist. Typically this is useful to see what attack steps are removed if a particular non-essential component(e.g. a plugin, library, feature, or service)."
         developer info: "This defense allows for both speculation about the presence of a particular application and to suggest that if it is possible removing it may restrict the attacker's actions."
-        ->  specificAccessFromLocalConnection,
+        ->  successfulUseVulnerability,
+            successfulReverseReach,
+            networkConnectFromResponse,
+            specificAccessFromLocalConnection,
             specificAccessFromNetworkConnection,
             localAccess,
             networkAccess,
+            successfulUnsafeUserActivity,
+            fullAccessFromSupplyChainCompromise,
             readFromSoftProdVulnerability,
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability,
-            successfulReverseReach,
-            successfulUseVulnerability,
             successfulApplicationRespondConnectThroughData,
             successfulRead,
             successfulModify,

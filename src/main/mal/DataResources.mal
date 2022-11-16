@@ -92,14 +92,16 @@ category DataResources {
       user info: "Any form of data that can be stored or transmitted."
     {
       # notPresent [Disabled]
-        user info: "It should be used to model the probability of data actually not existing on the associated container (i.e. Hardware, Application, Network, etc.)."
-        developer info: "This attack step is in series with the 'accessUnencryptedData' attack step because there is no reason to defend encrypted data (or deny them) if they do not exist..."
+        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility of data not existing on the associated container (i.e. Hardware, Application, Network, etc.)."
+        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
         ->  access,
             applicationRespondConnect,
             successfulRead,
             successfulWrite,
             successfulDeny,
-            successfulDelete
+            successfulDelete,
+            reverseReach,
+            extract
 
       | attemptAccess @hidden
         developer info: "Intermediate attack step to allow for defenses."

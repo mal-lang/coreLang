@@ -20,7 +20,8 @@ category IAM {
       user info: "An IAM object represents the base logic shared by all assets used for Identity and Access Management roles(Identity, Group, Privileges)."
     {
       # notPresent [Disabled]
-        user info: "It should be used to model the probability that the IAM object does not actually exist."
+        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the IAM object does not actually exist."
+        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
         ->  successfulAssume,
             successfulLockout
 
@@ -71,6 +72,8 @@ category IAM {
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
       # notPresent [Disabled]
+        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the Identity does not actually exist."
+        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
         +>  successfulLockoutFromCredentials
 
       | assume @Override {C,I,A}
@@ -111,6 +114,11 @@ category IAM {
       user info: "A group is a way to group together identities and/or other groups. This allows the expression of hierarchical IAM (structured inheritance)."
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
+      # notPresent [Disabled]
+        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the Group does not actually exist."
+        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
+        +>  lockoutFromMembers
+
       | assume @Override {C,I,A}
         user info: "If an identity of a group is compromised then the whole group(i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
