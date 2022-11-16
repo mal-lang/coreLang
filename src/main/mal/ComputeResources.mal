@@ -201,7 +201,6 @@ category ComputeResources {
             specificAccessFromNetworkConnection,
             localAccess,
             networkAccess,
-            fullAccessFromSoftProdVulnerability,
             readFromSoftProdVulnerability,
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability,
@@ -226,7 +225,6 @@ category ComputeResources {
         developer info: "This includes vulnerabilities associated with the SoftwareProduct that this Application is running as well."
         ->  allVulnerabilities().attemptAbuse,
             attemptSoftwareProductAbuse,
-            fullAccessFromSoftProdVulnerability,
             readFromSoftProdVulnerability,
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability
@@ -440,8 +438,7 @@ category ComputeResources {
       E softwareCheck @hidden
         developer info: "Only enable the following attacks steps if a SoftwareProduct is associated with this Application."
         <-  appSoftProduct
-        ->  fullAccessFromSoftProdVulnerability,
-            readFromSoftProdVulnerability,
+        ->  readFromSoftProdVulnerability,
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability
 
@@ -485,14 +482,9 @@ category ComputeResources {
 
       & softwareProductAbuse @hidden
         developer info: "Intermediate attack step used to conditionally trigger SoftwareProduct vulnerabilities separately for each application."
-        ->  fullAccessFromSoftProdVulnerability,
-            readFromSoftProdVulnerability,
+        ->  readFromSoftProdVulnerability,
             modifyFromSoftProdVulnerability,
             denyFromSoftProdVulnerability
-
-      & fullAccessFromSoftProdVulnerability @hidden
-        developer info: "Intermediate attack step to handle SoftwareProduct existence."
-        ->  fullAccess
 
       & readFromSoftProdVulnerability @hidden
         developer info: "Intermediate attack step to handle SoftwareProduct existence."
