@@ -305,7 +305,7 @@ category ComputeResources {
         ->  appExecutedApps.localConnect, // An attacker with low-privilege access on the executing instance is assumed to be able to locally interact with the executed applications.
             specificAccessRead,
             specificAccessModify,
-            specificAccessDeny,
+            specificAccessDelete,
             bypassContainerization,
             attemptUseVulnerability, // Attempt to exploit all the vulnerabilities associated with the Application
             attemptApplicationRespondConnectThroughData,
@@ -552,10 +552,10 @@ category ComputeResources {
             appExecutedApps.attemptDeny,
             sentData.attemptDeny // Sent Data can also be denied
 
-      | specificAccessDeny {A}
-        user info: "The attacker can deny some or all functionality and data pertaining to this application/service as well as executed applications, given the necessary permissions"
+      | specificAccessDelete {A}
+        user info: "The attacker can delete some or all functionality and data pertaining to this application/service as well as executed applications, given the necessary permissions"
         ->  containedData.authorizedDeleteFromApplication,
-            sentData.authorizedDeleteFromApplication // Sent Data can be denied given the necessary permissions
+            sentData.authorizedDeleteFromApplication // Sent Data can be deleted given the necessary permissions
 
       & denyFromNetworkingAsset @hidden
         developer info: "This is an intermediate attack step to only allow deny on an application when all the connection rules and networks associated with it are denied, because an app can be serving on many different ports."
