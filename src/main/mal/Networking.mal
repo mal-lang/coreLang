@@ -80,7 +80,6 @@ category Networking {
             applications.networkConnectUninspected,
             networkForwardingUninspected,
             attemptReverseReach,
-            clientApplications.attemptNetworkConnectFromResponse,
             accessNetworkData,
             deny
 
