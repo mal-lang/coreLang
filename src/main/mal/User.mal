@@ -89,10 +89,6 @@ category User {
 
       | phishUser @hidden
         developer info: "The attacker can phish the user to gain access to their credentials."
-        ->  attemptCredentialTheft
-
-      | attemptCredentialTheft @hidden
-        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  credentialTheft
 
       | credentialTheft @hidden [HardAndUncertain]

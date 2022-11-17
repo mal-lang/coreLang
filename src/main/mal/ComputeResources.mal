@@ -45,14 +45,6 @@ category ComputeResources {
         developer info: "Try to spread malware through removable media that the users connect to the hardware system."
         ->  (users \/ physicalZones.users).attemptDeliverMaliciousRemovableMedia
 
-      | attemptFullAccess @hidden
-        developer info: "Intermediate attack step to allow for defenses."
-        ->  successfulFullAccess
-
-      & successfulFullAccess @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  fullAccess
-
       | fullAccess {C,I,A}
         user info: "Full access on a piece of hardware grants full access on the applications running on it and access to the hosted data."
         ->  sysExecutedApps.fullAccess,
@@ -73,7 +65,7 @@ category ComputeResources {
       | supplyChainAttack [VeryHardAndUncertain]
         user info: "A supply chain compromise means that the attacker has gained full access of the hardware."
         modeler info: "The Hardware supply chain attack represents an attacker being able to tamper with the hardware/firmware before the deployment of the product and not alterations made to the hardware/firmware once it is operating."
-        ->  attemptFullAccess
+        ->  fullAccess
 
       # supplyChainAuditing
         user info: "Auditing inside the hardware supply chain can detect possible supply chain attacks."
@@ -151,7 +143,7 @@ category ComputeResources {
 
       | modify {I}
         user info: "Modify on hardware gives the attacker full access to the hardware and leads to a modify/write on all the applications running on it and hosted data."
-        ->  attemptFullAccess,
+        ->  fullAccess,
             sysExecutedApps.attemptModify,
             hostedData.attemptWrite
     }

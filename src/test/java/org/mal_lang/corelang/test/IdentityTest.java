@@ -62,7 +62,7 @@ public class IdentityTest extends CoreLangTest {
         var model = new IdentityTestMultipleCredentialsModel();
 
         var attacker = new Attacker();
-        attacker.addAttackPoint(model.creds1.attemptUse);
+        attacker.addAttackPoint(model.creds1.use);
         attacker.attack();
 
         model.identity.successfulAssume.assertCompromisedInstantaneously();

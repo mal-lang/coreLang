@@ -71,24 +71,15 @@ category IAM {
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
-      # notPresent [Disabled]
-        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the Identity does not actually exist."
-        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
-        +>  successfulLockoutFromCredentials
-
       | assume @Override {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
         developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
         +>  parentId.attemptAssume,
             memberOf.attemptAssume
 
-      & attemptLockoutFromCredentials @hidden
+      & lockoutFromCredentials @hidden
         developer info: "Only lockout an identity if all of the Credentials that could be used to authenticate have been denied."
-        ->  successfulLockoutFromCredentials
-
-      & successfulLockoutFromCredentials @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  lockout
+        ->  attemptLockout
 
       | lockout
         user info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
@@ -114,11 +105,6 @@ category IAM {
       user info: "A group is a way to group together identities and/or other groups. This allows the expression of hierarchical IAM (structured inheritance)."
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
-      # notPresent [Disabled]
-        user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the Group does not actually exist."
-        developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
-        +>  lockoutFromMembers
-
       | assume @Override {C,I,A}
         user info: "If an identity of a group is compromised then the whole group(i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
@@ -152,19 +138,19 @@ category IAM {
 
       | read @Override
         user info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
-        +> attemptUse
+        +> use
 
       | write @Override
         user info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
-        +> attemptUse
+        +> use
 
       | deny @Override
         user info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
-        +> identities.attemptLockoutFromCredentials
+        +> identities.lockoutFromCredentials
 
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
-        ->  attemptUse
+        ->  use
 
       | attemptCredentialsReuse @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -173,20 +159,16 @@ category IAM {
 
       & credentialsReuse @hidden
         developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
-        ->  attemptUse
-
-      | attemptUse @hidden
-        developer info: "Intermediate attack step to allow for defenses."
         ->  use
 
-      & use {C}
+      | use {C}
         user info: "The attacker is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
             signedData.accessSpoofedData,
             attemptPropagateOneCredentialCompromised,
             credentials.use,
-            hashes.attemptUse,
+            hashes.use,
             origCreds.guessCredentialsFromHash
 
       | attemptPropagateOneCredentialCompromised @hidden
@@ -204,7 +186,7 @@ category IAM {
 
       & credentialTheft @hidden
         developer info: "The attacker is able to steal the credentials."
-        ->  attemptUse
+        ->  use
 
       !E missingIdentity @hidden
         developer info: "If there are no Identities asociated with these Credentials we make the worst case scenario assumption regarding the strength of the Credentials."
@@ -228,7 +210,7 @@ category IAM {
       & guessCredentials @hidden [HardAndUncertain]
         developer info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
         modeler info: "The guessability of the Credentials is influenced by the notGuessable defense on this asset and the securityAwareness defense on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defense would play a role in restricting this attack step."
-        ->  attemptUse
+        ->  use
     }
 }
 

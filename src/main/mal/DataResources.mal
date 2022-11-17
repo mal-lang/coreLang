@@ -49,42 +49,22 @@ category DataResources {
       // The following 10 attack steps are used to implement data replication
       | attemptReadFromReplica @hidden
         developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
-        ->  successfulReadFromReplica
+        ->  read
 
       & attemptWriteFromReplica @hidden
         developer info: "Information can be overwritten only if all replicas have been overwritten."
-        ->  successfulWriteFromReplica
+        ->  write
 
       & attemptDeleteFromReplica @hidden
         developer info: "Information can be deleted only if all replicas have been deleted."
-        ->  successfulDeleteFromReplica
+        ->  delete
 
       & attemptDenyFromReplica @hidden
         developer info: "Information can be denied only if all replicas have been denied."
-        ->  successfulDenyFromReplica
+        ->  deny
 
       | attemptExtractFromReplica @hidden
         developer info: "The attacker attempts to extract the information."
-        ->  successfulExtractFromReplica
-
-      & successfulReadFromReplica @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  read
-
-      & successfulWriteFromReplica @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  write
-
-      & successfulDeleteFromReplica @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  delete
-
-      & successfulDenyFromReplica @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  deny
-
-      & successfulExtractFromReplica @hidden
-        developer info: "Intermediate attack step to model defenses."
         ->  extract
     }
 
