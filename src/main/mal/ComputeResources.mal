@@ -237,7 +237,6 @@ category ComputeResources {
       | reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
         ->  networks.attemptReverseReach,
-            clientAccessNetworks.attemptReverseReach,
             ingoingApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,
             attackerUnsafeUserActivityCapabilityWithReverseReach,
@@ -279,8 +278,6 @@ category ComputeResources {
         developer info: "The attacker can access outgoing and bidirectional networks and connections associated with the application."
         ->  networks.accessUninspected,
             networks.accessInspected,
-            clientAccessNetworks.accessUninspected,
-            clientAccessNetworks.accessInspected,
             outgoingApplicationConnections().attemptConnectToApplicationsUninspected,
             outgoingApplicationConnections().attemptConnectToApplicationsInspected,
             outgoingApplicationConnections().attemptAccessNetworksUninspected,

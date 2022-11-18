@@ -20,11 +20,10 @@ category Networking {
       user info: "A network (zone) is a set of network accessible applications and data."
       developer info: "The network asset tries to cover all the levels of the OSI stack in a very abstract and compact way (i.e. it tries to represent all the OSI layers). For example it will try to cover both ARP attacks (that are Level 2) but also DNS/HTTP spoofing attacks (that are Level 7)."
     {
-      let allNetApplications = (clientApplications \/ applications)
       let outboundAllowedConnections = (netConnections \/ outgoingNetConnections)
       let inboundAllowedConnections = (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections)
       let allNetConnections = (netConnections \/ ingoingNetConnections \/ outgoingNetConnections \/ diodeIngoingNetConnections)
-      let allowedApplicationConnectionsApplications = (allNetApplications() \/ allNetConnections().applications)
+      let allowedApplicationConnectionsApplications = (applications \/ allNetConnections().applications)
 
       | physicalAccess @entrypoint {C, A}
         user info: "Attacker has physical access on the network. This means they can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
@@ -97,8 +96,7 @@ category Networking {
 
       & reverseReach @hidden
         developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
-        ->  (netConnections \/ ingoingNetConnections \/ diodeIngoingNetConnections).attemptReverseReach,
-            clientApplications.attemptReverseReach,
+        ->  inboundAllowedConnections().attemptReverseReach,
             applications.attemptReverseReach
 
       | networkForwardingUninspected @hidden
@@ -309,8 +307,6 @@ associations {
       user info: "An application can communicate / be exposed on a network."
       modeler info: "This is DEPRECATED and should only be used by fully aware modelers."
       developer info: "This can equivalently be modeled using a ConnectionRule but this direct approach should be prefered in the case where the application is “located” in the same network as the host on which it is running."
-  Network          [clientAccessNetworks] * <-- NetworkClientAccess   --> *    [clientApplications]     Application
-      user info: "A client application can communicate over a network."
   Application      [applications]         * <-- ApplicationConnection --> *    [appConnections]         ConnectionRule
       user info: "An application can communicate over one or more (mesh type) bidirectional connections."
       modeler info: "ConnectionRules associated with Applications are practically expressing a traffic flow."
