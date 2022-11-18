@@ -46,7 +46,7 @@ category DataResources {
       | extract
         user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
 
-      // The following 10 attack steps are used to implement data replication
+      // The following 5 attack steps are used to implement data replication
       | attemptReadFromReplica @hidden
         developer info: "Reading one replica allows the attacker to read all other replicas as well since the information contained in them is the same."
         ->  read
