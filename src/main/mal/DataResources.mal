@@ -17,7 +17,7 @@
 category DataResources {
 
     asset Information
-      user info: "Represents any type of information that might be contained inside Data. This include general purpose information, but also serves as the basis for more specialized types, such as Credentials and SoftwareProduct. Information represents the abstract concept while Data represent an actual instance of information stored or transmitted digitally."
+      user info: "Represents any type of information that might be contained inside Data. This include general purpose information, but also serves as the basis for more specialized types, such as Credentials and SoftwareProduct. Information represents the abstract concept, while Data represent an actual instance of information stored or transmitted digitally."
     {
       | read
         user info: "The attacker is able to read the information. They may still be unable to extract it, which represents the adversary being able to read it themselves. This is the case if autonomous code is able to read it, but lack the required networking connections to transmit it back to the adversary."
@@ -44,7 +44,7 @@ category DataResources {
             dependentApps.deny
 
       | extract
-        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system they control."
+        user info: "The attacker is able to extract the information. This means that they have a path available through which they can transfer the information back to a system that they control."
 
       // The following 5 attack steps are used to implement data replication
       | attemptReadFromReplica @hidden

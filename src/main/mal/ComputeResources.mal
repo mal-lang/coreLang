@@ -235,7 +235,7 @@ category ComputeResources {
         ->  reverseReach
 
       | reverseReach @hidden
-        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates via outgoing or bidirectional communications."
+        developer info: "Reverse reach is used to determine whether or not the attacker can be reached by the user. Reverse reach propagates toward outgoing or bidirectional communications."
         ->  networks.attemptReverseReach,
             ingoingApplicationConnections().attemptReverseReach,
             appExecutedApps.attemptReverseReach,

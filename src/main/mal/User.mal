@@ -57,7 +57,7 @@ category User {
       | attemptSocialEngineering @entrypoint
         user info: "An attacker can try to perform social engineering techniques such as phishing and inducing the user to perform malicious actions."
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        modeler info: "Social engineering is modeled by having the attacker trigger this attack step on hthe target Users."
+        modeler info: "Social engineering is modeled by having the attacker trigger this attack step on the target Users."
         ->  successfulSocialEngineering,
             bypassSecurityAwareness
 
@@ -92,7 +92,7 @@ category User {
         ->  credentialTheft
 
       | credentialTheft @hidden [HardAndUncertain]
-        developer info: "Trick the user to provide their credentials."
+        developer info: "Trick the user into providing their credentials."
         modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
         ->  userIds.credentials.attemptCredentialTheft
 
@@ -107,7 +107,7 @@ category User {
 
       | unsafeUserActivity @hidden [Exponential(0.03)]
         developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
-        modeler info: "An attacker may trigger the assume step on identities belonging to the user without being able to reach (or be reached) via any of the Applications that the identity has access to. This represents an unmaterialised threat in that scenario."
+        modeler info: "If the attacker is not able to reach (or be reached) via any of the Applications this garnered access does not materialise into any actual attack vectors."
         ->  userIds.attemptAssume,
             userIds.execPrivApps.attemptUnsafeUserActivity,
             userIds.subprivileges.subprivileges*.execPrivApps.attemptUnsafeUserActivity,
