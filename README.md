@@ -11,6 +11,13 @@ This project has the following structure:
 
 Since this is a Maven project it is ought to be opened by any compatible IDE or to be used with the mvn command line tool.
 
+## Acknowledgements
+This work has received funding from the European Union's H2020 research and
+innovation programme under the project SOCCRATES and Grant Agreement no.
+833481, the Swedish Civil Contingencies Agency through the research centre
+Resilient Information and Control Systems (RICS), as well as the ERA-NET
+project HONOR, funded under grant agreement no. 646039 and no. 7759750.
+
 ## Previous work
 
 | Project | Link |
