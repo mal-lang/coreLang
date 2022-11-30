@@ -50,6 +50,7 @@ category ComputeResources {
         ->  sysExecutedApps.fullAccess,
             hostedData.attemptRead,
             hostedData.attemptWrite,
+            deny,
             attemptSpreadWormThroughRemovableMedia
 
       | attemptSupplyChainAttack @entrypoint
