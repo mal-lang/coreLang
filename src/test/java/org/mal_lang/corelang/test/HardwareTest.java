@@ -31,6 +31,7 @@ public class HardwareTest extends CoreLangTest {
         public HardwareWithVulnerabilityTestModel(boolean supplyChainAuditing,
                 boolean hardwareModificationsProtection,
                 boolean remove,
+                boolean physicalAccessRequired,
                 boolean confidentialityImpactLimitations,
                 boolean availabilityImpactLimitations,
                 boolean integrityImpactLimitations,
@@ -38,6 +39,7 @@ public class HardwareTest extends CoreLangTest {
             hardware = new Hardware("hardware", supplyChainAuditing, hardwareModificationsProtection);
             hardwareVulnerability = new
                 HardwareVulnerability("hardwareVulnerability", remove,
+                        physicalAccessRequired,
                         confidentialityImpactLimitations,
                         availabilityImpactLimitations,
                         integrityImpactLimitations,
@@ -62,7 +64,7 @@ public class HardwareTest extends CoreLangTest {
         attacker.attack();
 
         model.hardware.deny.assertCompromisedInstantaneously();
-        model.hardware.attemptUseVulnerability.assertCompromisedInstantaneously();
+        model.hardware.attemptUseVulnerabilityFromPhysicalAccess.assertCompromisedInstantaneously();
         model.hardware.fullAccess.assertUncompromised();
         model.application.physicalAccessAchieved.assertCompromisedInstantaneously();
     }
@@ -71,14 +73,14 @@ public class HardwareTest extends CoreLangTest {
     public void testPhysicalAccessWithVulnerabilityNoHardwareModificationsProtection() {
         printTestName(Thread.currentThread().getStackTrace()[1].getMethodName());
         var model = new HardwareWithVulnerabilityTestModel(false, false,
-                false, false, false, false, false);
+                false, false, false, false, false, false);
 
         var attacker = new Attacker();
         model.addAttacker(attacker,model.hardware.physicalAccess);
         attacker.attack();
 
         model.hardware.deny.assertCompromisedInstantaneously();
-        model.hardware.attemptUseVulnerability.assertCompromisedInstantaneously();
+        model.hardware.attemptUseVulnerabilityFromPhysicalAccess.assertCompromisedInstantaneously();
         model.hardware.fullAccess.assertCompromisedInstantaneously();
         model.application.physicalAccessAchieved.assertCompromisedInstantaneously();
         model.application.fullAccess.assertCompromisedInstantaneously();

@@ -19,13 +19,17 @@ category ComputeResources {
     asset Hardware
       user info: "Specifies the hardware on which applications can run."
     {
-      | attemptUseVulnerability @hidden
+      | attemptUseVulnerabilityFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  successfulUseVulnerability,
+        ->  successfulUseVulnerabilityFromPhysicalAccess,
             bypassHardwareModificationsProtection
 
-      & successfulUseVulnerability @hidden
+      & successfulUseVulnerabilityFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to model defenses."
+        ->  useVulnerability
+
+      | attemptUseVulnerabilityFromSoftwareFullAccess @hidden
+        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  useVulnerability
 
       | useVulnerability
@@ -99,7 +103,8 @@ category ComputeResources {
 
       | hardwareModifications @hidden
         developer info: "Attacker is able to modify the hardware setup. They could then exploit physical vulnerabilities or software vulnerabilities that require physical access."
-        ->  attemptUseVulnerability,
+        ->  attemptUseVulnerabilityFromPhysicalAccess,
+            vulnerabilities.physicalAccessAchieved,
             sysExecutedApps.physicalAccessAchieved
 
       # hardwareModificationsProtection
@@ -113,7 +118,7 @@ category ComputeResources {
 
       | hardwareModificationsProtectionBypassed @hidden
         developer info: "Hardware modifications protection is bypassed either because it was not set or the attacker was able to circumvent it through additional effort."
-        ->  successfulUseVulnerability,
+        ->  successfulUseVulnerabilityFromPhysicalAccess,
             successfulHardwareModifications,
             successfulSpreadWormThroughRemovableMedia,
             successfulUnsafeUserActivity
@@ -351,6 +356,7 @@ category ComputeResources {
             hostApp.localConnect,    // and localConnect on the host application
             managedRoutingFw.attemptModify, // if the routing firewall manager app is compromised the routing firewall should also be compromised
             hostHardware.attemptSpreadWormThroughRemovableMedia, // Propagate malware worms through removable media
+            hostHardware.attemptUseVulnerabilityFromSoftwareFullAccess, // If this application is run directly on hardware full access on it allows the attacker to exploit hardware vulnerabilities that do not require physical access
             specificAccess // And also provide specificAccess, mainly for completeness and more intuitive results
 
       | physicalAccessAchieved @hidden
