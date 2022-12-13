@@ -72,6 +72,10 @@ category IAM {
       user info: "An identity models an IAM identity that should then be associated with privileges on other instances."
       developer info: "An identity can be visualised as a group of assumable roles that can be associated with many credentials."
     {
+      # notPresent [Disabled]
+        user info: "Prevent unsafe user activity too if the Identity is assumed to not exist."
+        +>  successfulUnsafeUserActivity
+
       | assume @Override {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
         developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
@@ -90,16 +94,50 @@ category IAM {
         developer info: "If there are no Users asociated with this Identity we make the worst case scenario assumption regarding the strength of the Credentials belonging to it."
         <-  users
         ->  credentials.weakCredentials
+
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to allow for defenses."
+        ->  successfulUnsafeUserActivity
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defenses."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity
+        user info: "Propagate unsafe user activity to any Applications or subset of privileges associated with this Identity."
+        ->  execPrivApps.attemptUnsafeUserActivity,
+            highPrivApps.attemptUnsafeUserActivity,
+            lowPrivApps.attemptUnsafeUserActivity,
+            subprivileges.attemptUnsafeUserActivity
     }
 
     asset Privileges extends IAMObject
       user info: "A privileges asset can be associated with another IAMObject to reason about a specific subset of given privileges on Applications and Data."
       modeler info: "The privileges asset is not meant to be used normally when assigning permissions. Identities and Groups should be directly associated with the relevant assets. The purpose of the Privileges asset is to be used as a speculative asset when reasoning about additional privileges that a particular Group or Identity may have as a result of either poor configurations or the attacker's actions."
     {
+      # notPresent [Disabled]
+        user info: "Prevent unsafe user activity too if the Privileges are assumed to not exist."
+        +>  successfulUnsafeUserActivity
+
       | assume @Override {C,I,A}
         user info: "After authentication or compromise assume its privileges."
         developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
         +>  IAMOwners.attemptAssume
+
+      | attemptUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to allow for defenses."
+        ->  successfulUnsafeUserActivity
+
+      & successfulUnsafeUserActivity @hidden
+        developer info: "Intermediate attack step to model defenses."
+        ->  unsafeUserActivity
+
+      | unsafeUserActivity
+        user info: "Propagate unsafe user activity to any Applications or subset of privileges associated with these Privileges."
+        ->  execPrivApps.attemptUnsafeUserActivity,
+            highPrivApps.attemptUnsafeUserActivity,
+            lowPrivApps.attemptUnsafeUserActivity,
+            subprivileges.attemptUnsafeUserActivity
     }
 
     asset Group extends IAMObject
