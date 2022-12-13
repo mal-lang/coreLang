@@ -109,12 +109,7 @@ category User {
         developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
         modeler info: "If the attacker is not able to reach (or be reached) via any of the Applications this garnered access does not materialise into any actual attack vectors."
         ->  userIds.attemptAssume,
-            userIds.execPrivApps.attemptUnsafeUserActivity,
-            userIds.subprivileges.subprivileges*.execPrivApps.attemptUnsafeUserActivity,
-            userIds.highPrivApps.attemptUnsafeUserActivity,
-            userIds.subprivileges.subprivileges*.highPrivApps.attemptUnsafeUserActivity,
-            userIds.lowPrivApps.attemptUnsafeUserActivity,
-            userIds.subprivileges.subprivileges*.lowPrivApps.attemptUnsafeUserActivity
+            userIds.attemptUnsafeUserActivity
     }
 }
 
