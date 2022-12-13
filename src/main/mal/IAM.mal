@@ -139,11 +139,11 @@ category IAM {
 
       | read @Override
         user info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
-        +> use
+        +> attemptUse
 
       | write @Override
         user info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
-        +> use
+        +> attemptUse
 
       | deny @Override
         user info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
@@ -151,7 +151,7 @@ category IAM {
 
       | useLeakedCredentials [EasyAndCertain]
         user info: "If the password/credential is leaked to some location, it can then be available to the attacker and therefore it can be used."
-        ->  use
+        ->  attemptUse
 
       | attemptCredentialsReuse @hidden
         developer info: "Intermediate attack step to allow for defenses."
@@ -160,16 +160,20 @@ category IAM {
 
       & credentialsReuse @hidden
         developer info: "The user is reusing credentials which means that the attacker is able to compromise all of the non-unique credentials associated with this user."
+        ->  attemptUse
+
+      | attemptUse @hidden
+        developer info: "In order to use these credentials the attacker may require additional factors."
         ->  use
 
-      | use {C}
+      & use {C}
         user info: "The attacker is using the credentials to perform a legitimate authentication."
         ->  identities.attemptAssume,
             encryptedData.accessDecryptedData,
             signedData.accessSpoofedData,
             attemptPropagateOneCredentialCompromised,
-            credentials.use,
-            hashes.use,
+            credentials.use, // these credentials may serve as additional required factors for other credentials in a multi-factor authentication
+            hashes.attemptUse, // the hashes generated based on these credentials are also compromised as the attacker is assumed to know which hashing functions were used
             origCreds.guessCredentialsFromHash
 
       | attemptPropagateOneCredentialCompromised @hidden
@@ -187,7 +191,7 @@ category IAM {
 
       & credentialTheft @hidden
         developer info: "The attacker is able to steal the credentials."
-        ->  use
+        ->  attemptUse
 
       !E missingIdentity @hidden
         developer info: "If there are no Identities asociated with these Credentials we make the worst case scenario assumption regarding the strength of the Credentials."
@@ -211,7 +215,7 @@ category IAM {
       & guessCredentials @hidden [HardAndUncertain]
         developer info: "The attacker can try to just guess a set of credentials. The likelihood of succeeding is dependent on how strong the credentials are."
         modeler info: "The guessability of the Credentials is influenced by the notGuessable defense on this asset and the securityAwareness defense on the User associated with the Identity that these Credentials belong to. If either the User or Identity associations are missing the assumption is made that the crentials are guessable and only the notGuessable defense would play a role in restricting this attack step."
-        ->  use
+        ->  attemptUse
     }
 }
 
