@@ -151,7 +151,7 @@ category IAM {
 
       & lockoutFromMembers @hidden
         developer info: "If all of the Identities belonging to a Group are lockedout we assume that the Group as a whole is lockedout."
-        ->  lockout
+        ->  attemptLockout
     }
 
     asset Credentials extends Information
