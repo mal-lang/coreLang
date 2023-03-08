@@ -46,7 +46,6 @@ public class UserTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.user.phishUser.assertCompromisedInstantaneously();
         assertReached(model.user.credentialTheft);
 
         assertReached(model.credentials.credentialTheft);
@@ -66,7 +65,6 @@ public class UserTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.user.phishUser.assertCompromisedInstantaneously();
         assertReached(model.user.credentialTheft);
 
         model.credentials.use.assertUncompromised();
@@ -85,7 +83,6 @@ public class UserTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.user.phishUser.assertCompromisedInstantaneously();
         assertReached(model.user.credentialTheft);
 
         assertReached(model.credentials.credentialTheft);
@@ -106,7 +103,6 @@ public class UserTest extends CoreLangTest {
         model.addAttacker(attacker);
         attacker.attack();
 
-        model.user.phishUser.assertCompromisedInstantaneously();
         assertReached(model.user.credentialTheft);
 
         model.credentials.use.assertUncompromised();

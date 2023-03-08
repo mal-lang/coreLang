@@ -39,7 +39,6 @@ category User {
       | securityAwarenessBypassed @hidden
         developer info: "Security awareness is bypassed either because it was not set, the attacker was able to circumvent it through additional effort, or we simply assume that everyone has an off day every now and then."
         ->  successfulSocialEngineering,
-            successfulUnsafeUserActivity,
             successfulDeliverMaliciousRemovableMedia
 
       | oneCredentialCompromised @hidden
@@ -67,7 +66,7 @@ category User {
 
       | socialEngineering @hidden
         developer info: "Currently social engineering entails phishing credentials and tricking the user into unsafe actions that expose Applications to the attacker. In the future, other social engineering techniques should be added to this attack step."
-        ->  phishUser,
+        ->  credentialTheft,
             unsafeUserActivity
 
       | attemptDeliverMaliciousRemovableMedia @entrypoint
@@ -87,23 +86,10 @@ category User {
             physicalZones.hardwareSystems.attemptUnsafeUserActivity,
             hardwareSystems.attemptUnsafeUserActivity
 
-      | phishUser @hidden
-        developer info: "The attacker can phish the user to gain access to their credentials."
-        ->  credentialTheft
-
       | credentialTheft @hidden [HardAndUncertain]
         developer info: "Trick the user into providing their credentials."
         modeler info: "Distribution: Bernoulli(0.5) * Exponential(0.1), source: Sommestad (2011) Password authentication attacks: a survey of attacks and when they will succeed, suggest to use Bernoulli(0.05)"
         ->  userIds.credentials.attemptCredentialTheft
-
-      | attemptUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  successfulUnsafeUserActivity,
-            bypassSecurityAwareness
-
-      & successfulUnsafeUserActivity @hidden
-        developer info: "Intermediate attack step to model defenses."
-        ->  unsafeUserActivity
 
       | unsafeUserActivity @hidden [Exponential(0.03)]
         developer info: "The user can engage in unsafe behaviour that could allow the attacker to gain access to the applications the user has access to."
