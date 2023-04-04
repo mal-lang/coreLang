@@ -29,8 +29,8 @@ category Networking {
         user info: "Attacker has physical access on the network. This means they can cut wires/fibers, connect using iLOs, eavesdrop and get proper network access."
         modeler info: "This attack step can be used as an entry point when analyzing scenarios that involve gaining physical access to assets."
         ->  deny,
-            attemptAccessUninspected,
-            attemptAccessInspected,
+            attemptAccessUninspectedFromPhysicalAccess,
+            attemptAccessInspectedFromPhysicalAccess,
             bypassEavesdropDefenseFromPhysicalAccess,
             bypassAdversaryInTheMiddleDefenseFromPhysicalAccess
 
@@ -52,24 +52,24 @@ category Networking {
 
       | accessControlBypassed @hidden
         developer info: "Access control is bypassed either because it was not set, the attacker was able to circumvent it through additional effort."
-        ->  successfulAccessUninspected,
-            successfulAccessInspected
+        ->  successfulAccessUninspectedFromPhysicalAccess,
+            successfulAccessInspectedFromPhysicalAccess
 
-      | attemptAccessUninspected @hidden
+      | attemptAccessUninspectedFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  successfulAccessUninspected,
+        ->  successfulAccessUninspectedFromPhysicalAccess,
             bypassAccessControl
 
-      | attemptAccessInspected @hidden
+      | attemptAccessInspectedFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
-        ->  successfulAccessInspected,
+        ->  successfulAccessInspectedFromPhysicalAccess,
             bypassAccessControl
 
-      & successfulAccessUninspected @hidden
+      & successfulAccessUninspectedFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to model defenses."
         ->  accessUninspected
 
-      & successfulAccessInspected @hidden
+      & successfulAccessInspectedFromPhysicalAccess @hidden
         developer info: "Intermediate attack step to model defenses."
         ->  accessInspected
 
