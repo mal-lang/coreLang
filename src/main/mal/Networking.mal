@@ -214,6 +214,7 @@ category Networking {
 
       # payloadInspection [Disabled]
         user info: "If enabled, then the traffic is considered to be inspected and filtered by an IDPS that can detect and stop malicious payloads, effectively allowing only legitimate communication(i.e. network-level vulnerabilities cannot be exploited, unsafe actions that the user may taken that would benefit the attacker are also prevented)."
+        mitre info: "Used for M1037: Filter Network Traffic, M1021: Restrict Web-Based Content, M1031: Network Intrusion Prevention, M1057: Data Loss Prevention"
         ->  payloadInspectionBypassed
 
       | bypassPayloadInspection [VeryHardAndUncertain]

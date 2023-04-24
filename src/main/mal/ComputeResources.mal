@@ -597,6 +597,7 @@ category ComputeResources {
       # effectiveness [Enabled]
         user info: "The effectiveness defense represents how capable the IDPS is to prevent disruptions from occurring on the associated applications."
         modeler info: "The notPresent defense should inversely impact the effectiveness defense. However, because this is not currently implemented in coreLang it is up to the modeler to properly take this into account when setting the values of these defenses."
+        mitre info: "Used for M1049: Antivirus/Antimalware, M1050: Exploit Protection, M1040: Behavior Prevention on Endpoint, M1038: Execution Prevention, M1051: Update Software, M1016: Vulnerability Scanning, M1021: Restrict Web-Based Content"
         ->  effectivenessBypassed
 
       | bypassEffectiveness [VeryHardAndUncertain]
@@ -633,6 +634,7 @@ associations {
       user info: "Hardware on which Applications are running. The host hardware is not mandatory to be specified."
   Application      [hostApp]           0..1 <-- AppExecution          --> *    [appExecutedApps]        Application
       user info: "Sandboxing and containerization are represented through AppExecution. This application hosting can be nested. For example, application 1 runs application 2 which runs application 3. (Where application 1 is an OS, application 2 is a VM, and application 3 is app running in the VM.)"
+      mitre info: "Used for M1048: Application Isolation and Sandboxing"
   IDPS             [protectorIDPSs]       * <-- AppProtection         --> *    [protectedApps]          Application
       user info: "IDPSs can provide protection to other applications."
   SoftwareProduct  [appSoftProduct]    0..1 <-- AppSoftwareProduct    --> *    [softApplications]       Application

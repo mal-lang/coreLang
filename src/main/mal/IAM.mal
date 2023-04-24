@@ -22,6 +22,7 @@ category IAM {
       # notPresent [Disabled]
         user info: "This defense is used to reason about the attack vectors introduced by this asset. It should be used to model the possibility that the IAM object does not actually exist."
         developer info: "Enabling this defense should make the asset behave as if it did not exist, as such all of its impactful attack steps should be disabled by it."
+        mitre info: "Used for M1026: Privileged Account Management, M1025: Privileged Process Integrity, M1022: Restrict File and Directory Permissions, M1052: User Account Control, M1018: User Account Management, M1024: Restrict Registry Permissions, M1043: Credential Access Protection, M1057: Data Loss Prevention"
         ->  successfulAssume,
             successfulLockout
 
@@ -260,8 +261,10 @@ category IAM {
 associations {
   Credentials      [encryptCreds]      0..1 <-- EncryptionCredentials --> *    [encryptedData]          Data
       user info: "Encrypted data can be associated with the relevant encryption credentials."
+        mitre info: "Used for M1041: Encrypt Sensitive Information, M1043: Credential Access Protection"
   Credentials      [signingCreds]      0..1 <-- SigningCredentials    --> *    [signedData]             Data
       user info: "Signed data can be associated with the relevant signing credentials."
+      mitre info: "Used for M1045: Code Signing, M1046: Boot Integrity"
   Credentials      [hashes]               * <-- HashedCredentials     --> 0..1 [origCreds]              Credentials
       user info: "Credentials can be associated with their hashed counterparts. Multiple hashes can be generated for the same Credentials, but a hash is unique to one set of Credentials."
   Credentials      [credentials]          * <-- ConditionalAuthentication --> * [requiredFactors]       Credentials
@@ -283,6 +286,7 @@ associations {
   IAMObject        [readingIAMs]          * <-- ReadPrivileges        --> *    [readPrivData]           Data
   IAMObject        [writingIAMs]          * <-- WritePrivileges       --> *    [writePrivData]          Data
   IAMObject        [deletingIAMs]         * <-- DeletePrivileges      --> *    [deletePrivData]         Data
+      mitre info: "Used for M1026: Privileged Account Management, M1025: Privileged Process Integrity, M1022: Restrict File and Directory Permissions, M1052: User Account Control, M1018: User Account Management, M1024: Restrict Registry Permissions, M1043: Credential Access Protection, M1057: Data Loss Prevention, M1039: Environment Variable Permissions"
   // Associations for the Privileges asset
   IAMObject        [IAMOwners]            * <-- HasPrivileges         --> *    [subprivileges]          Privileges
       user info: "Identities, Groups, and Privileges may have a subset of Privileges that we logically separate to model specific scenarios, such as partial lockouts or speculating about possible privileges."

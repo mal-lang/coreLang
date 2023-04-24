@@ -288,6 +288,7 @@ associations {
       user info: "Data can contain information, as for example credentials."
   Data        [dataReplicas]         * <-- Replica               --> *    [replicatedInformation]  Information
       user info: "Information can be replicated across multiple data assets that offer redundancy."
+        mitre info: "Used for M1053: Data Backup"
   // ### Application dependence associations
   /* Dependence is used to represent various situations where the operations
    * of the Application are impacted by modifying/denying the Data/Information
