@@ -299,7 +299,7 @@ category Networking {
 
 associations {
   // ### Networking associations
-  RoutingFirewall  [routingFirewalls]  0..1 <-- ConnectionRule        --> *    [connectionRules]        ConnectionRule
+  RoutingFirewall  [routingFirewalls]  0..1 <-- FirewallConnectionRule --> *    [connectionRules]       ConnectionRule
       user info: "A routing firewall has routing or firewall rules specified by connections between networks or applications respectively."
   RoutingFirewall  [managedRoutingFw]     * <-- ManagedBy             --> 0..1 [managerApp]             Application
       user info: "A routing firewall can have an admin/manager interface (application) that is accessible from a network location."
