@@ -103,10 +103,14 @@ category DataResources {
         <-  encryptCreds
         ->  bypassPayloadInspectionFromEncryptedData
 
+      let senderOutgoingApplicationConnections = (senderApp.appConnections \/ senderApp.outgoingAppConnections)
+      let receiverIngoingApplicationConnections = (receiverApp.appConnections \/ receiverApp.ingoingAppConnections)
+      let transitNetworkInboundAllowedConnections = (transitNetwork.netConnections \/ transitNetwork.ingoingNetConnections \/ transitNetwork.diodeIngoingNetConnections)
+      let transitNetworkOutboundAllowedConnections = (transitNetwork.netConnections \/ transitNetwork.outgoingNetConnections)
       | bypassPayloadInspectionFromEncryptedData @hidden
         developer info: "The connection rules that the encrypted data traverse over cannot provide payload inspection since they are assumed to permit encrypted traffic. This implies that the attacker could simply encrypt their own communications to evade inspection."
-        ->  (senderApp.outgoingApplicationConnections() /\ transitNetwork.inboundAllowedConnections()).payloadInspectionBypassed,
-            (receiverApp.ingoingApplicationConnections() /\ transitNetwork.outboundAllowedConnections()).payloadInspectionBypassed
+        ->  (senderOutgoingApplicationConnections() /\ transitNetworkInboundAllowedConnections()).payloadInspectionBypassed,
+            (receiverIngoingApplicationConnections() /\ transitNetworkOutboundAllowedConnections()).payloadInspectionBypassed
 
       & accessUnencryptedData @hidden
         developer info: "If data are unencrypted then access them."
