@@ -34,11 +34,11 @@ category Networking {
             bypassEavesdropDefenseFromPhysicalAccess,
             bypassAdversaryInTheMiddleDefenseFromPhysicalAccess
 
-      | bypassEavesdropDefenseFromPhysicalAccess [VeryHardAndUncertain]
+      | bypassEavesdropDefenseFromPhysicalAccess
         user info: "The eavesdrop defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
         ->  eavesdropDefenseBypassed
 
-      | bypassAdversaryInTheMiddleDefenseFromPhysicalAccess [VeryHardAndUncertain]
+      | bypassAdversaryInTheMiddleDefenseFromPhysicalAccess
         user info: "The adversary in the middle defense can be bypassed more easily if the attacker has physical access to the network. This attack step will add its impact to the unconditional bypass."
         ->  adversaryInTheMiddleDefenseBypassed
 
