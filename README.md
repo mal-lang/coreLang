@@ -25,6 +25,12 @@ project HONOR, funded under grant agreement no. 646039 and no. 7759750.
 | Old coreLang | <https://github.com/pontusj101/coreLang> |
 | Core MAL specification of awsLang | <https://gist.github.com/maxwalls/ace99182d064087d2023553337e953c4> |
 
+| Paper | Link |
+| --- | --- |
+| Katsikeas, S. et al. Development and validation of coreLang: A threat modeling language for the ICT domain, Computers & Security, 2024 | https://doi.org/10.1016/j.cose.2024.104057 |
+| Katsikeas, S. et al. Empirical evaluation of a threat modeling language as a cybersecurity assessment tool, Computers & Security, 2024 | https://doi.org/10.1016/j.cose.2024.103743 |
+| Katsikeas, S. et al. An Attack Simulation Language for the IT Domain. In: Eades III, H., Gadyatskaya, O. (eds) Graphical Models for Security. GraMSec 2020. Lecture Notes in Computer Science | https://doi.org/10.1007/978-3-030-62230-5_4 |
+
 ## License
 
 Copyright © 2019-2021 [coreLang contributors](https://mal-lang.org/coreLang/contributors.html)
