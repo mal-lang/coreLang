@@ -77,7 +77,7 @@ category IAM {
         user info: "Prevent unsafe user activity too if the Identity is assumed to not exist."
         +>  successfulUnsafeUserActivity
 
-      | assume @Override {C,I,A}
+      | assume {C,I,A}
         user info: "After authentication or compromise of an account/identity, assume its privileges."
         developer info: "This is both legitimate and illegitimate access! Also assume all the privileges of the parent identities (on the above level/inherited by this identity) because those represent the group of (inherited) roles."
         +>  parentId.attemptAssume,
@@ -120,7 +120,7 @@ category IAM {
         user info: "Prevent unsafe user activity too if the Privileges are assumed to not exist."
         +>  successfulUnsafeUserActivity
 
-      | assume @Override {C,I,A}
+      | assume {C,I,A}
         user info: "After authentication or compromise assume its privileges."
         developer info: "Assume identity/group the privileges are associated with since the privileges are simply an extension of it."
         +>  IAMOwners.attemptAssume
@@ -145,7 +145,7 @@ category IAM {
       user info: "A group is a way to group together identities and/or other groups. This allows the expression of hierarchical IAM (structured inheritance)."
       modeler info: "Groups can be used instead of nested identities to make the model more intuitive and clearer to understand."
     {
-      | assume @Override {C,I,A}
+      | assume {C,I,A}
         user info: "If an identity of a group is compromised then the whole group(i.e. all other privileges of the group) should be considered as compromised. Furthermore, the parent groups should also be considered compromised."
         developer info: "The parent groups should be compromised because all the privileges of the parent groups are inherited on the children groups but lower children groups should not be compromised because lower levels might have inherited plus additional privileges."
         +>  parentGroup.attemptAssume
@@ -176,15 +176,15 @@ category IAM {
         user info: "Describes if the credentials cannot be phished(they are biometric, e.g. fingerprints or iris scans, or physical, e.g. access cards or keys, elements)."
         ->  credentialTheft
 
-      | read @Override
+      | read
         user info: "If the attacker is able to read the information containing credentials we assume that they are compromised."
         +> attemptUse
 
-      | write @Override
+      | write
         user info: "If the attacker is able to write the information containing credentials we assume that they have changed them for the authentication process."
         +> attemptUse
 
-      | deny @Override
+      | deny
         user info: "If the attacker is able to deny the information containing credentials we assume that they have denied them for the authentication process."
         +> identities.lockoutFromCredentials
 
