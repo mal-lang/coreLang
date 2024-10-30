@@ -241,7 +241,8 @@ category Networking {
       | attemptAccessNetworksUninspected @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  successfulAccessNetworksUninspected,
-            bypassRestricted
+            bypassRestricted,
+            bypassPayloadInspection
 
       | attemptAccessNetworksInspected @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
@@ -274,8 +275,7 @@ category Networking {
       | attemptConnectToApplicationsInspected @hidden
         developer info: "Intermediate attack step to allow for defenses and trigger bypasses."
         ->  connectToApplicationsInspected,
-            bypassRestricted,
-            bypassPayloadInspection
+            bypassRestricted
 
       & connectToApplicationsUninspected @hidden
         developer info: "Connect to all the (server) Applications that are associated with this ConnectionRule, without any restriction due to inspection."
